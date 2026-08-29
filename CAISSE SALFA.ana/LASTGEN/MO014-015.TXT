@@ -1,0 +1,11 @@
+//MO014-015.TXT ANA00014 TO ANA00015
+CAISSE		TAR	595	nouvelle taille enregistrement : 595
+CAISSE	DEBIT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique DEBIT a pour nouveau type Réel sur 8 octets
+CAISSE	CREDIT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique CREDIT a pour nouveau type Réel sur 8 octets
+LIGNE_CAISSE		TAR	284	nouvelle taille enregistrement : 284
+LIGNE_CAISSE	MONTANT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique MONTANT a pour nouveau type Réel sur 8 octets
+EN_ATTENTE		TAR	544	nouvelle taille enregistrement : 544
+EN_ATTENTE	DEBIT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique DEBIT a pour nouveau type Réel sur 8 octets
+EN_ATTENTE	CREDIT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique CREDIT a pour nouveau type Réel sur 8 octets
+LIGNE_ATTENTE		TAR	284	nouvelle taille enregistrement : 284
+LIGNE_ATTENTE	MONTANT	CNW	Réel sur 8 octets$Entier sur 4 octets	la rubrique MONTANT a pour nouveau type Réel sur 8 octets

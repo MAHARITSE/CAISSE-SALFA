@@ -1,0 +1,17 @@
+//MO018-019.TXT ANA00018 TO ANA00019
+CAISSE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+CAISSE		FCNX-	MaConnexion1	
+LIGNE_CAISSE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+LIGNE_CAISSE		FCNX-	MaConnexion1	
+CLOTURE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+CLOTURE		FCNX-	MaConnexion1	
+MODELE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+MODELE		FCNX-	MaConnexion1	
+LIGNE_MODELE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+LIGNE_MODELE		FCNX-	MaConnexion1	
+NUM_PIECE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+NUM_PIECE		FCNX-	MaConnexion1	
+MEMOIRE_CAISSE		BASE		La base du fichier est passée de HFSQL Client/Serveur à HFSQL Classic
+MEMOIRE_CAISSE		FCNX-	MaConnexion1	
+LIGNE_MODELE		FRN		
+NUM_PIECE		FRN		

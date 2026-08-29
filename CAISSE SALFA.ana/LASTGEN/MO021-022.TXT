@@ -1,0 +1,6 @@
+//MO021-022.TXT ANA00021 TO ANA00022
+Mabanque		NFI		nouveau fichier
+Beneficiaires		NFI		nouveau fichier
+Virement		NFI		nouveau fichier
+Contrainte_Mabanque_Virement		NWL	Mabanque (IDMabanque) et Virement (IDMabanque)	Nouvelle liaison entre les fichiers Mabanque (IDMabanque) et Virement (IDMabanque)
+Contrainte_Beneficiaires_Virement		NWL	Beneficiaires (IDBeneficiaires) et Virement (IDBeneficiaires)	Nouvelle liaison entre les fichiers Beneficiaires (IDBeneficiaires) et Virement (IDBeneficiaires)

@@ -1,0 +1,3 @@
+//MO013-014.TXT ANA00013 TO ANA00014
+CAISSE		TAR	587	nouvelle taille enregistrement : 587
+CAISSE	NUMERO	RUB+		NUMERO est une nouvelle rubrique

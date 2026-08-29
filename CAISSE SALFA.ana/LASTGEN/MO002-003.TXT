@@ -1,0 +1,10 @@
+//MO002-003.TXT ANA00002 TO ANA00003
+NUM_PIECE		TAR	536	nouvelle taille enregistrement : 536
+NUM_PIECE	DATE	RUB+		DATE est une nouvelle rubrique
+NUM_PIECE	LIBELLE	RUB+		LIBELLE est une nouvelle rubrique
+NUM_PIECE	DEBIT	RUB+		DEBIT est une nouvelle rubrique
+NUM_PIECE	CREDIT	RUB+		CREDIT est une nouvelle rubrique
+NUM_PIECE	OBSERVATION	RUB+		OBSERVATION est une nouvelle rubrique
+EN_ATTENTE		NFI		nouveau fichier
+LIGNE_ATTENTE		NFI		nouveau fichier
+Contrainte_EN_ATTENTE_LIGNE_ATTENTE		NWL	EN_ATTENTE (IDEN_ATTENTE) et LIGNE_ATTENTE (IDEN_ATTENTE)	Nouvelle liaison entre les fichiers EN_ATTENTE (IDEN_ATTENTE) et LIGNE_ATTENTE (IDEN_ATTENTE)

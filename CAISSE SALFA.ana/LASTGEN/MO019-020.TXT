@@ -1,0 +1,16 @@
+//MO019-020.TXT ANA00019 TO ANA00020
+CAISSE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+CAISSE		FCNX+	Connexion à 'Salfa-Tul'	
+LIGNE_CAISSE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+LIGNE_CAISSE		FCNX+	Connexion à 'Salfa-Tul'	
+CLOTURE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+CLOTURE		FCNX+	Connexion à 'Salfa-Tul'	
+MODELE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+MODELE		FCNX+	Connexion à 'Salfa-Tul'	
+LIGNE_MODELE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+LIGNE_MODELE		FCNX+	Connexion à 'Salfa-Tul'	
+NUM_PIECE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+NUM_PIECE		FCNX+	Connexion à 'Salfa-Tul'	
+MEMOIRE_CAISSE		BASE		La base du fichier est passée de HFSQL Classic à HFSQL Client/Serveur
+MEMOIRE_CAISSE		FCNX+	Connexion à 'Salfa-Tul'	
+Connexion à 'Salfa-Tul'		CNX+		
