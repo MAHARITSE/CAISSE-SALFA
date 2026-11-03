@@ -108,9 +108,9 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="app-shell flex min-h-screen flex-col bg-slate-50 text-slate-900 lg:h-screen lg:overflow-hidden">
       <header className="border-b border-slate-200 bg-white no-print">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
           <div>
             <h1 className="text-sm font-semibold tracking-tight">CAISSE SALFA — Livre journal</h1>
             <p className="text-[11px] text-slate-500">Trésorerie de l hôpital : recettes et dépenses</p>
@@ -136,18 +136,20 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
-        <Synthese
-          soldeInitial={parametres.soldeInitial}
-          onSoldeInitial={changerSoldeInitial}
-          recettes={recettes}
-          depenses={depenses}
-          soldeFin={soldeFin}
-          periode={periode}
-        />
+      <main className="app-main flex min-h-0 flex-1 flex-col gap-3 px-3 py-3 sm:px-4">
+        <div className="no-print shrink-0">
+          <Synthese
+            soldeInitial={parametres.soldeInitial}
+            onSoldeInitial={changerSoldeInitial}
+            recettes={recettes}
+            depenses={depenses}
+            soldeFin={soldeFin}
+            periode={periode}
+          />
+        </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-[340px_1fr]">
-          <div className="space-y-3 no-print">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(340px,400px)_minmax(0,1fr)]">
+          <div className="no-print min-h-0 space-y-3 lg:overflow-y-auto lg:pr-1">
             <SaisieEcriture
               ecritureEnEdition={enEdition}
               numeroSuivant={(sens: Sens, date: string) => prochainNumero(ecritures, sens, date)}
@@ -158,8 +160,8 @@ export function App() {
             />
           </div>
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2 no-print">
+          <div className="flex min-h-0 flex-col gap-3">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 no-print">
               <input
                 type="month"
                 value={mois}

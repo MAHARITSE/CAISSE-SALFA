@@ -22,6 +22,16 @@
   display: none;
 }
 
+/* En plein écran, le journal défile : l en-tête et les totaux restent visibles. */
+@media screen {
+  #journal tfoot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background-color: var(--color-slate-100, #f1f5f9);
+  }
+}
+
 @media print {
   body {
     background: #fff;
@@ -35,25 +45,46 @@
     display: block;
   }
 
-  main {
-    max-width: none !important;
+  /* La mise en page plein écran redevient un simple flux pour l impression. */
+  .app-shell,
+  .app-main {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .app-main {
     padding: 0 !important;
   }
 
-  main > div {
+  .app-main > div,
+  .app-main .grid {
     display: block !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  #journal {
+  #journal,
+  #journal > div {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
     border: 0;
+  }
+
+  thead {
+    position: static !important;
+    display: table-header-group;
+  }
+
+  #journal tfoot td {
+    position: static !important;
   }
 
   table {
     font-size: 10.5px;
-  }
-
-  thead {
-    display: table-header-group;
   }
 
   tr {
@@ -62,6 +93,6 @@
 
   @page {
     size: A4 landscape;
-    margin: 12mm;
+    margin: 10mm;
   }
 }
