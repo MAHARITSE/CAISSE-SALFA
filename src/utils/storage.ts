@@ -1,12 +1,41 @@
-import { Ecriture, Mode, Parametres, Sens } from '../types';
+import { Ecriture, LigneDetail, MasqueSaisie, Parametres, Sens } from '../types';
 
 const CLE_ECRITURES = 'salfa_tresorerie_ecritures_v1';
 const CLE_PARAMETRES = 'salfa_tresorerie_parametres_v1';
 const CLE_ANCIENNE_CAISSE = 'salfa_caisse_transactions';
 
-export const MODES: Mode[] = ['Espèces', 'Chèque', 'Virement', 'Mobile Money'];
+/** Postes types de recettes journalières hospitalières (selon bordereau SALFA) */
+export const SERVICES_RECETTES_JOUR = [
+  'CONSULTATION',
+  'ECHOGRAPHIE',
+  'CHAMBRE',
+  'LABORATOIRE',
+  'MATERNITE',
+  'MEDICAMENT',
+  'SOINS',
+  'HOSPITALISATION',
+  'DENTISTERIE',
+  'BLOC',
+  'DIVERS',
+  'VACCIN',
+];
+
+/** Postes types de dépenses fréquentes */
+export const SERVICES_DEPENSES_TYPES = [
+  'ACHATS MEDICAMENTS',
+  'FOURNITURES ET CONSOMMABLES',
+  'CARBURANT & TRANSPORT',
+  'MAINTENANCE ET REPARATION',
+  'SALAIRES ET PRIMES',
+  'HONORAIRES MEDICAUX',
+  'EAU ET ELECTRICITE',
+  'TELEPHONE ET INTERNET',
+  'FRAIS DE MISSION',
+  'DIVERS DEPENSES',
+];
 
 export const CATEGORIES_RECETTE = [
+  'Recettes journalières',
   'Consultations',
   'Pharmacie',
   'Laboratoire',
@@ -35,8 +64,6 @@ export const CATEGORIES_DEPENSE = [
 export const categoriesPour = (sens: Sens): string[] =>
   sens === 'RECETTE' ? CATEGORIES_RECETTE : CATEGORIES_DEPENSE;
 
-const MODES_CONNUS = new Set<string>(MODES);
-const mode = (v: unknown): Mode => (typeof v === 'string' && MODES_CONNUS.has(v) ? (v as Mode) : 'Espèces');
 const texte = (v: unknown): string => (typeof v === 'string' ? v : '');
 const montantPositif = (v: unknown): number =>
   typeof v === 'number' && isFinite(v) && v > 0 ? Math.round(v) : 0;
@@ -94,8 +121,27 @@ export function enregistrerEcritures(ecritures: Ecriture[]): void {
 
 function normaliser(e: Record<string, unknown>): Ecriture | null {
   const sens: Sens = e.sens === 'RECETTE' || e.type === 'RECETTE' ? 'RECETTE' : 'DEPENSE';
-  const montant = montantPositif(e.montant);
   const date = texte(e.date);
+
+  let lignesDetail: LigneDetail[] | undefined = undefined;
+  if (Array.isArray(e.lignesDetail)) {
+    const parsed = e.lignesDetail
+      .filter((l): l is Record<string, unknown> => !!l && typeof l === 'object')
+      .map((l, idx) => ({
+        id: texte(l.id) || `d-${idx}-${Math.random().toString(36).slice(2)}`,
+        libelle: texte(l.libelle),
+        reference: texte(l.reference) || undefined,
+        montant: montantPositif(l.montant),
+      }))
+      .filter(l => Boolean(l.libelle) || l.montant > 0);
+    if (parsed.length > 0) {
+      lignesDetail = parsed;
+    }
+  }
+
+  const totalDetails = lignesDetail ? lignesDetail.reduce((s, d) => s + d.montant, 0) : 0;
+  const montant = montantPositif(e.montant) || totalDetails;
+
   if (!montant || !date) return null;
   return {
     id: texte(e.id) || `e-${Math.random().toString(36).slice(2)}`,
@@ -106,8 +152,9 @@ function normaliser(e: Record<string, unknown>): Ecriture | null {
     categorie: texte(e.categorie) || (sens === 'RECETTE' ? 'Autres recettes' : 'Divers'),
     tiers: texte(e.tiers) || texte(e.beneficiaire) || undefined,
     montant,
-    mode: mode(e.mode ?? e.modePaiement),
-    reference: texte(e.reference) || texte(e.notes) || undefined,
+    lignesDetail,
+    reference: texte(e.reference) || undefined,
+    observation: texte(e.observation) || texte(e.notes) || undefined,
     createdAt: texte(e.createdAt) || new Date().toISOString(),
   };
 }
@@ -133,4 +180,56 @@ export function prochainNumero(ecritures: Ecriture[], sens: Sens, date: string):
     .filter(e => e.sens === sens && e.numero.startsWith(prefixe))
     .reduce((acc, e) => Math.max(acc, Number.parseInt(e.numero.slice(prefixe.length), 10) || 0), 0);
   return `${prefixe}${String(max + 1).padStart(4, '0')}`;
+}
+
+const CLE_MASQUES = 'salfa_tresorerie_masques_v1';
+
+export const MASQUES_DEFAUT: MasqueSaisie[] = [
+  {
+    id: 'masque-recettes-hopital',
+    nom: 'Bordereau recettes hôpital (12 postes)',
+    sens: 'RECETTE',
+    description: 'Postes types du carnet de caisse hospitalier',
+    lignes: [
+      { description: 'CONSULTATION' },
+      { description: 'ECHOGRAPHIE' },
+      { description: 'CHAMBRE' },
+      { description: 'LABORATOIRE' },
+      { description: 'MATERNITE' },
+      { description: 'MEDICAMENT' },
+      { description: 'SOINS' },
+      { description: 'HOSPITALISATION' },
+      { description: 'DENTISTERIE' },
+      { description: 'BLOC' },
+      { description: 'DIVERS' },
+      { description: 'VACCIN' },
+    ],
+  },
+  {
+    id: 'masque-depenses-courantes',
+    nom: 'Charges courantes & fonctionnement',
+    sens: 'DEPENSE',
+    description: 'Dépenses périodiques d exploitation',
+    lignes: [
+      { description: 'ACHATS MEDICAMENTS' },
+      { description: 'FOURNITURES MEDICALES' },
+      { description: 'CARBURANT' },
+      { description: 'EAU & ELECTRICITE' },
+      { description: 'MAINTENANCE' },
+      { description: 'DIVERS' },
+    ],
+  },
+];
+
+export function chargerMasques(): MasqueSaisie[] {
+  const brut = lire(CLE_MASQUES);
+  if (Array.isArray(brut) && brut.length > 0) {
+    return brut as MasqueSaisie[];
+  }
+  enregistrerMasques(MASQUES_DEFAUT);
+  return MASQUES_DEFAUT;
+}
+
+export function enregistrerMasques(masques: MasqueSaisie[]): void {
+  localStorage.setItem(CLE_MASQUES, JSON.stringify(masques));
 }

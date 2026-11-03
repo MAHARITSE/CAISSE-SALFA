@@ -32,8 +32,7 @@ export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport)
       'Libellé',
       'Catégorie',
       'Tiers / service',
-      'Mode',
-      'Référence',
+      'Observation / Réf',
       'Recette',
       'Dépense',
       'Solde',
@@ -47,24 +46,40 @@ export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport)
       '',
       '',
       '',
-      '',
       nombre(options.soldeOuverture),
     ]),
-    ...lignes.map(l =>
-      ligne([
+    ...lignes.flatMap(l => {
+      const lignePrincipale = ligne([
         dateFr(l.date),
         l.numero,
         l.libelle,
         l.categorie,
         l.tiers ?? '',
-        l.mode,
-        l.reference ?? '',
+        l.observation || l.reference || '',
         l.sens === 'RECETTE' ? nombre(l.montant) : '',
         l.sens === 'DEPENSE' ? nombre(l.montant) : '',
         nombre(l.solde),
-      ]),
-    ),
-    ligne(['', '', 'TOTAUX DE LA PÉRIODE', '', '', '', '', nombre(options.recettes), nombre(options.depenses), nombre(options.soldeFin)]),
+      ]);
+
+      if (l.lignesDetail && l.lignesDetail.length > 0) {
+        const sousLignes = l.lignesDetail.map((d, idx) =>
+          ligne([
+            '',
+            '',
+            `  ↳ ${idx + 1}. ${d.libelle}`,
+            'Détail poste',
+            '',
+            d.reference ?? '',
+            l.sens === 'RECETTE' ? nombre(d.montant) : '',
+            l.sens === 'DEPENSE' ? nombre(d.montant) : '',
+            '',
+          ]),
+        );
+        return [lignePrincipale, ...sousLignes];
+      }
+      return [lignePrincipale];
+    }),
+    ligne(['', '', 'TOTAUX DE LA PÉRIODE', '', '', '', nombre(options.recettes), nombre(options.depenses), nombre(options.soldeFin)]),
   ];
 
   const blob = new Blob(['\uFEFF' + contenu.join('\r\n')], { type: 'text/csv;charset=utf-8;' });

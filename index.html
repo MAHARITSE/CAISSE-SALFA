@@ -2,12 +2,43 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          var currentFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return currentFetch;
+            },
+            set: function(fn) {
+              currentFetch = fn;
+            },
+            configurable: true,
+            enumerable: true,
+          });
+        } catch (e) {
+          try {
+            var proto = Object.getPrototypeOf(window);
+            if (proto) {
+              var curProtoFetch = proto.fetch || window.fetch;
+              Object.defineProperty(proto, 'fetch', {
+                get: function() { return curProtoFetch; },
+                set: function(v) { curProtoFetch = v; },
+                configurable: true,
+                enumerable: true,
+              });
+            }
+          } catch (_) {}
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CAISSE SALFA — Livre journal des recettes et dépenses</title>
-    <meta name="description" content="Livre journal des recettes et dépenses de la trésorerie de l hôpital SALFA" />
-    <meta property="og:title" content="CAISSE SALFA — Livre journal" />
-    <meta property="og:description" content="Livre journal des recettes et dépenses de la trésorerie de l hôpital SALFA" />
+    <title>Gestion de Caisse SALFA — Livre journal</title>
+    <meta name="description" content="Système de gestion de caisse, demandes de fonds, bénéficiaires et ordres de virement pour SALFA" />
+    <meta property="og:title" content="Gestion de Caisse SALFA — Livre journal" />
+    <meta property="og:description" content="Système de gestion de caisse, demandes de fonds, bénéficiaires et ordres de virement pour SALFA" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
