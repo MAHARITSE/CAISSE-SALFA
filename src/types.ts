@@ -14,6 +14,7 @@ export interface Ecriture {
   montant: number; // MGA, toujours positif
   mode: Mode;
   reference?: string;
+  observation?: string;
   createdAt: string;
 }
 
@@ -24,4 +25,18 @@ export interface Parametres {
 /** Ligne calculée pour l'affichage. */
 export interface LigneJournal extends Ecriture {
   solde: number; // solde cumulé après l'écriture
+}
+
+/** Ligne du modèle de saisie « Recette caisse » (bordereau papier). */
+export interface LigneBordereau {
+  categorie: string;
+  reference: string;
+  montant: number;
+  observation: string;
+}
+
+export interface BordereauRecette {
+  date: string;
+  pourCompteDe: string; // « P/c de » sur le bordereau
+  lignes: LigneBordereau[];
 }

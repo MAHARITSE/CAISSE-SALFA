@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Ecriture, LigneJournal, Parametres, Sens } from './types';
+import { BordereauRecette, Ecriture, LigneJournal, Parametres } from './types';
 import {
   chargerEcritures,
   chargerParametres,
@@ -9,9 +9,14 @@ import {
 } from './utils/storage';
 import { libelleMois, moisCourant } from './utils/format';
 import { exporterLivreCsv } from './utils/export';
-import { SaisieEcriture } from './components/SaisieEcriture';
+import { RecetteCaisse } from './components/RecetteCaisse';
+import { SaisieDepense } from './components/SaisieDepense';
+import { EditionEcriture } from './components/EditionEcriture';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
+
+type Vue = 'saisie' | 'journal';
+type TypeSaisie = 'RECETTE' | 'DEPENSE';
 
 const parDate = (a: Ecriture, b: Ecriture) =>
   a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
@@ -19,6 +24,8 @@ const parDate = (a: Ecriture, b: Ecriture) =>
 export function App() {
   const [ecritures, setEcritures] = useState<Ecriture[]>([]);
   const [parametres, setParametres] = useState<Parametres>({ soldeInitial: 0 });
+  const [vue, setVue] = useState<Vue>('saisie');
+  const [typeSaisie, setTypeSaisie] = useState<TypeSaisie>('RECETTE');
   const [mois, setMois] = useState(moisCourant());
   const [toutAfficher, setToutAfficher] = useState(false);
   const [recherche, setRecherche] = useState('');
@@ -28,8 +35,6 @@ export function App() {
     const liste = chargerEcritures();
     setEcritures(liste);
     setParametres(chargerParametres());
-    // Au premier affichage, ouvrir le mois de la dernière écriture
-    // plutôt qu'un mois vide.
     if (liste.length > 0 && !liste.some(e => e.date.startsWith(moisCourant()))) {
       setMois(liste[liste.length - 1].date.slice(0, 7));
     }
@@ -65,7 +70,7 @@ export function App() {
     () =>
       q
         ? duMois.filter(e =>
-            [e.libelle, e.categorie, e.numero, e.tiers, e.reference, e.mode]
+            [e.libelle, e.categorie, e.numero, e.tiers, e.reference, e.observation, e.mode]
               .filter(Boolean)
               .some(v => String(v).toLowerCase().includes(q)),
           )
@@ -93,6 +98,37 @@ export function App() {
     setEnEdition(null);
   };
 
+  /** Le bordereau papier devient une écriture de recette par ligne renseignée. */
+  const enregistrerBordereau = (bordereau: BordereauRecette) => {
+    let liste = [...ecritures];
+    const maintenant = new Date().toISOString();
+
+    bordereau.lignes
+      .filter(ligne => ligne.montant > 0)
+      .forEach((ligne, index) => {
+        liste = [
+          ...liste,
+          {
+            id: `e-${Date.now()}-${index}`,
+            numero: prochainNumero(liste, 'RECETTE', bordereau.date),
+            date: bordereau.date,
+            sens: 'RECETTE',
+            libelle: ligne.categorie,
+            categorie: ligne.categorie,
+            tiers: bordereau.pourCompteDe || undefined,
+            montant: ligne.montant,
+            mode: 'Espèces',
+            reference: ligne.reference || undefined,
+            observation: ligne.observation || undefined,
+            createdAt: maintenant,
+          },
+        ];
+      });
+
+    sauvegarder(liste);
+    setVue('journal');
+  };
+
   const supprimer = (id: string) => {
     const cible = ecritures.find(e => e.id === id);
     if (!cible) return;
@@ -115,6 +151,27 @@ export function App() {
             <h1 className="text-sm font-semibold tracking-tight">CAISSE SALFA — Livre journal</h1>
             <p className="text-[11px] text-slate-500">Trésorerie de l hôpital : recettes et dépenses</p>
           </div>
+
+          <nav className="flex items-center gap-1 rounded-md bg-slate-100 p-1">
+            {(
+              [
+                ['saisie', 'Saisie'],
+                ['journal', 'Journal'],
+              ] as [Vue, string][]
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setVue(id)}
+                className={`px-3 py-1.5 rounded text-xs font-semibold ${
+                  vue === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -137,27 +194,51 @@ export function App() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
-        <Synthese
-          soldeInitial={parametres.soldeInitial}
-          onSoldeInitial={changerSoldeInitial}
-          recettes={recettes}
-          depenses={depenses}
-          soldeFin={soldeFin}
-          periode={periode}
-        />
+        <div className="no-print">
+          <Synthese
+            soldeInitial={parametres.soldeInitial}
+            onSoldeInitial={changerSoldeInitial}
+            recettes={recettes}
+            depenses={depenses}
+            soldeFin={soldeFin}
+            periode={periode}
+          />
+        </div>
 
-        <div className="grid items-start gap-4 lg:grid-cols-[340px_1fr]">
-          <div className="space-y-3 no-print">
-            <SaisieEcriture
-              ecritureEnEdition={enEdition}
-              numeroSuivant={(sens: Sens, date: string) => prochainNumero(ecritures, sens, date)}
-              suggestionsLibelle={suggestionsLibelle}
-              suggestionsTiers={suggestionsTiers}
-              onEnregistrer={enregistrer}
-              onAnnulerEdition={() => setEnEdition(null)}
-            />
+        {vue === 'saisie' ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-1 rounded-md bg-slate-100 p-1 no-print">
+              {(
+                [
+                  ['RECETTE', 'Recette de caisse'],
+                  ['DEPENSE', 'Dépense'],
+                ] as [TypeSaisie, string][]
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTypeSaisie(id)}
+                  className={`px-3 py-1.5 rounded text-xs font-semibold ${
+                    typeSaisie === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {typeSaisie === 'RECETTE' ? (
+              <RecetteCaisse onEnregistrer={enregistrerBordereau} />
+            ) : (
+              <SaisieDepense
+                numeroSuivant={(date: string) => prochainNumero(ecritures, 'DEPENSE', date)}
+                suggestionsLibelle={suggestionsLibelle}
+                suggestionsTiers={suggestionsTiers}
+                onEnregistrer={enregistrer}
+              />
+            )}
           </div>
-
+        ) : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 no-print">
               <input
@@ -191,6 +272,15 @@ export function App() {
               />
             </div>
 
+            {enEdition ? (
+              <EditionEcriture
+                key={enEdition.id}
+                ecriture={enEdition}
+                onEnregistrer={enregistrer}
+                onAnnuler={() => setEnEdition(null)}
+              />
+            ) : null}
+
             <LivreJournal
               lignes={lignes}
               soldeOuverture={soldeOuverture}
@@ -203,7 +293,7 @@ export function App() {
               onSupprimer={supprimer}
             />
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
