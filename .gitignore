@@ -6,3 +6,9 @@ dist-ssr/
 .env.local
 .DS_Store
 npm-debug.log*
+
+# Tests navigateur
+playwright-report/
+test-results/
+blob-report/
+.playwright/

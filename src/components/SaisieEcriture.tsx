@@ -1,690 +1,166 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Calendar,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  FileText,
-  Layers,
-  Plus,
-  Settings,
-  Trash2,
-  X,
-  AlertCircle,
-} from 'lucide-react';
-import { Ecriture, LigneDetail, MasqueSaisie, Sens } from '../types';
-import { categoriesPour } from '../utils/storage';
-import { aujourdHui, formatAr } from '../utils/format';
+import { useId, useRef, useState, type FormEvent } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, ListPlus } from 'lucide-react';
+import type { Ecriture, MasqueSaisie, Sens } from '../types';
+import { categoriesPour, MAX_DETAILS, MODES_PAIEMENT, MONTANT_MAX } from '../utils/constants';
+import { aujourdHui, formatAr, parserMontant } from '../utils/format';
+import { identifiant } from '../utils/ledger';
+import { validerEcriture } from '../utils/validation';
+import { Modale } from './Modale';
+import { Confirmation } from './Confirmation';
 
 interface SaisieEcritureProps {
   ecritureEnEdition: Ecriture | null;
-  sensInitial?: Sens;
+  sensInitial: Sens;
   numeroSuivant: (sens: Sens, date: string) => string;
   suggestionsLibelle: string[];
   suggestionsTiers: string[];
-  masques?: MasqueSaisie[];
-  onOuvrirGestionMasques?: () => void;
-  onEnregistrer: (ecriture: Ecriture) => void;
-  onAnnulerEdition: () => void;
-  onFermer?: () => void;
+  masques: MasqueSaisie[];
+  erreurExterne?: string | null;
+  onOuvrirGestionMasques: () => void;
+  onEnregistrer: (ecriture: Ecriture) => boolean;
+  onFermer: () => void;
 }
 
-interface LigneGrid {
-  id: string;
-  description: string;
-  montant: number;
-}
+interface LigneBrouillon { id: string; description: string; reference: string; montant: string }
 
-export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
-  ecritureEnEdition,
-  sensInitial = 'RECETTE',
-  numeroSuivant,
-  suggestionsLibelle,
-  suggestionsTiers,
-  masques = [],
-  onOuvrirGestionMasques,
-  onEnregistrer,
-  onAnnulerEdition,
-  onFermer,
-}) => {
-  // Le sens est strictement verrouillé : +Recette ouvre SEULEMENT recette, +Dépense ouvre SEULEMENT dépense
-  const sens: Sens = ecritureEnEdition ? ecritureEnEdition.sens : sensInitial;
+export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
+  const sens = edition?.sens ?? sensInitial;
   const estRecette = sens === 'RECETTE';
-
-  const [date, setDate] = useState(aujourdHui());
-  const [libelle, setLibelle] = useState('');
-  const [observation, setObservation] = useState('');
-  const [categorie, setCategorie] = useState(categoriesPour(sens)[0]);
-  const [tiers, setTiers] = useState('');
-  const [optionsAvancees, setOptionsAvancees] = useState(false);
-
-  // Lignes de détail de la caisse (décomposition des montants)
-  const [lignes, setLignes] = useState<LigneGrid[]>([]);
-
-  // Saisie rapide dans la barre d'ajout
-  const [saisieDescription, setSaisieDescription] = useState('');
-  const [saisieMontant, setSaisieMontant] = useState('');
-
-  // Fallback si montant direct sans décomposition
-  const [montantSimple, setMontantSimple] = useState('');
-
-  // Menu déroulant pour appliquer un masque de saisie
-  const [menuMasquesOuvert, setMenuMasquesOuvert] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
+  const formId = useId();
+  const [date, setDate] = useState(edition?.date ?? aujourdHui());
+  const [libelle, setLibelle] = useState(edition?.libelle ?? '');
+  const [categorie, setCategorie] = useState(edition?.categorie ?? categoriesPour(sens)[0]);
+  const [tiers, setTiers] = useState(edition?.tiers ?? '');
+  const [mode, setMode] = useState(edition ? edition.mode ?? '' : 'Espèces');
+  const [reference, setReference] = useState(edition?.reference ?? '');
+  const [observation, setObservation] = useState(edition?.observation ?? '');
+  const [montantSimple, setMontantSimple] = useState(edition?.lignesDetail?.length ? '' : edition ? String(edition.montant) : '');
+  const [detaille, setDetaille] = useState(Boolean(edition?.lignesDetail?.length));
+  const [lignes, setLignes] = useState<LigneBrouillon[]>(edition?.lignesDetail?.map(d => ({ id: d.id, description: d.libelle, reference: d.reference ?? '', montant: String(d.montant) })) ?? []);
+  const [nouveauPoste, setNouveauPoste] = useState('');
+  const [nouvelleReference, setNouvelleReference] = useState('');
+  const [nouveauMontant, setNouveauMontant] = useState('');
   const [erreur, setErreur] = useState('');
-  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const [modifie, setModifie] = useState(false);
+  const [confirmerFermeture, setConfirmerFermeture] = useState(false);
+  const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
+  const soumission = useRef(false);
+  const categories = [...new Set([...categoriesPour(sens), ...(edition ? [edition.categorie] : [])])];
+  const modes = [...new Set([...MODES_PAIEMENT, ...(mode ? [mode] : [])])];
+  const numero = edition?.numero ?? (/^\d{4}-\d{2}-\d{2}$/.test(date) ? numeroSuivant(sens, date) : 'Attribué à l’enregistrement');
+  const total = detaille ? lignes.reduce((s, l) => s + (parserMontant(l.montant) ?? 0), 0) : parserMontant(montantSimple) ?? 0;
+  const changer = () => setModifie(true);
 
-  // Masques filtrés pour cette fenêtre (Recette ou Dépense)
-  const masquesApplicables = masques.filter(m => m.sens === sens);
+  function demanderFermeture() {
+    if (modifie) setConfirmerFermeture(true);
+    else onFermer();
+  }
 
-  // Fermer le dropdown si clic à l'extérieur
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setMenuMasquesOuvert(false);
-      }
-    }
-    if (menuMasquesOuvert) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuMasquesOuvert]);
+  function ajouterPoste() {
+    const montant = parserMontant(nouveauMontant);
+    if (!nouveauPoste.trim()) { setErreur('Renseignez le libellé du poste à ajouter.'); return; }
+    if (montant === null || montant <= 0) { setErreur('Le montant du poste doit être un entier supérieur à zéro, sans décimale.'); return; }
+    if (lignes.length >= MAX_DETAILS) { setErreur(`Un bordereau peut contenir ${MAX_DETAILS} postes au maximum.`); return; }
+    setLignes(prev => [...prev, { id: identifiant('d'), description: nouveauPoste.trim(), reference: nouvelleReference.trim(), montant: String(montant) }]);
+    setNouveauPoste(''); setNouvelleReference(''); setNouveauMontant(''); setErreur(''); changer();
+  }
 
-  // Initialisation à l'ouverture (création ou édition)
-  useEffect(() => {
-    if (ecritureEnEdition) {
-      setDate(ecritureEnEdition.date);
-      setLibelle(ecritureEnEdition.libelle);
-      setObservation(ecritureEnEdition.observation ?? ecritureEnEdition.reference ?? '');
-      setCategorie(ecritureEnEdition.categorie);
-      setTiers(ecritureEnEdition.tiers ?? '');
+  function appliquerMasque(m: MasqueSaisie) {
+    setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: l.description, reference: '', montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
+    setDetaille(true); setErreur(''); changer();
+  }
 
-      if (ecritureEnEdition.lignesDetail && ecritureEnEdition.lignesDetail.length > 0) {
-        setLignes(
-          ecritureEnEdition.lignesDetail.map(d => ({
-            id: d.id,
-            description: d.libelle,
-            montant: d.montant,
-          })),
-        );
-        setMontantSimple('');
-      } else {
-        setLignes([]);
-        setMontantSimple(String(ecritureEnEdition.montant || ''));
-      }
-    } else {
-      setDate(aujourdHui());
-      setLibelle(''); // Pas de pré-remplissage du libellé
-      setObservation('');
-      setCategorie(categoriesPour(sens)[0]);
-      setTiers('');
-      setLignes([]);
-      setMontantSimple('');
-    }
-    setSaisieDescription('');
-    setSaisieMontant('');
-    setMenuMasquesOuvert(false);
-    setErreur('');
-  }, [ecritureEnEdition, sens]);
+  function choisirMasque(id: string) {
+    const m = masques.find(m => m.id === id && m.sens === sens);
+    if (!m) return;
+    if (lignes.length > 0 || parserMontant(montantSimple)) setMasqueAConfirmer(m);
+    else appliquerMasque(m);
+  }
 
-  const numero = ecritureEnEdition ? ecritureEnEdition.numero : numeroSuivant(sens, date);
-
-  // Calcul du montant total
-  const montantTotalLignes = lignes.reduce((total, l) => total + l.montant, 0);
-  const montantTotal = lignes.length > 0 ? montantTotalLignes : (Number(montantSimple) || 0);
-
-  /** Ajoute une ligne dans la grille */
-  const ajouterLigne = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const desc = saisieDescription.trim().toUpperCase();
-    const mnt = Math.max(0, Math.round(Number(saisieMontant) || 0));
-
-    if (!desc) {
-      setErreur('Veuillez saisir une description pour la ligne.');
-      descriptionInputRef.current?.focus();
-      return;
-    }
-    if (mnt <= 0) {
-      setErreur('Veuillez saisir un montant supérieur à 0.');
-      return;
-    }
-
-    setLignes(prev => [
-      ...prev,
-      {
-        id: `lig-${Date.now()}-${prev.length}`,
-        description: desc,
-        montant: mnt,
-      },
-    ]);
-
-    setSaisieDescription('');
-    setSaisieMontant('');
-    setErreur('');
-    descriptionInputRef.current?.focus();
-  };
-
-  /** Supprime une ligne */
-  const supprimerLigne = (id: string) => {
-    setLignes(prev => prev.filter(l => l.id !== id));
-  };
-
-  /** Modifie le montant d'une ligne directement dans la grille */
-  const modifierMontantLigne = (id: string, valeurStr: string) => {
-    const mnt = Math.max(0, Math.round(Number(valeurStr) || 0));
-    setLignes(prev => prev.map(l => (l.id === id ? { ...l, montant: mnt } : l)));
-  };
-
-  /** Applique un masque de saisie choisi par l'utilisateur */
-  const appliquerMasque = (m: MasqueSaisie) => {
-    const nouvelles: LigneGrid[] = m.lignes.map((l, idx) => ({
-      id: `m-${Date.now()}-${idx}`,
-      description: l.description,
-      montant: l.montantDefaut || 0,
-    }));
-    setLignes(nouvelles);
-    setMenuMasquesOuvert(false);
-    setMontantSimple('');
-    setErreur('');
-  };
-
-  const validerEnregistrement = (e: React.FormEvent) => {
+  function enregistrer(e: FormEvent) {
     e.preventDefault();
-
-    if (!libelle.trim()) {
-      setErreur('Veuillez renseigner le libellé de l\'écriture.');
-      return;
+    if (soumission.current) return;
+    setErreur('');
+    try {
+      if (detaille) {
+        if (!lignes.length) throw new Error('Ajoutez au moins un poste ou choisissez « Montant unique ».');
+        if (lignes.some(l => !l.description.trim() || parserMontant(l.montant) === null || parserMontant(l.montant)! <= 0)) {
+          throw new Error('Chaque poste doit avoir un libellé et un montant entier positif. Complétez ou supprimez les postes inutilisés.');
+        }
+      }
+      const montant = detaille ? lignes.reduce((s, l) => s + parserMontant(l.montant)!, 0) : parserMontant(montantSimple);
+      if (montant === null || montant <= 0) throw new Error('Saisissez un montant entier supérieur à zéro. Les décimales et les montants vides ne sont pas acceptés.');
+      const brouillon: Ecriture = {
+        id: edition?.id ?? identifiant(), numero, date, sens,
+        libelle: libelle.trim(), categorie,
+        tiers: tiers.trim() || undefined, mode: mode || undefined,
+        reference: reference.trim() || undefined, observation: observation.trim() || undefined,
+        montant,
+        lignesDetail: detaille ? lignes.map(l => ({ id: l.id, libelle: l.description.trim(), reference: l.reference.trim() || undefined, montant: parserMontant(l.montant)! })) : undefined,
+        createdAt: edition?.createdAt ?? new Date().toISOString(),
+      };
+      const valide = validerEcriture(brouillon);
+      soumission.current = true;
+      if (!onEnregistrer(valide)) {
+        soumission.current = false;
+        setErreur('L’écriture n’a pas été enregistrée. Votre saisie est conservée : corrigez le problème indiqué puis réessayez.');
+      }
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Saisie invalide.');
     }
+  }
 
-    if (montantTotal <= 0) {
-      setErreur('Le montant total doit être supérieur à 0.');
-      return;
-    }
-
-    // Filtrer les sous-lignes valides (> 0) si présentes
-    const sousLignesValides: LigneDetail[] = lignes
-      .filter(l => l.montant > 0)
-      .map(l => ({
-        id: l.id,
-        libelle: l.description,
-        montant: l.montant,
-      }));
-
-    const maintenant = new Date().toISOString();
-    const ecriture: Ecriture = {
-      id: ecritureEnEdition ? ecritureEnEdition.id : `e-${Date.now()}`,
-      numero,
-      date,
-      sens,
-      libelle: libelle.trim(),
-      observation: observation.trim() || undefined,
-      reference: observation.trim() || undefined,
-      categorie,
-      tiers: tiers.trim() || undefined,
-      montant: montantTotal,
-      lignesDetail: sousLignesValides.length > 0 ? sousLignesValides : undefined,
-      createdAt: ecritureEnEdition ? ecritureEnEdition.createdAt : maintenant,
-    };
-
-    onEnregistrer(ecriture);
-    if (onFermer) {
-      onFermer();
-    }
-  };
+  const toucheAjout = (e: React.KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); ajouterPoste(); } };
 
   return (
-    <div className="w-full rounded-2xl bg-white shadow-2xl border border-slate-200/90 ring-1 ring-slate-900/5 overflow-hidden flex flex-col max-h-[90vh]">
-      {/* En-tête modernisé avec accentuation subtile selon le sens */}
-      <div
-        className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${
-          estRecette
-            ? 'bg-gradient-to-r from-emerald-50/90 via-teal-50/30 to-white border-emerald-100'
-            : 'bg-gradient-to-r from-rose-50/90 via-orange-50/30 to-white border-rose-100'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
-              estRecette
-                ? 'bg-emerald-600 text-white'
-                : 'bg-rose-600 text-white'
-            }`}
-          >
-            {estRecette ? (
-              <ArrowDownLeft className="w-5 h-5 stroke-[2.5]" />
-            ) : (
-              <ArrowUpRight className="w-5 h-5 stroke-[2.5]" />
-            )}
+    <>
+      <Modale titre={edition ? `Modifier ${edition.numero}` : estRecette ? 'Nouvelle recette' : 'Nouvelle dépense'}
+        sousTitre={`${numero} · ${estRecette ? 'Encaissement' : 'Décaissement'} en ariary (MGA)`}
+        icone={estRecette ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} className="text-rose-600" />}
+        enteteClass={estRecette ? 'bg-emerald-50/70' : 'bg-rose-50/70'} onFermer={demanderFermeture}
+        pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'}><Check size={16} />Enregistrer</button></div></div>}>
+        <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min="1900-01-01" max="9999-12-31" required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
+            <div><label className="label" htmlFor={`${formId}-mode`}>Mode de paiement</label><select id={`${formId}-mode`} className="field" value={mode} onChange={e => setMode(e.target.value)}><option value="">Non précisé</option>{modes.map(m => <option key={m}>{m}</option>)}</select></div>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold tracking-tight text-slate-900">
-                {ecritureEnEdition
-                  ? `Modifier l'écriture ${numero}`
-                  : estRecette
-                  ? 'Nouvelle Recette de Caisse'
-                  : 'Nouvelle Dépense de Caisse'}
-              </h2>
-              <span
-                className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-md border ${
-                  estRecette
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    : 'bg-rose-50 text-rose-800 border-rose-200'
-                }`}
-              >
-                {numero}
-              </span>
+          <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(e.target.value)} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. Recettes journalières — caisse principale' : 'Ex. Achat de carburant — ambulance'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div><label className="label" htmlFor={`${formId}-reference`}>Référence de la pièce</label><input id={`${formId}-reference`} className="field" maxLength={200} value={reference} onChange={e => setReference(e.target.value)} placeholder="Facture, chèque, bordereau…" /></div>
+            <div><label className="label" htmlFor={`${formId}-observation`}>Observation</label><input id={`${formId}-observation`} className="field" maxLength={2000} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Information complémentaire (facultatif)" /></div>
+          </div>
+          <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4" aria-label="Montants de l’écriture">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold">Montant de l’opération</h3>
+              <div className="segmented" aria-label="Mode de saisie du montant"><button type="button" aria-pressed={!detaille} onClick={() => { setDetaille(false); changer(); }}>Montant unique</button><button type="button" aria-pressed={detaille} onClick={() => { setDetaille(true); changer(); }}>Détail par postes</button></div>
             </div>
-            <p className="text-xs text-slate-500">
-              {estRecette
-                ? 'Encaissement trésorerie · ventilation par départements'
-                : 'Décaissement trésorerie · ventilation par postes de dépense'}
-            </p>
-          </div>
-        </div>
-
-        {onFermer && (
-          <button
-            type="button"
-            onClick={onFermer}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Fermer (Échap)"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Corps du formulaire avec scroll fluide */}
-      <div className="p-6 overflow-y-auto space-y-5 flex-1">
-        {/* Section 1 : Informations principales */}
-        <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/80 space-y-3.5">
-          <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-3">
-            {/* DATE */}
-            <div>
-              <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-600 mb-1">
-                Date de l'opération
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 font-medium shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition"
-                  required
-                />
-                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+            {!detaille ? <div><label className="label" htmlFor={`${formId}-montant`}>Montant total (Ar) *</label><input id={`${formId}-montant`} className="field text-right text-lg font-semibold tabular-nums" inputMode="numeric" value={montantSimple} onChange={e => setMontantSimple(e.target.value)} placeholder="0" required={!detaille} /><p className="mt-1.5 text-[11px] text-slate-500">Montant entier en ariary. Maximum : {formatAr(MONTANT_MAX)}.</p></div> : <>
+              <div className="flex flex-wrap items-end gap-2"><div className="min-w-40 flex-1"><label className="label" htmlFor={`${formId}-modele`}>Modèle de bordereau</label><select id={`${formId}-modele`} className="field" value="" onChange={e => choisirMasque(e.target.value)}><option value="">Choisir un modèle…</option>{masques.filter(m => m.sens === sens).map(m => <option key={m.id} value={m.id}>{m.nom} ({m.lignes.length} postes)</option>)}</select></div><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={15} />Gérer les modèles</button></div>
+              <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_1fr_130px_auto]">
+                <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(e.target.value)} onKeyDown={toucheAjout} placeholder="Consultation…" /></div>
+                <div><label className="label" htmlFor={`${formId}-ref-poste`}>Référence / quittance</label><input id={`${formId}-ref-poste`} className="field" maxLength={200} value={nouvelleReference} onChange={e => setNouvelleReference(e.target.value)} onKeyDown={toucheAjout} placeholder="Facultatif" /></div>
+                <div><label className="label" htmlFor={`${formId}-mnt-poste`}>Montant (Ar)</label><input id={`${formId}-mnt-poste`} className="field text-right tabular-nums" inputMode="numeric" value={nouveauMontant} onChange={e => setNouveauMontant(e.target.value)} onKeyDown={toucheAjout} placeholder="0" /></div>
+                <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
-            </div>
-
-            {/* LIBELLE */}
-            <div>
-              <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-600 mb-1">
-                Libellé principal <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={libelle}
-                onChange={e => setLibelle(e.target.value)}
-                placeholder={
-                  estRecette
-                    ? 'Ex: RECETTE DU JOUR CAISSE PRINCIPALE...'
-                    : 'Ex: ACHAT CARBURANT, REGLEMENT FOURNISSEUR...'
-                }
-                list="suggestions-libelle"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 uppercase shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition"
-                required
-              />
-              <datalist id="suggestions-libelle">
-                {suggestionsLibelle.map(l => (
-                  <option key={l} value={l} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-
-          {/* OBSERVATION */}
-          <div>
-            <label className="block text-[11px] font-semibold tracking-wider uppercase text-slate-600 mb-1">
-              Observation / Référence pièce
-            </label>
-            <textarea
-              value={observation}
-              onChange={e => setObservation(e.target.value)}
-              rows={2}
-              placeholder="Ex: Facture N° 2026/04, chèque ou bordereau de versement, remarques..."
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 resize-none transition"
-            />
-          </div>
-
-          {/* Options secondaires (Catégorie, Tiers / Bénéficiaire) */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => setOptionsAvancees(!optionsAvancees)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer"
-            >
-              {optionsAvancees ? (
-                <ChevronUp className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
-              )}
-              <span>{optionsAvancees ? 'Masquer la catégorie et le tiers' : 'Spécifier la catégorie ou le tiers / bénéficiaire'}</span>
-            </button>
-
-            {optionsAvancees && (
-              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-slate-200">
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-slate-600 mb-1">
-                    Catégorie comptable
-                  </label>
-                  <select
-                    value={categorie}
-                    onChange={e => setCategorie(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-800 bg-white shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800"
-                  >
-                    {categoriesPour(sens).map(c => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold uppercase text-slate-600 mb-1">
-                    {estRecette ? 'Caissier / Déposant' : 'Bénéficiaire / Fournisseur'}
-                  </label>
-                  <input
-                    type="text"
-                    value={tiers}
-                    onChange={e => setTiers(e.target.value)}
-                    placeholder={estRecette ? 'Nom du caissier' : 'Nom du bénéficiaire'}
-                    list="suggestions-tiers"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-800 bg-white shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800"
-                  />
-                  <datalist id="suggestions-tiers">
-                    {suggestionsTiers.map(t => (
-                      <option key={t} value={t} />
-                    ))}
-                  </datalist>
-                </div>
+              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                <table className="w-full min-w-[520px] text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-left">Référence</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
+                  {!lignes.length && <tr><td colSpan={4} className="p-6 text-center text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={24} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
+                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><input className="field min-w-28" aria-label={`Référence du poste ${i + 1}`} maxLength={200} value={l.reference} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, reference: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><input className="field w-32 text-right tabular-nums" aria-label={`Montant du poste ${i + 1}`} inputMode="numeric" value={l.montant} placeholder="0" onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={15} /></button></td></tr>)}
+                </tbody></table>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Section 2 : Décomposition des montants / Grille de caisse */}
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Détail des montants
-              </h3>
-              {lignes.length > 0 && (
-                <span className="text-[11px] font-medium text-slate-500 bg-slate-100 rounded-md px-2 py-0.5">
-                  {lignes.length} ligne{lignes.length > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Menu déroulant Masque de saisie */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setMenuMasquesOuvert(!menuMasquesOuvert)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition cursor-pointer"
-                >
-                  <Layers className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Masque de saisie</span>
-                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                </button>
-
-                {menuMasquesOuvert && (
-                  <div className="absolute right-0 mt-1.5 z-40 w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-100">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 py-1.5 border-b border-slate-100 flex items-center justify-between">
-                      <span>Modèles {estRecette ? 'Recette' : 'Dépense'}</span>
-                      <span className="text-slate-400">{masquesApplicables.length} dispo</span>
-                    </div>
-
-                    <div className="py-1 max-h-52 overflow-y-auto space-y-1">
-                      {masquesApplicables.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic px-2 py-3 text-center">
-                          Aucun masque configuré.
-                        </p>
-                      ) : (
-                        masquesApplicables.map(m => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => appliquerMasque(m)}
-                            className="w-full text-left rounded-lg px-2.5 py-2 hover:bg-slate-50 transition cursor-pointer group"
-                          >
-                            <div className="text-xs font-semibold text-slate-900 group-hover:text-emerald-700">
-                              {m.nom}
-                            </div>
-                            <div className="text-[11px] text-slate-500 truncate">
-                              {m.lignes.length} postes : {m.lignes.map(l => l.description).join(', ')}
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-
-                    {onOuvrirGestionMasques && (
-                      <div className="pt-2 border-t border-slate-100 mt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMenuMasquesOuvert(false);
-                            onOuvrirGestionMasques();
-                          }}
-                          className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 py-1.5 rounded-md transition cursor-pointer"
-                        >
-                          <Settings className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Gérer les masques...</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {lignes.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setLignes([])}
-                  className="text-xs text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                >
-                  Vider la grille
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Barre d'ajout rapide modernisée */}
-          <form
-            onSubmit={ajouterLigne}
-            className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 grid grid-cols-1 sm:grid-cols-[1fr_180px_100px] gap-2 items-center"
-          >
-            <div>
-              <input
-                ref={descriptionInputRef}
-                type="text"
-                value={saisieDescription}
-                onChange={e => setSaisieDescription(e.target.value)}
-                placeholder={
-                  estRecette
-                    ? 'Description (ex: CONSULTATION, PHARMACIE...)'
-                    : 'Description (ex: FRAIS DÉPLACEMENT, FOURNITURES...)'
-                }
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs uppercase font-medium text-slate-900 placeholder:normal-case placeholder:text-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition"
-              />
-            </div>
-
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                step={100}
-                value={saisieMontant}
-                onChange={e => setSaisieMontant(e.target.value)}
-                placeholder="Montant"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-mono font-semibold text-right text-slate-900 placeholder:font-normal placeholder:text-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition pr-10"
-              />
-              <span className="absolute right-2.5 top-1.5 text-[11px] text-slate-400 font-mono pointer-events-none">
-                Ar
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 text-xs font-medium shadow-xs transition cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Ajouter</span>
-            </button>
-          </form>
-
-          {/* Grille modernisée */}
-          <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-2xs">
-            <div className="max-h-56 overflow-y-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
-                    <th className="py-2 px-3 w-12 text-center">#</th>
-                    <th className="py-2 px-3 text-left">Poste / Description</th>
-                    <th className="py-2 px-4 w-44 text-right">Montant (MGA)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {lignes.length === 0 ? (
-                    <tr>
-                      <td colSpan={3} className="py-8 px-4 text-center">
-                        <div className="max-w-xs mx-auto space-y-1.5">
-                          <FileText className="w-6 h-6 text-slate-300 mx-auto" />
-                          <p className="text-xs font-medium text-slate-600">Aucune ligne de détail</p>
-                          <p className="text-[11px] text-slate-400">
-                            Ajoutez des lignes via la barre ci-dessus, chargez un masque ou entrez un montant direct ci-dessous.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    lignes.map((ligne, idx) => (
-                      <tr
-                        key={ligne.id}
-                        className="hover:bg-slate-50/80 transition-colors group"
-                      >
-                        <td className="py-1.5 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => supprimerLigne(ligne.id)}
-                            className="w-6 h-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                            title="Supprimer la ligne"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                        <td className="py-1.5 px-3 font-semibold uppercase text-slate-800">
-                          {idx + 1}. {ligne.description}
-                        </td>
-                        <td className="py-1.5 px-4 text-right">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <input
-                              type="number"
-                              min={0}
-                              step={100}
-                              value={ligne.montant === 0 ? '' : ligne.montant}
-                              onChange={e => modifierMontantLigne(ligne.id, e.target.value)}
-                              placeholder="0"
-                              className="w-28 rounded-md border border-transparent hover:border-slate-300 focus:border-slate-800 focus:bg-white px-2 py-1 text-right font-mono font-semibold text-slate-900 text-xs transition"
-                            />
-                            <span className="text-[11px] text-slate-400 font-mono">Ar</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Saisie montant simple direct si aucune sous-ligne */}
-          {lignes.length === 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs">
-              <span className="font-medium text-slate-700">Montant forfaitaire unique :</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  step={100}
-                  value={montantSimple}
-                  onChange={e => setMontantSimple(e.target.value)}
-                  placeholder="0"
-                  className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-right font-mono font-semibold text-slate-900 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800"
-                />
-                <span className="font-mono text-xs text-slate-500 font-semibold">Ar</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {erreur && (
-          <div className="rounded-xl bg-rose-50 border border-rose-200/80 p-3 flex items-center gap-2.5 text-xs text-rose-800">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{erreur}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Barre inférieure / Total & Actions */}
-      <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Total {estRecette ? 'Recette' : 'Dépense'} :
-          </span>
-          <span
-            className={`text-2xl font-bold font-mono tracking-tight ${
-              estRecette ? 'text-emerald-700' : 'text-rose-700'
-            }`}
-          >
-            {formatAr(montantTotal)}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              onAnnulerEdition();
-              if (onFermer) onFermer();
-            }}
-            className="rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition cursor-pointer"
-          >
-            Annuler
-          </button>
-
-          <button
-            type="button"
-            onClick={validerEnregistrement}
-            className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer active:scale-[0.98] ${
-              estRecette
-                ? 'bg-emerald-600 hover:bg-emerald-700'
-                : 'bg-rose-600 hover:bg-rose-700'
-            }`}
-          >
-            <Check className="w-4 h-4 stroke-[2.5]" />
-            <span>{estRecette ? 'Enregistrer la recette' : 'Enregistrer la dépense'}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+              <p className="text-[11px] text-slate-500">Le total est calculé automatiquement. Chaque poste doit être complété ; les références sont conservées dans le bordereau et l’export.</p>
+            </>}
+          </section>
+          {(erreur || erreurExterne) && <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800"><AlertCircle size={17} className="shrink-0" /><div>{erreur && <p>{erreur}</p>}{erreurExterne && <p className="mt-1">{erreurExterne}</p>}</div></div>}
+          <p className="text-[11px] text-slate-500">* Champs obligatoires. {edition ? 'Le numéro et la date de création d’origine sont conservés.' : 'Le numéro définitif est attribué au moment de l’enregistrement.'}</p>
+        </form>
+      </Modale>
+      {confirmerFermeture && <Confirmation titre="Abandonner la saisie ?" onAnnuler={() => setConfirmerFermeture(false)} onConfirmer={onFermer} libelleConfirmer="Abandonner les modifications"><p>Les modifications de ce formulaire ne sont pas encore enregistrées. Voulez-vous les abandonner ?</p></Confirmation>}
+      {masqueAConfirmer && <Confirmation titre="Remplacer les montants ?" onAnnuler={() => setMasqueAConfirmer(null)} onConfirmer={() => { appliquerMasque(masqueAConfirmer); setMasqueAConfirmer(null); }} libelleConfirmer="Appliquer le modèle"><p>Le modèle « {masqueAConfirmer.nom} » remplacera les postes et le montant unique actuellement saisis. Les autres informations sont conservées.</p></Confirmation>}
+    </>
   );
-};
-
-export default SaisieEcriture;
+}
