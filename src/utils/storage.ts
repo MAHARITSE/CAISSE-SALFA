@@ -1,186 +1,111 @@
-import { CaisseTransaction, DemandeFonds, Beneficiaire, CompteBancaire, OrdreVirement, User, MasqueDepense } from '../types';
-import { 
-  INITIAL_TRANSACTIONS, 
-  INITIAL_DEMANDES, 
-  INITIAL_BENEFICIAIRES, 
-  INITIAL_BANQUES, 
-  INITIAL_VIREMENTS,
-  INITIAL_MASQUES_DEPENSES
-} from './mockData';
-import { loadEnteteMasque, saveEnteteMasque } from './masqueDepenses';
+import { Depense, MasqueDepense, ModePaiement } from '../types';
 
-const STORAGE_KEYS = {
-  TRANSACTIONS: 'salfa_caisse_transactions',
-  DEMANDES: 'salfa_caisse_demandes',
-  BENEFICIAIRES: 'salfa_caisse_beneficiaires',
-  BANQUES: 'salfa_caisse_banques',
-  VIREMENTS: 'salfa_caisse_virements',
-  USER: 'salfa_caisse_current_user',
-  INITIAL_BALANCE: 'salfa_caisse_solde_initial',
-  MASQUES_DEPENSES: 'salfa_caisse_masques_depenses'
-};
+const CLE_DEPENSES = 'salfa_caisse_transactions';
+const CLE_MASQUES = 'salfa_caisse_masques_depenses';
 
-export const DEFAULT_USER: User = {
-  id: 'usr-1',
-  name: 'Andriamanitra Hasina',
-  username: 'caissier.salfa',
-  role: 'caissier'
-};
+export const CATEGORIES = [
+  'Consommables médicaux',
+  'Pharmacie & Médicaments',
+  'Fournitures de bureau',
+  'Carburant & Transport',
+  'Maintenance & Équipements',
+  'Frais de mission',
+  'Eau & Électricité',
+  'Divers',
+];
 
-export function getStoredTransactions(): CaisseTransaction[] {
+export const MODES: ModePaiement[] = ['Espèces', 'Chèque', 'Virement', 'Mobile Money'];
+
+const MODES_CONNUS = new Set<string>(MODES);
+
+const mode = (v: unknown): ModePaiement =>
+  typeof v === 'string' && MODES_CONNUS.has(v) ? (v as ModePaiement) : 'Espèces';
+
+const texte = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+const nombre = (v: unknown): number => (typeof v === 'number' && isFinite(v) ? v : 0);
+
+function lire(cle: string): unknown {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    return data ? JSON.parse(data) : INITIAL_TRANSACTIONS;
+    const brut = localStorage.getItem(cle);
+    return brut ? JSON.parse(brut) : null;
   } catch {
-    return INITIAL_TRANSACTIONS;
+    return null;
   }
 }
 
-export function saveStoredTransactions(items: CaisseTransaction[]) {
-  localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(items));
+/** Lit les dépenses enregistrées (y compris l'ancien format de l'application). */
+export function chargerDepenses(): Depense[] {
+  const brut = lire(CLE_DEPENSES);
+  if (!Array.isArray(brut)) return [];
+  return brut
+    .filter((d): d is Record<string, unknown> => !!d && typeof d === 'object')
+    .filter(d => d.type === undefined || d.type === 'DEPENSE')
+    .map(d => ({
+      id: texte(d.id) || `tx-${Math.random().toString(36).slice(2)}`,
+      numero: texte(d.numero) || texte(d.numeroPiece),
+      date: texte(d.date),
+      libelle: texte(d.libelle),
+      montant: nombre(d.montant),
+      categorie: texte(d.categorie) || 'Divers',
+      beneficiaire: texte(d.beneficiaire),
+      modePaiement: mode(d.modePaiement),
+      notes: texte(d.notes) || undefined,
+      createdAt: texte(d.createdAt) || new Date().toISOString(),
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
-export function getStoredDemandes(): DemandeFonds[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.DEMANDES);
-    return data ? JSON.parse(data) : INITIAL_DEMANDES;
-  } catch {
-    return INITIAL_DEMANDES;
-  }
+export function enregistrerDepenses(depenses: Depense[]): void {
+  localStorage.setItem(CLE_DEPENSES, JSON.stringify(depenses));
 }
 
-export function saveStoredDemandes(items: DemandeFonds[]) {
-  localStorage.setItem(STORAGE_KEYS.DEMANDES, JSON.stringify(items));
+/** Lit le masque ; à défaut, propose quelques dépenses types. */
+export function chargerMasques(): MasqueDepense[] {
+  const brut = lire(CLE_MASQUES);
+  if (!Array.isArray(brut)) return masqueParDefaut();
+  const masques = brut
+    .filter((m): m is Record<string, unknown> => !!m && typeof m === 'object')
+    .map(m => ({
+      id: texte(m.id) || `m-${Math.random().toString(36).slice(2)}`,
+      designation: texte(m.designation) || texte(m.libelle),
+      libelle: texte(m.libelle),
+      montant: nombre(m.montant) || nombre(m.montantDefaut),
+      categorie: texte(m.categorie) || 'Divers',
+      beneficiaire: texte(m.beneficiaire),
+      modePaiement: mode(m.modePaiement),
+    }))
+    .filter(m => m.designation && m.libelle);
+  return masques.length > 0 ? masques : masqueParDefaut();
 }
 
-export function getStoredBeneficiaires(): Beneficiaire[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.BENEFICIAIRES);
-    return data ? JSON.parse(data) : INITIAL_BENEFICIAIRES;
-  } catch {
-    return INITIAL_BENEFICIAIRES;
-  }
+export function enregistrerMasques(masques: MasqueDepense[]): void {
+  localStorage.setItem(CLE_MASQUES, JSON.stringify(masques));
 }
 
-export function saveStoredBeneficiaires(items: Beneficiaire[]) {
-  localStorage.setItem(STORAGE_KEYS.BENEFICIAIRES, JSON.stringify(items));
+function masqueParDefaut(): MasqueDepense[] {
+  const base = [
+    ['Consommables médicaux', 'Consommables médicaux', 820000],
+    ['Carburant ambulance', 'Carburant ambulance et groupe électrogène', 650000],
+    ['Fournitures de bureau', 'Fournitures de bureau', 180000],
+    ['Frais de mission', 'Frais de mission du personnel', 350000],
+  ] as const;
+  return base.map(([designation, libelle, montant], i) => ({
+    id: `m-${i + 1}`,
+    designation,
+    libelle,
+    montant,
+    categorie: 'Divers',
+    beneficiaire: '',
+    modePaiement: 'Espèces',
+  }));
 }
 
-export function getStoredBanques(): CompteBancaire[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.BANQUES);
-    return data ? JSON.parse(data) : INITIAL_BANQUES;
-  } catch {
-    return INITIAL_BANQUES;
-  }
-}
-
-export function saveStoredBanques(items: CompteBancaire[]) {
-  localStorage.setItem(STORAGE_KEYS.BANQUES, JSON.stringify(items));
-}
-
-export function getStoredVirements(): OrdreVirement[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.VIREMENTS);
-    return data ? JSON.parse(data) : INITIAL_VIREMENTS;
-  } catch {
-    return INITIAL_VIREMENTS;
-  }
-}
-
-export function saveStoredVirements(items: OrdreVirement[]) {
-  localStorage.setItem(STORAGE_KEYS.VIREMENTS, JSON.stringify(items));
-}
-
-export function getStoredMasquesDepenses(): MasqueDepense[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.MASQUES_DEPENSES);
-    if (!data) return INITIAL_MASQUES_DEPENSES;
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return INITIAL_MASQUES_DEPENSES;
-    return parsed.filter((m): m is MasqueDepense => !!m && typeof m.id === 'string');
-  } catch {
-    return INITIAL_MASQUES_DEPENSES;
-  }
-}
-
-export function saveStoredMasquesDepenses(items: MasqueDepense[]) {
-  localStorage.setItem(STORAGE_KEYS.MASQUES_DEPENSES, JSON.stringify(items));
-}
-
-export function getCurrentUser(): User {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.USER);
-    return data ? JSON.parse(data) : DEFAULT_USER;
-  } catch {
-    return DEFAULT_USER;
-  }
-}
-
-export function saveCurrentUser(user: User) {
-  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-}
-
-export function getInitialBalance(): number {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.INITIAL_BALANCE);
-    return data ? parseFloat(data) : 3500000; // 3,500,000 MGA
-  } catch {
-    return 3500000;
-  }
-}
-
-export function saveInitialBalance(amount: number) {
-  localStorage.setItem(STORAGE_KEYS.INITIAL_BALANCE, amount.toString());
-}
-
-export function exportFullDatabaseJSON(): string {
-  const exportObject = {
-    appName: 'CAISSE SALFA',
-    version: '25.0-web',
-    exportedAt: new Date().toISOString(),
-    transactions: getStoredTransactions(),
-    demandes: getStoredDemandes(),
-    beneficiaires: getStoredBeneficiaires(),
-    banques: getStoredBanques(),
-    virements: getStoredVirements(),
-    masquesDepenses: getStoredMasquesDepenses(),
-    masqueEntete: loadEnteteMasque(),
-    initialBalance: getInitialBalance()
-  };
-
-  return JSON.stringify(exportObject, null, 2);
-}
-
-export function importFullDatabaseJSON(jsonString: string): boolean {
-  try {
-    const data = JSON.parse(jsonString);
-    if (data.transactions && Array.isArray(data.transactions)) {
-      saveStoredTransactions(data.transactions);
-    }
-    if (data.demandes && Array.isArray(data.demandes)) {
-      saveStoredDemandes(data.demandes);
-    }
-    if (data.beneficiaires && Array.isArray(data.beneficiaires)) {
-      saveStoredBeneficiaires(data.beneficiaires);
-    }
-    if (data.banques && Array.isArray(data.banques)) {
-      saveStoredBanques(data.banques);
-    }
-    if (data.virements && Array.isArray(data.virements)) {
-      saveStoredVirements(data.virements);
-    }
-    if (data.masquesDepenses && Array.isArray(data.masquesDepenses)) {
-      saveStoredMasquesDepenses(data.masquesDepenses);
-    }
-    if (data.masqueEntete && typeof data.masqueEntete === 'object') {
-      saveEnteteMasque(data.masqueEntete);
-    }
-    if (data.initialBalance !== undefined) {
-      saveInitialBalance(data.initialBalance);
-    }
-    return true;
-  } catch {
-    return false;
-  }
+export function prochainNumero(depenses: Depense[]): string {
+  const annee = new Date().getFullYear();
+  const prefixe = `DEP-${annee}-`;
+  const max = depenses
+    .filter(d => d.numero.startsWith(prefixe))
+    .reduce((acc, d) => Math.max(acc, Number.parseInt(d.numero.slice(prefixe.length), 10) || 0), 0);
+  return `${prefixe}${String(max + 1).padStart(4, '0')}`;
 }
