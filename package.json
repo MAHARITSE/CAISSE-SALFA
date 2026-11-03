@@ -10,13 +10,8 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.475.0",
-    "motion": "^12.4.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "recharts": "^2.15.1",
-    "tailwind-merge": "^3.0.1"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.7",
@@ -27,5 +22,6 @@
     "tailwindcss": "^4.0.7",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
-  }
+  },
+  "description": "Caisse SALFA — saisie minimaliste des dépenses"
 }

@@ -1,373 +1,210 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ActiveTab, 
-  User, 
-  CaisseTransaction, 
-  DemandeFonds, 
-  Beneficiaire, 
-  CompteBancaire, 
-  OrdreVirement, 
-  DemandeStatus,
-  ClotureCaisse 
-} from './types';
-import { 
-  getStoredTransactions, 
-  saveStoredTransactions, 
-  getStoredDemandes, 
-  saveStoredDemandes, 
-  getStoredBeneficiaires, 
-  saveStoredBeneficiaires, 
-  getStoredBanques, 
-  saveStoredBanques, 
-  getStoredVirements, 
-  saveStoredVirements, 
-  getCurrentUser, 
-  saveCurrentUser, 
-  getInitialBalance 
+import React, { useEffect, useMemo, useState } from 'react';
+import { Ecriture, LigneJournal, Parametres, Sens } from './types';
+import {
+  chargerEcritures,
+  chargerParametres,
+  enregistrerEcritures,
+  enregistrerParametres,
+  prochainNumero,
 } from './utils/storage';
-import { Header } from './components/Header';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
-import { SaisieCaisse } from './components/SaisieCaisse';
-import { MemoireCaisse } from './components/MemoireCaisse';
-import { DemandesFonds } from './components/DemandesFonds';
-import { Beneficiaires } from './components/Beneficiaires';
-import { GestionBanque } from './components/GestionBanque';
-import { ClotureCaisseView } from './components/ClotureCaisse';
-import { LoginModal } from './components/LoginModal';
-import { PrintReportsModal, ReportType } from './components/PrintReportsModal';
-import { FileText, Printer, ShieldCheck } from 'lucide-react';
+import { libelleMois, moisCourant } from './utils/format';
+import { exporterLivreCsv } from './utils/export';
+import { SaisieEcriture } from './components/SaisieEcriture';
+import { Synthese } from './components/Synthese';
+import { LivreJournal } from './components/LivreJournal';
+
+const parDate = (a: Ecriture, b: Ecriture) =>
+  a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
-  const [currentUser, setCurrentUser] = useState<User>(getCurrentUser());
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
-  // Core collections
-  const [transactions, setTransactions] = useState<CaisseTransaction[]>([]);
-  const [demandes, setDemandes] = useState<DemandeFonds[]>([]);
-  const [beneficiaires, setBeneficiaires] = useState<Beneficiaire[]>([]);
-  const [banques, setBanques] = useState<CompteBancaire[]>([]);
-  const [virements, setVirements] = useState<OrdreVirement[]>([]);
-  const [initialBalance, setInitialBalance] = useState<number>(3500000);
-
-  // Printing & Receipt Modal state
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printReportType, setPrintReportType] = useState<ReportType>('RECEIPT');
-  const [selectedTxForReceipt, setSelectedTxForReceipt] = useState<CaisseTransaction | null>(null);
-  const [selectedVirementForPrint, setSelectedVirementForPrint] = useState<OrdreVirement | null>(null);
-  const [selectedClotureForPrint, setSelectedClotureForPrint] = useState<ClotureCaisse | null>(null);
-
-  // Load initial data
-  const loadAllData = () => {
-    setTransactions(getStoredTransactions());
-    setDemandes(getStoredDemandes());
-    setBeneficiaires(getStoredBeneficiaires());
-    setBanques(getStoredBanques());
-    setVirements(getStoredVirements());
-    setInitialBalance(getInitialBalance());
-  };
+  const [ecritures, setEcritures] = useState<Ecriture[]>([]);
+  const [parametres, setParametres] = useState<Parametres>({ soldeInitial: 0 });
+  const [mois, setMois] = useState(moisCourant());
+  const [toutAfficher, setToutAfficher] = useState(false);
+  const [recherche, setRecherche] = useState('');
+  const [enEdition, setEnEdition] = useState<Ecriture | null>(null);
 
   useEffect(() => {
-    loadAllData();
+    const liste = chargerEcritures();
+    setEcritures(liste);
+    setParametres(chargerParametres());
+    // Au premier affichage, ouvrir le mois de la dernière écriture
+    // plutôt qu'un mois vide.
+    if (liste.length > 0 && !liste.some(e => e.date.startsWith(moisCourant()))) {
+      setMois(liste[liste.length - 1].date.slice(0, 7));
+    }
   }, []);
 
-  // Save changes to storage whenever collections update
-  const handleAddTransaction = (newTx: CaisseTransaction) => {
-    const updated = [newTx, ...transactions];
-    setTransactions(updated);
-    saveStoredTransactions(updated);
-
-    // Also update bank balance if mode is Virement
-    if (newTx.modePaiement === 'Virement' && newTx.compteBanqueId) {
-      const updatedBanques = banques.map(b => {
-        if (b.id === newTx.compteBanqueId) {
-          const delta = newTx.type === 'RECETTE' ? newTx.montant : -newTx.montant;
-          return { ...b, soldeActuel: b.soldeActuel + delta };
-        }
-        return b;
-      });
-      setBanques(updatedBanques);
-      saveStoredBanques(updatedBanques);
-    }
+  const sauvegarder = (liste: Ecriture[]) => {
+    setEcritures(liste);
+    enregistrerEcritures(liste);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    const updated = transactions.filter(t => t.id !== id);
-    setTransactions(updated);
-    saveStoredTransactions(updated);
-  };
-
-  const handleAddDemande = (newDem: DemandeFonds) => {
-    const updated = [newDem, ...demandes];
-    setDemandes(updated);
-    saveStoredDemandes(updated);
-  };
-
-  const handleUpdateDemandeStatus = (id: string, status: DemandeStatus, approvedBy?: string) => {
-    const updated = demandes.map(d => {
-      if (d.id === id) {
-        return {
-          ...d,
-          statut: status,
-          approuvePar: approvedBy || d.approuvePar,
-          dateApprobation: status === 'Approuvé' ? new Date().toISOString() : d.dateApprobation
-        };
-      }
-      return d;
+  /** Livre complet avec solde cumulé, toutes périodes confondues. */
+  const avecSolde = useMemo<LigneJournal[]>(() => {
+    let solde = parametres.soldeInitial;
+    return [...ecritures].sort(parDate).map(e => {
+      solde += e.sens === 'RECETTE' ? e.montant : -e.montant;
+      return { ...e, solde };
     });
-    setDemandes(updated);
-    saveStoredDemandes(updated);
+  }, [ecritures, parametres.soldeInitial]);
+
+  const duMois = useMemo(
+    () => (toutAfficher ? avecSolde : avecSolde.filter(e => e.date.startsWith(mois))),
+    [avecSolde, mois, toutAfficher],
+  );
+
+  const soldeOuverture = useMemo(() => {
+    if (toutAfficher) return parametres.soldeInitial;
+    const precedentes = avecSolde.filter(e => e.date < `${mois}-01`);
+    return precedentes.length ? precedentes[precedentes.length - 1].solde : parametres.soldeInitial;
+  }, [avecSolde, mois, toutAfficher, parametres.soldeInitial]);
+
+  const q = recherche.trim().toLowerCase();
+  const lignes = useMemo(
+    () =>
+      q
+        ? duMois.filter(e =>
+            [e.libelle, e.categorie, e.numero, e.tiers, e.reference, e.mode]
+              .filter(Boolean)
+              .some(v => String(v).toLowerCase().includes(q)),
+          )
+        : duMois,
+    [duMois, q],
+  );
+
+  const recettes = lignes.filter(e => e.sens === 'RECETTE').reduce((s, e) => s + e.montant, 0);
+  const depenses = lignes.filter(e => e.sens === 'DEPENSE').reduce((s, e) => s + e.montant, 0);
+  const soldeFin = lignes.length ? lignes[lignes.length - 1].solde : soldeOuverture;
+  const periode = toutAfficher ? 'Toutes périodes' : libelleMois(mois);
+
+  const suggestionsLibelle = useMemo(
+    () => [...new Set(ecritures.map(e => e.libelle).filter(Boolean))].slice(-60),
+    [ecritures],
+  );
+  const suggestionsTiers = useMemo(
+    () => [...new Set(ecritures.map(e => e.tiers).filter((t): t is string => !!t))].slice(-60),
+    [ecritures],
+  );
+
+  const enregistrer = (ecriture: Ecriture) => {
+    const existe = ecritures.some(e => e.id === ecriture.id);
+    sauvegarder(existe ? ecritures.map(e => (e.id === ecriture.id ? ecriture : e)) : [...ecritures, ecriture]);
+    setEnEdition(null);
   };
 
-  const handleConvertDemandeToTransaction = (dem: DemandeFonds) => {
-    // Generate new cash expense transaction from approved request
-    const year = new Date().getFullYear();
-    const nextSeq = transactions.filter(t => t.type === 'DEPENSE').length + 1;
-    const numeroPiece = `DEP-${year}-${nextSeq.toString().padStart(4, '0')}`;
-
-    const newTx: CaisseTransaction = {
-      id: `tx-${Date.now()}`,
-      numeroPiece,
-      type: 'DEPENSE',
-      date: new Date().toISOString().slice(0, 10),
-      libelle: `[Décaissement Demande ${dem.codeDemande}] ${dem.motif}`,
-      montant: dem.montant,
-      montantEnLettres: '',
-      categorie: 'Frais de mission',
-      beneficiaire: dem.demandeur,
-      modePaiement: 'Espèces',
-      statut: 'Validé',
-      createdAt: new Date().toISOString()
-    };
-
-    handleAddTransaction(newTx);
-    handleUpdateDemandeStatus(dem.id, 'Liquidé');
-    handleShowReceipt(newTx);
+  const supprimer = (id: string) => {
+    const cible = ecritures.find(e => e.id === id);
+    if (!cible) return;
+    if (!window.confirm(`Supprimer l écriture ${cible.numero} — ${cible.libelle} ?`)) return;
+    sauvegarder(ecritures.filter(e => e.id !== id));
+    if (enEdition?.id === id) setEnEdition(null);
   };
 
-  const handleAddBeneficiaire = (newBen: Beneficiaire) => {
-    const updated = [newBen, ...beneficiaires];
-    setBeneficiaires(updated);
-    saveStoredBeneficiaires(updated);
+  const changerSoldeInitial = (montant: number) => {
+    const suivant = { ...parametres, soldeInitial: montant };
+    setParametres(suivant);
+    enregistrerParametres(suivant);
   };
-
-  const handleAddBanque = (newBank: CompteBancaire) => {
-    const updated = [newBank, ...banques];
-    setBanques(updated);
-    saveStoredBanques(updated);
-  };
-
-  const handleAddVirement = (newVir: OrdreVirement) => {
-    const updated = [newVir, ...virements];
-    setVirements(updated);
-    saveStoredVirements(updated);
-
-    // Deduct from bank balance
-    const updatedBanques = banques.map(b => {
-      if (b.id === newVir.compteSourceId) {
-        return { ...b, soldeActuel: b.soldeActuel - newVir.montant };
-      }
-      return b;
-    });
-    setBanques(updatedBanques);
-    saveStoredBanques(updatedBanques);
-
-    handlePrintVirement(newVir);
-  };
-
-  const handleShowReceipt = (tx: CaisseTransaction) => {
-    setSelectedTxForReceipt(tx);
-    setPrintReportType('RECEIPT');
-    setIsPrintModalOpen(true);
-  };
-
-  const handlePrintVirement = (v: OrdreVirement) => {
-    setSelectedVirementForPrint(v);
-    setPrintReportType('VIREMENT');
-    setIsPrintModalOpen(true);
-  };
-
-  const handlePrintClotureReport = (clot: ClotureCaisse) => {
-    setSelectedClotureForPrint(clot);
-    setPrintReportType('CLOTURE');
-    setIsPrintModalOpen(true);
-  };
-
-  // Compute live current balance
-  const totalRecettes = transactions
-    .filter(t => t.type === 'RECETTE' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-
-  const totalDepenses = transactions
-    .filter(t => t.type === 'DEPENSE' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-
-  const currentBalance = initialBalance + totalRecettes - totalDepenses;
-  const pendingDemandesCount = demandes.filter(d => d.statut === 'En attente').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Header */}
-      <Header
-        currentUser={currentUser}
-        onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        onDataRefresh={loadAllData}
-        currentBalance={currentBalance}
-      />
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 bg-white no-print">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div>
+            <h1 className="text-sm font-semibold tracking-tight">CAISSE SALFA — Livre journal</h1>
+            <p className="text-[11px] text-slate-500">Trésorerie de l hôpital : recettes et dépenses</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                exporterLivreCsv(lignes, { periode, soldeOuverture, recettes, depenses, soldeFin })
+              }
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Exporter Excel (CSV)
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              Imprimer
+            </button>
+          </div>
+        </div>
+      </header>
 
-      {/* Main Workspace Layout */}
-      <div className="flex-1 max-w-7xl w-full mx-auto flex flex-col lg:flex-row my-4 px-4 sm:px-6 lg:px-8 gap-6">
-        {/* Sidebar Navigation */}
-        <Sidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          pendingDemandesCount={pendingDemandesCount}
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
+        <Synthese
+          soldeInitial={parametres.soldeInitial}
+          onSoldeInitial={changerSoldeInitial}
+          recettes={recettes}
+          depenses={depenses}
+          soldeFin={soldeFin}
+          periode={periode}
         />
 
-        {/* Dynamic Content View */}
-        <main className="flex-1 min-w-0">
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              transactions={transactions}
-              demandes={demandes}
-              initialBalance={initialBalance}
-              onNavigateTab={setActiveTab}
-              onSelectTransactionReceipt={handleShowReceipt}
+        <div className="grid items-start gap-4 lg:grid-cols-[340px_1fr]">
+          <div className="space-y-3 no-print">
+            <SaisieEcriture
+              ecritureEnEdition={enEdition}
+              numeroSuivant={(sens: Sens, date: string) => prochainNumero(ecritures, sens, date)}
+              suggestionsLibelle={suggestionsLibelle}
+              suggestionsTiers={suggestionsTiers}
+              onEnregistrer={enregistrer}
+              onAnnulerEdition={() => setEnEdition(null)}
             />
-          )}
+          </div>
 
-          {activeTab === 'saisie' && (
-            <SaisieCaisse
-              transactions={transactions}
-              beneficiaires={beneficiaires}
-              banques={banques}
-              onAddTransaction={handleAddTransaction}
-              onShowReceipt={handleShowReceipt}
-            />
-          )}
-
-          {activeTab === 'memoire' && (
-            <MemoireCaisse
-              transactions={transactions}
-              onDeleteTransaction={handleDeleteTransaction}
-              onShowReceipt={handleShowReceipt}
-              onNavigateTab={setActiveTab}
-            />
-          )}
-
-          {activeTab === 'demandes' && (
-            <DemandesFonds
-              demandes={demandes}
-              onAddDemande={handleAddDemande}
-              onUpdateDemandeStatus={handleUpdateDemandeStatus}
-              onConvertToTransaction={handleConvertDemandeToTransaction}
-            />
-          )}
-
-          {activeTab === 'beneficiaires' && (
-            <Beneficiaires
-              beneficiaires={beneficiaires}
-              transactions={transactions}
-              onAddBeneficiaire={handleAddBeneficiaire}
-            />
-          )}
-
-          {activeTab === 'banque' && (
-            <GestionBanque
-              banques={banques}
-              virements={virements}
-              beneficiaires={beneficiaires}
-              onAddBanque={handleAddBanque}
-              onAddVirement={handleAddVirement}
-              onPrintVirement={handlePrintVirement}
-            />
-          )}
-
-          {activeTab === 'cloture' && (
-            <ClotureCaisseView
-              transactions={transactions}
-              initialBalance={initialBalance}
-              currentUser={currentUser}
-              onPrintClotureReport={handlePrintClotureReport}
-            />
-          )}
-
-          {activeTab === 'rapports' && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
-              <div className="border-b pb-4">
-                <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200">
-                  ETAT_*.wde - Générateur de Rapports Officiers
-                </span>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900 mt-1">Génération d États & Impressions</h2>
-                <p className="text-xs text-slate-500">
-                  Sélectionner un rapport financier officiel à générer au format imprimable / PDF.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div 
-                  onClick={() => {
-                    setPrintReportType('GLOBAL_SUMMARY');
-                    setIsPrintModalOpen(true);
-                  }}
-                  className="p-5 border border-slate-200 rounded-2xl hover:border-teal-500 hover:shadow-md transition-all cursor-pointer space-y-2 bg-slate-50/50"
-                >
-                  <div className="flex items-center space-x-2 text-teal-700 font-bold">
-                    <FileText className="w-5 h-5" />
-                    <span>Récapitulatif Général de Caisse</span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    État récapitulatif complet des pièces de recettes et dépenses avec cumulatif.
-                  </p>
-                </div>
-
-                <div 
-                  onClick={() => {
-                    if (transactions.length > 0) {
-                      handleShowReceipt(transactions[0]);
-                    }
-                  }}
-                  className="p-5 border border-slate-200 rounded-2xl hover:border-teal-500 hover:shadow-md transition-all cursor-pointer space-y-2 bg-slate-50/50"
-                >
-                  <div className="flex items-center space-x-2 text-teal-700 font-bold">
-                    <Printer className="w-5 h-5" />
-                    <span>Impression Bon de Caisse / Reçu</span>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Générer et imprimer un reçu d encaissement ou un bon de décaissement avec visa.
-                  </p>
-                </div>
-              </div>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 no-print">
+              <input
+                type="month"
+                value={mois}
+                onChange={e => {
+                  setMois(e.target.value || moisCourant());
+                  setToutAfficher(false);
+                }}
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                aria-label="Mois affiché"
+              />
+              <button
+                type="button"
+                onClick={() => setToutAfficher(v => !v)}
+                className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
+                  toutAfficher
+                    ? 'bg-slate-900 text-white'
+                    : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Tout afficher
+              </button>
+              <input
+                type="search"
+                value={recherche}
+                onChange={e => setRecherche(e.target.value)}
+                placeholder="Rechercher un libellé, un n°…"
+                className="ml-auto w-full sm:w-64 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                aria-label="Recherche"
+              />
             </div>
-          )}
-        </main>
-      </div>
 
-      {/* User Login / Role Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        currentUser={currentUser}
-        onSelectUser={(u) => {
-          setCurrentUser(u);
-          saveCurrentUser(u);
-        }}
-      />
-
-      {/* Printable Reports Modal */}
-      <PrintReportsModal
-        isOpen={isPrintModalOpen}
-        onClose={() => setIsPrintModalOpen(false)}
-        reportType={printReportType}
-        transaction={selectedTxForReceipt}
-        virement={selectedVirementForPrint}
-        cloture={selectedClotureForPrint}
-        banques={banques}
-        beneficiaires={beneficiaires}
-        transactionsList={transactions}
-        currentUser={currentUser}
-      />
+            <LivreJournal
+              lignes={lignes}
+              soldeOuverture={soldeOuverture}
+              periode={periode}
+              recettes={recettes}
+              depenses={depenses}
+              soldeFin={soldeFin}
+              enEditionId={enEdition?.id ?? null}
+              onEditer={setEnEdition}
+              onSupprimer={supprimer}
+            />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

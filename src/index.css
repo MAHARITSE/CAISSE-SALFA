@@ -1,32 +1,67 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 
-  h1, h2, h3, .font-serif {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+  }
+
+  input,
+  select,
+  button,
+  textarea {
+    font: inherit;
   }
 }
 
+.print-only {
+  display: none;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  body {
+    background: #fff;
   }
-  #printable-section, #printable-section * {
-    visibility: visible;
-  }
-  #printable-section {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 20px;
-    background: white;
-  }
+
   .no-print {
     display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  main > div {
+    display: block !important;
+  }
+
+  #journal {
+    border: 0;
+  }
+
+  table {
+    font-size: 10.5px;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
   }
 }
