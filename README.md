@@ -33,42 +33,12 @@ Chaque écriture porte :
 En tête du tableau figure le **report à nouveau** : solde d'ouverture du mois,
 modifiable dans la carte « Solde d'ouverture ».
 
-## Saisie : deux modes, l'interface simple par défaut
-
-L'onglet **Saisie** propose :
-
-- **Saisie simple** (par défaut) : une écriture à la fois, avec la bascule
-  Recette / Dépense. C'est l'interface habituelle, à utiliser pour la majorité
-  des opérations.
-- **Bordereau multi-lignes** : à appeler quand un état de recette comporte
-  plusieurs lignes de vente — la caissière remplit alors le bordereau d'un coup.
-
-## Modèle de saisie des recettes (bordereau papier)
-
-Le mode **Bordereau multi-lignes** reprend le bordereau utilisé sur papier :
-
-| n° | Désignation | Référence | Montant | Observation |
-| --- | --- | --- | --- | --- |
-| 1 | MÉDICAMENT | n° pièce | montant | remarque |
-| 2 | CONSULTATION | … | … | … |
-| … | ÉCHOGRAPHIE, HOSPITALISATION, DENTISTERIE, SOINS, LABORATOIRE, BLOC, DIVERS, VACCIN | | | |
-
-- En-tête : **Date** et **P/c de** (le nom porté sur le bordereau).
-- Le **total des recettes** se calcule à chaque frappe.
-- Le montant est repris en toutes lettres : « Arrêtée la recette à la somme totale de
-  *Un million six cent trente mille quatre cents Ariary* ».
-- À l'enregistrement, **chaque ligne renseignée devient une écriture de recette**
-  du livre journal (numéros `RC-2026-0001`, `RC-2026-0002`…) avec sa référence
-  et son observation ; le total du journal correspond au total du bordereau.
-- Seules les lignes avec un montant > 0 sont enregistrées, les autres restent vierges.
-
 ## Fonctions
 
-- **Saisie** : interface simple (recette / dépense, une ligne) et bordereau
-  multi-lignes à la demande, numéro automatique, suggestions de libellés et de
-  tiers déjà utilisés.
-- **Correction** : `✎` ouvre le panneau de modification de l'écriture (recette
-  comme dépense), `×` la supprime après confirmation.
+- **Saisie** : bascule Recette / Dépense, numéro automatique, suggestions de
+  libellés et de tiers déjà utilisés.
+- **Correction** : `✎` recharge l'écriture dans le formulaire, `×` la supprime
+  (confirmation avant suppression).
 - **Période** : sélecteur de mois, bouton « Tout afficher », recherche plein texte.
 - **Synthèse** : recettes, dépenses et solde de la période affichée.
 - **Export Excel** : CSV `;` + BOM UTF-8 (`livre_journal_novembre_2026.csv`),
@@ -92,13 +62,10 @@ premier lancement, puis converties au nouveau format.
 src/
   App.tsx                    état, filtres, solde cumulé
   types.ts                   Ecriture, LigneJournal, Parametres
-  components/SaisieEcriture.tsx     saisie simple (recette ou dépense)
-  components/RecetteCaisse.tsx      bordereau de recette multi-lignes
-  components/EditionEcriture.tsx    correction d'une écriture
+  components/SaisieEcriture.tsx
   components/LivreJournal.tsx
   components/Synthese.tsx
   utils/storage.ts           lecture/écriture + reprise de l'ancien format
   utils/format.ts            Ariary, dates, libellés de mois
-  utils/numberToWords.ts     montant en toutes lettres (Ariary)
   utils/export.ts            export CSV compatible Excel
 ```

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Ecriture, Mode, Sens } from '../types';
 import { MODES, categoriesPour } from '../utils/storage';
 import { aujourdHui, formatAr } from '../utils/format';
 
 interface SaisieEcritureProps {
+  ecritureEnEdition: Ecriture | null;
   numeroSuivant: (sens: Sens, date: string) => string;
   suggestionsLibelle: string[];
   suggestionsTiers: string[];
   onEnregistrer: (ecriture: Ecriture) => void;
+  onAnnulerEdition: () => void;
 }
 
 const champ =
@@ -26,17 +28,35 @@ const nouveau = (sens: Sens) => ({
 });
 
 export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
+  ecritureEnEdition,
   numeroSuivant,
   suggestionsLibelle,
   suggestionsTiers,
   onEnregistrer,
+  onAnnulerEdition,
 }) => {
   const [form, setForm] = useState(nouveau('RECETTE'));
   const [erreur, setErreur] = useState('');
   const [confirmation, setConfirmation] = useState('');
 
+  useEffect(() => {
+    if (!ecritureEnEdition) return;
+    setForm({
+      sens: ecritureEnEdition.sens,
+      date: ecritureEnEdition.date,
+      libelle: ecritureEnEdition.libelle,
+      categorie: ecritureEnEdition.categorie,
+      tiers: ecritureEnEdition.tiers ?? '',
+      montant: String(ecritureEnEdition.montant),
+      mode: ecritureEnEdition.mode,
+      reference: ecritureEnEdition.reference ?? '',
+    });
+    setErreur('');
+    setConfirmation('');
+  }, [ecritureEnEdition]);
+
   const estRecette = form.sens === 'RECETTE';
-  const numero = numeroSuivant(form.sens, form.date);
+  const numero = ecritureEnEdition ? ecritureEnEdition.numero : numeroSuivant(form.sens, form.date);
   const montantNum = Number(form.montant) || 0;
 
   const changerSens = (sens: Sens) => {
@@ -62,7 +82,7 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
     }
     const maintenant = new Date().toISOString();
     const ecriture: Ecriture = {
-      id: `e-${Date.now()}`,
+      id: ecritureEnEdition ? ecritureEnEdition.id : `e-${Date.now()}`,
       numero,
       date: form.date,
       sens: form.sens,
@@ -72,10 +92,14 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
       montant: montantNum,
       mode: form.mode,
       reference: form.reference.trim() || undefined,
-      createdAt: maintenant,
+      createdAt: ecritureEnEdition ? ecritureEnEdition.createdAt : maintenant,
     };
     onEnregistrer(ecriture);
-    setConfirmation(`${estRecette ? 'Recette' : 'Dépense'} ${numero} enregistrée.`);
+    setConfirmation(
+      ecritureEnEdition
+        ? `Écriture ${numero} modifiée.`
+        : `${estRecette ? 'Recette' : 'Dépense'} ${numero} enregistrée.`,
+    );
     setErreur('');
     setForm(f => ({ ...f, libelle: '', montant: '', reference: '', tiers: '' }));
   };
@@ -83,7 +107,9 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
   return (
     <form onSubmit={enregistrer} className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-800">Nouvelle écriture</h2>
+        <h2 className="text-sm font-semibold text-slate-800">
+          {ecritureEnEdition ? 'Modifier l écriture' : 'Nouvelle écriture'}
+        </h2>
         <span className="text-[11px] font-mono text-slate-400">{numero}</span>
       </div>
 
@@ -208,7 +234,22 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
 
       <div className="space-y-2 pt-1 border-t border-slate-100">
         <div className="flex items-center justify-between gap-3 pt-2">
-          <span className="text-[11px] text-slate-400">N° attribué automatiquement</span>
+          {ecritureEnEdition ? (
+            <button
+              type="button"
+              onClick={() => {
+                onAnnulerEdition();
+                setForm(f => ({ ...f, libelle: '', montant: '', reference: '', tiers: '' }));
+                setErreur('');
+                setConfirmation('');
+              }}
+              className="text-xs text-slate-500 hover:text-slate-900"
+            >
+              Annuler la modification
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-400">N° attribué automatiquement</span>
+          )}
           <span className="text-[11px] text-slate-400">{formatAr(montantNum)}</span>
         </div>
 
@@ -218,7 +259,11 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
             estRecette ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
           }`}
         >
-          {estRecette ? 'Enregistrer la recette' : 'Enregistrer la dépense'}
+          {ecritureEnEdition
+            ? 'Enregistrer les modifications'
+            : estRecette
+              ? 'Enregistrer la recette'
+              : 'Enregistrer la dépense'}
         </button>
       </div>
     </form>

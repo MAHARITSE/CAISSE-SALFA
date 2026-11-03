@@ -6,18 +6,16 @@ const CLE_ANCIENNE_CAISSE = 'salfa_caisse_transactions';
 
 export const MODES: Mode[] = ['Espèces', 'Chèque', 'Virement', 'Mobile Money'];
 
-/** Modèle du bordereau papier « RECETTE CAISSE ». */
 export const CATEGORIES_RECETTE = [
-  'MÉDICAMENT',
-  'CONSULTATION',
-  'ÉCHOGRAPHIE',
-  'HOSPITALISATION',
-  'DENTISTERIE',
-  'SOINS',
-  'LABORATOIRE',
-  'BLOC',
-  'DIVERS',
-  'VACCIN',
+  'Consultations',
+  'Pharmacie',
+  'Laboratoire',
+  'Hospitalisation',
+  'Maternité',
+  'Imagerie',
+  'Subventions & dons',
+  'Remboursements',
+  'Autres recettes',
 ];
 
 export const CATEGORIES_DEPENSE = [
@@ -110,7 +108,6 @@ function normaliser(e: Record<string, unknown>): Ecriture | null {
     montant,
     mode: mode(e.mode ?? e.modePaiement),
     reference: texte(e.reference) || texte(e.notes) || undefined,
-    observation: texte(e.observation) || undefined,
     createdAt: texte(e.createdAt) || new Date().toISOString(),
   };
 }

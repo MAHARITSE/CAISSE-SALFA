@@ -85,15 +85,13 @@ export const LivreJournal: React.FC<LivreJournalProps> = ({
                 <td className="px-3 py-2 whitespace-nowrap font-mono text-[11px] text-slate-500">{ligne.numero}</td>
                 <td className="px-3 py-2 text-slate-900">
                   <span className="block">{ligne.libelle}</span>
-                  {ligne.tiers || ligne.reference || ligne.observation ? (
+                  {ligne.tiers || ligne.reference ? (
                     <span className="block text-[11px] text-slate-500">
-                      {[ligne.tiers, ligne.reference, ligne.observation].filter(Boolean).join(' · ')}
+                      {[ligne.tiers, ligne.reference].filter(Boolean).join(' · ')}
                     </span>
                   ) : null}
                 </td>
-                <td className="px-3 py-2 text-slate-600 whitespace-nowrap">
-                  {ligne.categorie === ligne.libelle ? '' : ligne.categorie}
-                </td>
+                <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{ligne.categorie}</td>
                 <td className="px-3 py-2 text-slate-600 whitespace-nowrap">{ligne.mode}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap text-emerald-700">
                   {ligne.sens === 'RECETTE' ? formatAr(ligne.montant) : ''}

@@ -34,13 +34,11 @@ export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport)
       'Tiers / service',
       'Mode',
       'Référence',
-      'Observation',
       'Recette',
       'Dépense',
       'Solde',
     ]),
     ligne([
-      '',
       '',
       '',
       'Report à nouveau',
@@ -61,13 +59,12 @@ export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport)
         l.tiers ?? '',
         l.mode,
         l.reference ?? '',
-        l.observation ?? '',
         l.sens === 'RECETTE' ? nombre(l.montant) : '',
         l.sens === 'DEPENSE' ? nombre(l.montant) : '',
         nombre(l.solde),
       ]),
     ),
-    ligne(['', '', 'TOTAUX DE LA PÉRIODE', '', '', '', '', '', nombre(options.recettes), nombre(options.depenses), nombre(options.soldeFin)]),
+    ligne(['', '', 'TOTAUX DE LA PÉRIODE', '', '', '', '', nombre(options.recettes), nombre(options.depenses), nombre(options.soldeFin)]),
   ];
 
   const blob = new Blob(['\uFEFF' + contenu.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
