@@ -110,7 +110,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white no-print">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div>
             <h1 className="text-sm font-semibold tracking-tight">CAISSE SALFA — Livre journal</h1>
             <p className="text-[11px] text-slate-500">Trésorerie de l hôpital : recettes et dépenses</p>
@@ -136,7 +136,7 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-4 px-4 py-5">
+      <main className="w-full space-y-4 px-4 py-5 sm:px-6">
         <Synthese
           soldeInitial={parametres.soldeInitial}
           onSoldeInitial={changerSoldeInitial}
