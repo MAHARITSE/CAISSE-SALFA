@@ -10,13 +10,13 @@ import {
 import { libelleMois, moisCourant } from './utils/format';
 import { exporterLivreCsv } from './utils/export';
 import { RecetteCaisse } from './components/RecetteCaisse';
-import { SaisieDepense } from './components/SaisieDepense';
+import { SaisieEcriture } from './components/SaisieEcriture';
 import { EditionEcriture } from './components/EditionEcriture';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
 
 type Vue = 'saisie' | 'journal';
-type TypeSaisie = 'RECETTE' | 'DEPENSE';
+type ModeSaisie = 'simple' | 'bordereau';
 
 const parDate = (a: Ecriture, b: Ecriture) =>
   a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
@@ -25,7 +25,7 @@ export function App() {
   const [ecritures, setEcritures] = useState<Ecriture[]>([]);
   const [parametres, setParametres] = useState<Parametres>({ soldeInitial: 0 });
   const [vue, setVue] = useState<Vue>('saisie');
-  const [typeSaisie, setTypeSaisie] = useState<TypeSaisie>('RECETTE');
+  const [modeSaisie, setModeSaisie] = useState<ModeSaisie>('simple');
   const [mois, setMois] = useState(moisCourant());
   const [toutAfficher, setToutAfficher] = useState(false);
   const [recherche, setRecherche] = useState('');
@@ -207,35 +207,43 @@ export function App() {
 
         {vue === 'saisie' ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-1 rounded-md bg-slate-100 p-1 no-print">
-              {(
-                [
-                  ['RECETTE', 'Recette de caisse'],
-                  ['DEPENSE', 'Dépense'],
-                ] as [TypeSaisie, string][]
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTypeSaisie(id)}
-                  className={`px-3 py-1.5 rounded text-xs font-semibold ${
-                    typeSaisie === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2 no-print">
+              <div className="flex items-center gap-1 rounded-md bg-slate-100 p-1">
+                {(
+                  [
+                    ['simple', 'Saisie simple'],
+                    ['bordereau', 'Bordereau multi-lignes'],
+                  ] as [ModeSaisie, string][]
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setModeSaisie(id)}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold ${
+                      modeSaisie === id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                {modeSaisie === 'simple'
+                  ? 'Une recette ou une dépense à la fois.'
+                  : 'Plusieurs lignes de vente sur un même état de recette.'}
+              </p>
             </div>
 
-            {typeSaisie === 'RECETTE' ? (
-              <RecetteCaisse onEnregistrer={enregistrerBordereau} />
-            ) : (
-              <SaisieDepense
-                numeroSuivant={(date: string) => prochainNumero(ecritures, 'DEPENSE', date)}
+            {modeSaisie === 'simple' ? (
+              <SaisieEcriture
+                numeroSuivant={(sens, date) => prochainNumero(ecritures, sens, date)}
                 suggestionsLibelle={suggestionsLibelle}
                 suggestionsTiers={suggestionsTiers}
                 onEnregistrer={enregistrer}
               />
+            ) : (
+              <RecetteCaisse onEnregistrer={enregistrerBordereau} />
             )}
           </div>
         ) : (

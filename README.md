@@ -33,9 +33,19 @@ Chaque écriture porte :
 En tête du tableau figure le **report à nouveau** : solde d'ouverture du mois,
 modifiable dans la carte « Solde d'ouverture ».
 
+## Saisie : deux modes, l'interface simple par défaut
+
+L'onglet **Saisie** propose :
+
+- **Saisie simple** (par défaut) : une écriture à la fois, avec la bascule
+  Recette / Dépense. C'est l'interface habituelle, à utiliser pour la majorité
+  des opérations.
+- **Bordereau multi-lignes** : à appeler quand un état de recette comporte
+  plusieurs lignes de vente — la caissière remplit alors le bordereau d'un coup.
+
 ## Modèle de saisie des recettes (bordereau papier)
 
-L'onglet **Saisie → Recette de caisse** reprend le bordereau utilisé sur papier :
+Le mode **Bordereau multi-lignes** reprend le bordereau utilisé sur papier :
 
 | n° | Désignation | Référence | Montant | Observation |
 | --- | --- | --- | --- | --- |
@@ -54,8 +64,9 @@ L'onglet **Saisie → Recette de caisse** reprend le bordereau utilisé sur papi
 
 ## Fonctions
 
-- **Saisie** : bordereau de recette multi-lignes ou dépense simple, numéro
-  automatique, suggestions de libellés et de tiers déjà utilisés.
+- **Saisie** : interface simple (recette / dépense, une ligne) et bordereau
+  multi-lignes à la demande, numéro automatique, suggestions de libellés et de
+  tiers déjà utilisés.
 - **Correction** : `✎` ouvre le panneau de modification de l'écriture (recette
   comme dépense), `×` la supprime après confirmation.
 - **Période** : sélecteur de mois, bouton « Tout afficher », recherche plein texte.
@@ -81,8 +92,8 @@ premier lancement, puis converties au nouveau format.
 src/
   App.tsx                    état, filtres, solde cumulé
   types.ts                   Ecriture, LigneJournal, Parametres
-  components/RecetteCaisse.tsx      bordereau de recette (modèle de saisie)
-  components/SaisieDepense.tsx      saisie d'une dépense
+  components/SaisieEcriture.tsx     saisie simple (recette ou dépense)
+  components/RecetteCaisse.tsx      bordereau de recette multi-lignes
   components/EditionEcriture.tsx    correction d'une écriture
   components/LivreJournal.tsx
   components/Synthese.tsx
