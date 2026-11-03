@@ -1,11 +1,13 @@
-import { CaisseTransaction, DemandeFonds, Beneficiaire, CompteBancaire, OrdreVirement, User } from '../types';
+import { CaisseTransaction, DemandeFonds, Beneficiaire, CompteBancaire, OrdreVirement, User, MasqueDepense } from '../types';
 import { 
   INITIAL_TRANSACTIONS, 
   INITIAL_DEMANDES, 
   INITIAL_BENEFICIAIRES, 
   INITIAL_BANQUES, 
-  INITIAL_VIREMENTS 
+  INITIAL_VIREMENTS,
+  INITIAL_MASQUES_DEPENSES
 } from './mockData';
+import { loadEnteteMasque, saveEnteteMasque } from './masqueDepenses';
 
 const STORAGE_KEYS = {
   TRANSACTIONS: 'salfa_caisse_transactions',
@@ -14,7 +16,8 @@ const STORAGE_KEYS = {
   BANQUES: 'salfa_caisse_banques',
   VIREMENTS: 'salfa_caisse_virements',
   USER: 'salfa_caisse_current_user',
-  INITIAL_BALANCE: 'salfa_caisse_solde_initial'
+  INITIAL_BALANCE: 'salfa_caisse_solde_initial',
+  MASQUES_DEPENSES: 'salfa_caisse_masques_depenses'
 };
 
 export const DEFAULT_USER: User = {
@@ -89,6 +92,22 @@ export function saveStoredVirements(items: OrdreVirement[]) {
   localStorage.setItem(STORAGE_KEYS.VIREMENTS, JSON.stringify(items));
 }
 
+export function getStoredMasquesDepenses(): MasqueDepense[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.MASQUES_DEPENSES);
+    if (!data) return INITIAL_MASQUES_DEPENSES;
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return INITIAL_MASQUES_DEPENSES;
+    return parsed.filter((m): m is MasqueDepense => !!m && typeof m.id === 'string');
+  } catch {
+    return INITIAL_MASQUES_DEPENSES;
+  }
+}
+
+export function saveStoredMasquesDepenses(items: MasqueDepense[]) {
+  localStorage.setItem(STORAGE_KEYS.MASQUES_DEPENSES, JSON.stringify(items));
+}
+
 export function getCurrentUser(): User {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.USER);
@@ -125,6 +144,8 @@ export function exportFullDatabaseJSON(): string {
     beneficiaires: getStoredBeneficiaires(),
     banques: getStoredBanques(),
     virements: getStoredVirements(),
+    masquesDepenses: getStoredMasquesDepenses(),
+    masqueEntete: loadEnteteMasque(),
     initialBalance: getInitialBalance()
   };
 
@@ -148,6 +169,12 @@ export function importFullDatabaseJSON(jsonString: string): boolean {
     }
     if (data.virements && Array.isArray(data.virements)) {
       saveStoredVirements(data.virements);
+    }
+    if (data.masquesDepenses && Array.isArray(data.masquesDepenses)) {
+      saveStoredMasquesDepenses(data.masquesDepenses);
+    }
+    if (data.masqueEntete && typeof data.masqueEntete === 'object') {
+      saveEnteteMasque(data.masqueEntete);
     }
     if (data.initialBalance !== undefined) {
       saveInitialBalance(data.initialBalance);

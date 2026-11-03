@@ -1,32 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  CaisseTransaction, 
-  TransactionType, 
-  PaymentMode, 
-  Beneficiaire, 
-  CompteBancaire 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  CaisseTransaction,
+  TransactionType,
+  PaymentMode,
+  Beneficiaire,
+  CompteBancaire,
+  MasqueDepense,
+  MasqueEnteteConfig
 } from '../types';
 import { numberToWordsMGA, formatCurrencyMGA } from '../utils/numberToWords';
-import { 
-  PlusCircle, 
-  MinusCircle, 
-  CheckCircle2, 
-  FileText, 
-  Coins, 
-  Building2, 
-  CreditCard, 
-  Calendar, 
-  User, 
-  Tag, 
-  AlertCircle 
+import {
+  loadEnteteMasque,
+  masqueVide,
+  prochainCodeMasque,
+} from '../utils/masqueDepenses';
+import { MasqueSaisiePanel } from './MasqueSaisiePanel';
+import { MasqueDepensesModal } from './MasqueDepensesModal';
+import { MasqueEnteteModal } from './MasqueEnteteModal';
+import { MasqueDepensePrintModal } from './MasqueDepensePrintModal';
+import {
+  PlusCircle,
+  MinusCircle,
+  CheckCircle2,
+  FileText,
+  Coins,
+  Building2,
+  CreditCard,
+  Calendar,
+  User,
+  Tag,
+  AlertCircle,
+  Layers
 } from 'lucide-react';
 
 interface SaisieCaisseProps {
   transactions: CaisseTransaction[];
   beneficiaires: Beneficiaire[];
   banques: CompteBancaire[];
+  masques: MasqueDepense[];
+  currentUserName: string;
   onAddTransaction: (transaction: CaisseTransaction) => void;
   onShowReceipt: (tx: CaisseTransaction) => void;
+  onSaveMasques: (masques: MasqueDepense[]) => void;
 }
 
 const CATEGORIES_RECETTE = [
@@ -56,8 +71,11 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
   transactions,
   beneficiaires,
   banques,
+  masques,
+  currentUserName,
   onAddTransaction,
-  onShowReceipt
+  onShowReceipt,
+  onSaveMasques
 }) => {
   const [type, setType] = useState<TransactionType>('RECETTE');
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -68,6 +86,22 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
   const [modePaiement, setModePaiement] = useState<PaymentMode>('Espèces');
   const [compteBanqueId, setCompteBanqueId] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  // --- Masque de saisie des dépenses -------------------------------------
+  const [entete, setEntete] = useState<MasqueEnteteConfig>(loadEnteteMasque);
+  const [masqueAppliqueId, setMasqueAppliqueId] = useState<string | null>(null);
+  const [memoriserMasque, setMemoriserMasque] = useState<boolean>(false);
+  const [miseAJourMasque, setMiseAJourMasque] = useState<boolean>(true);
+  const [nomMasque, setNomMasque] = useState<string>('');
+  const [gestionOuverte, setGestionOuverte] = useState<boolean>(false);
+  const [enteteOuvert, setEnteteOuvert] = useState<boolean>(false);
+  const [impressionOuverte, setImpressionOuverte] = useState<boolean>(false);
+  const [confirmationMasque, setConfirmationMasque] = useState<string>('');
+
+  const masqueApplique = useMemo(
+    () => (masqueAppliqueId ? masques.find(m => m.id === masqueAppliqueId) ?? null : null),
+    [masques, masqueAppliqueId]
+  );
 
   // Auto-generate voucher number
   const generateNumeroPiece = (txType: TransactionType): string => {
@@ -86,8 +120,91 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
     setCategorie(type === 'RECETTE' ? CATEGORIES_RECETTE[0] : CATEGORIES_DEPENSE[0]);
   }, [type, transactions]);
 
+  // Rechargement de l'entête après une restauration de la base (import JSON).
+  useEffect(() => {
+    const recharger = () => setEntete(loadEnteteMasque());
+    window.addEventListener('salfa-caisse-data-restored', recharger);
+    return () => window.removeEventListener('salfa-caisse-data-restored', recharger);
+  }, []);
+
   const montantNum = parseFloat(montantStr) || 0;
   const montantEnLettres = numberToWordsMGA(montantNum);
+
+  /** Appel d'une dépense du masque : pré-remplit le formulaire de saisie. */
+  const appliquerMasque = (masque: MasqueDepense) => {
+    setType('DEPENSE');
+    setMasqueAppliqueId(masque.id);
+    setLibelle(masque.libelle);
+    setMontantStr(masque.montantDefaut > 0 ? String(masque.montantDefaut) : '');
+    setCategorie(masque.categorie);
+    setBeneficiaire(masque.beneficiaire);
+    setModePaiement(masque.modePaiement);
+    setCompteBanqueId(masque.compteBanqueId ?? '');
+    setNotes(masque.notes ?? '');
+    setNomMasque(masque.designation);
+    setMiseAJourMasque(true);
+    setMemoriserMasque(false);
+    setConfirmationMasque(`Masque ${masque.code} appliqué : ${masque.designation}.`);
+  };
+
+  /** Verse la dépense en cours dans le masque (création ou mise à jour). */
+  const enregistrerDansMasque = (silencieux = false) => {
+    const now = new Date().toISOString();
+    const designation = nomMasque.trim() || libelle.trim();
+    const cible = masqueApplique && miseAJourMasque ? masqueApplique : null;
+
+    if (!designation || !libelle.trim()) {
+      if (!silencieux) {
+        setConfirmationMasque('');
+        alert('Renseignez le libellé de la dépense et le nom qu elle portera dans le masque.');
+      }
+      return;
+    }
+
+    if (cible) {
+      const updated = masques.map(m =>
+        m.id === cible.id
+          ? {
+              ...m,
+              designation,
+              libelle: libelle.trim() || m.libelle,
+              categorie,
+              beneficiaire: beneficiaire.trim(),
+              modePaiement,
+              montantDefaut: montantNum,
+              compteBanqueId: modePaiement === 'Virement' ? compteBanqueId || undefined : undefined,
+              notes: notes.trim(),
+              updatedAt: now
+            }
+          : m
+      );
+      onSaveMasques(updated);
+      setConfirmationMasque(`Masque ${cible.code} mis à jour avec les valeurs saisies.`);
+    } else {
+      const nouveau: MasqueDepense = {
+        ...masqueVide(masques),
+        code: prochainCodeMasque(masques),
+        designation,
+        libelle: libelle.trim(),
+        categorie,
+        beneficiaire: beneficiaire.trim(),
+        modePaiement,
+        montantDefaut: montantNum,
+        compteBanqueId: modePaiement === 'Virement' ? compteBanqueId || undefined : undefined,
+        notes: notes.trim(),
+        actif: true,
+        ordre: masques.length,
+        createdAt: now,
+        updatedAt: now
+      };
+      onSaveMasques([...masques, nouveau]);
+      setMasqueAppliqueId(nouveau.id);
+      setNomMasque(designation);
+      setMiseAJourMasque(true);
+      setConfirmationMasque(`Dépense versée dans le masque sous le code ${nouveau.code}.`);
+    }
+    setMemoriserMasque(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +232,12 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
     };
 
     onAddTransaction(newTx);
+
+    // Décision : cette dépense entre-t-elle dans le masque de saisie ?
+    if (type === 'DEPENSE' && memoriserMasque) {
+      enregistrerDansMasque(true);
+    }
+
     onShowReceipt(newTx);
 
     // Reset Form
@@ -122,6 +245,9 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
     setMontantStr('');
     setNotes('');
     setNumeroPiece(generateNumeroPiece(type));
+    // Le masque appliqué ne doit pas être écrasé par la dépense suivante.
+    setMasqueAppliqueId(null);
+    setNomMasque('');
   };
 
   return (
@@ -167,8 +293,28 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
         </div>
       </div>
 
+      {/* Masque de saisie des dépenses (uniquement pour les dépenses) */}
+      {type === 'DEPENSE' && (
+        <MasqueSaisiePanel
+          masques={masques}
+          entete={entete}
+          masqueAppliqueId={masqueAppliqueId}
+          onAppliquer={appliquerMasque}
+          onOuvrirGestion={() => setGestionOuverte(true)}
+          onOuvrirEntete={() => setEnteteOuvert(true)}
+          onOuvrirImpression={() => setImpressionOuverte(true)}
+        />
+      )}
+
       {/* Main Form */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+        {confirmationMasque && (
+          <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs font-semibold text-teal-900 flex items-start gap-2">
+            <Layers className="w-4 h-4 mt-0.5 shrink-0 text-teal-600" />
+            <span>{confirmationMasque}</span>
+          </div>
+        )}
+
         {/* Row 1: N° Pièce, Date, Mode Règlement */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -343,8 +489,72 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
           />
         </div>
 
+        {/* Décision : verser la dépense dans le masque de saisie */}
+        {type === 'DEPENSE' && (
+          <div className={`p-4 rounded-2xl border space-y-3 ${memoriserMasque ? 'bg-amber-50 border-amber-300' : 'bg-slate-50 border-slate-200'}`}>
+            <label className="flex items-start gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={memoriserMasque}
+                onChange={(e) => {
+                  setMemoriserMasque(e.target.checked);
+                  if (e.target.checked && !nomMasque.trim()) {
+                    setNomMasque(libelle.trim());
+                  }
+                }}
+                className="mt-0.5 accent-teal-600"
+              />
+              <span>
+                Verser cette dépense dans le masque de saisie
+                <span className="block font-normal text-slate-500">
+                  Elle deviendra une dépense type, appelable en un clic et reportée sur le masque imprimable.
+                </span>
+              </span>
+            </label>
+
+            {memoriserMasque && (
+              <div className="grid sm:grid-cols-2 gap-3 pl-6">
+                <label className="block text-xs">
+                  <span className="font-bold text-slate-700 block mb-1">Nom dans le masque</span>
+                  <input
+                    type="text"
+                    value={nomMasque}
+                    placeholder={libelle || 'Ex: Consommables médicaux'}
+                    onChange={(e) => setNomMasque(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-amber-300 bg-white text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  />
+                </label>
+                {masqueApplique && (
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 self-end pb-2">
+                    <input
+                      type="checkbox"
+                      checked={miseAJourMasque}
+                      onChange={(e) => setMiseAJourMasque(e.target.checked)}
+                      className="accent-teal-600"
+                    />
+                    Mettre à jour le masque {masqueApplique.code}
+                  </label>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2 pl-0 sm:pl-6">
+              <button
+                type="button"
+                onClick={() => enregistrerDansMasque()}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-[11px] font-bold text-slate-700 hover:border-teal-400 hover:text-teal-800"
+              >
+                {masqueApplique && miseAJourMasque ? 'Mettre à jour le masque maintenant' : 'Ajouter au masque maintenant'}
+              </button>
+              <span className="text-[11px] text-slate-500">
+                Sans enregistrer la transaction dans la caisse.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Submit Bar */}
-        <div className="pt-4 border-t border-slate-200/80 flex items-center justify-between">
+        <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-xs text-slate-500 flex items-center gap-1.5">
             <AlertCircle className="w-4 h-4 text-teal-600 shrink-0" />
             <span>Un reçu de caisse imprimable sera automatiquement généré après validation.</span>
@@ -363,6 +573,34 @@ export const SaisieCaisse: React.FC<SaisieCaisseProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Fenêtres du masque de saisie des dépenses */}
+      <MasqueDepensesModal
+        isOpen={gestionOuverte}
+        onClose={() => setGestionOuverte(false)}
+        masques={masques}
+        banques={banques}
+        transactions={transactions}
+        onSaveMasques={onSaveMasques}
+      />
+
+      <MasqueEnteteModal
+        isOpen={enteteOuvert}
+        onClose={() => setEnteteOuvert(false)}
+        onSaved={(cfg) => {
+          setEntete(cfg);
+          setEnteteOuvert(false);
+        }}
+      />
+
+      <MasqueDepensePrintModal
+        isOpen={impressionOuverte}
+        onClose={() => setImpressionOuverte(false)}
+        entete={entete}
+        masques={masques}
+        transactions={transactions}
+        currentUser={{ id: 'saisie', name: currentUserName, username: 'caissier.salfa', role: 'caissier' }}
+      />
     </div>
   );
 };

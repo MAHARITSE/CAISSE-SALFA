@@ -48,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
         const success = importFullDatabaseJSON(content);
         if (success) {
           alert('Base de données CAISSE SALFA restaurée avec succès !');
+          window.dispatchEvent(new CustomEvent('salfa-caisse-data-restored'));
           onDataRefresh();
         } else {
           alert('Erreur lors de l importation du fichier JSON.');

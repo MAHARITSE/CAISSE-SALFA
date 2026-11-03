@@ -8,7 +8,8 @@ import {
   CompteBancaire, 
   OrdreVirement, 
   DemandeStatus,
-  ClotureCaisse 
+  ClotureCaisse,
+  MasqueDepense
 } from './types';
 import { 
   getStoredTransactions, 
@@ -23,7 +24,9 @@ import {
   saveStoredVirements, 
   getCurrentUser, 
   saveCurrentUser, 
-  getInitialBalance 
+  getInitialBalance,
+  getStoredMasquesDepenses,
+  saveStoredMasquesDepenses
 } from './utils/storage';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -49,6 +52,7 @@ export function App() {
   const [beneficiaires, setBeneficiaires] = useState<Beneficiaire[]>([]);
   const [banques, setBanques] = useState<CompteBancaire[]>([]);
   const [virements, setVirements] = useState<OrdreVirement[]>([]);
+  const [masquesDepenses, setMasquesDepenses] = useState<MasqueDepense[]>([]);
   const [initialBalance, setInitialBalance] = useState<number>(3500000);
 
   // Printing & Receipt Modal state
@@ -65,6 +69,7 @@ export function App() {
     setBeneficiaires(getStoredBeneficiaires());
     setBanques(getStoredBanques());
     setVirements(getStoredVirements());
+    setMasquesDepenses(getStoredMasquesDepenses());
     setInitialBalance(getInitialBalance());
   };
 
@@ -90,6 +95,12 @@ export function App() {
       setBanques(updatedBanques);
       saveStoredBanques(updatedBanques);
     }
+  };
+
+  const handleSaveMasques = (items: MasqueDepense[]) => {
+    const ordered = items.map((m, index) => ({ ...m, ordre: index }));
+    setMasquesDepenses(ordered);
+    saveStoredMasquesDepenses(ordered);
   };
 
   const handleDeleteTransaction = (id: string) => {
@@ -242,8 +253,11 @@ export function App() {
               transactions={transactions}
               beneficiaires={beneficiaires}
               banques={banques}
+              masques={masquesDepenses}
+              currentUserName={currentUser.name}
               onAddTransaction={handleAddTransaction}
               onShowReceipt={handleShowReceipt}
+              onSaveMasques={handleSaveMasques}
             />
           )}
 

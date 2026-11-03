@@ -111,6 +111,42 @@ export interface ClotureCaisse {
   statut: 'Conforme' | 'Écart constaté';
 }
 
+/* ------------------------------------------------------------------
+ * MASQUE DE SAISIE DES DÉPENSES
+ * Chaque "masque" est une dépense type que l'on peut appeler dans la
+ * saisie (pré-remplissage) et reporter sur le document imprimable.
+ * ------------------------------------------------------------------ */
+
+export interface MasqueDepense {
+  id: string;
+  code: string; // Ex: MDEP-0001
+  designation: string; // Nom court affiché dans le sélecteur du masque
+  libelle: string;
+  categorie: string;
+  beneficiaire: string;
+  modePaiement: PaymentMode;
+  montantDefaut: number; // MGA
+  compteBanqueId?: string;
+  notes?: string;
+  actif: boolean; // Inclus ou non dans le masque imprimé
+  ordre: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MasqueEnteteMode = 'image' | 'personnalise';
+
+export interface MasqueEnteteConfig {
+  mode: MasqueEnteteMode;
+  image: string; // Entête complet (data URL) utilisé en mode 'image'
+  lignes: string[]; // Lignes de texte utilisées en mode 'personnalise'
+  logoGauche: string;
+  logoDroit: string;
+  titreDocument: string;
+  mentionPied: string;
+  nbLignesVierges: number; // Nombre de lignes de la feuille vierge imprimable
+}
+
 export interface FilterState {
   searchQuery: string;
   type: 'TOUS' | 'RECETTE' | 'DEPENSE';

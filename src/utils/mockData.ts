@@ -1,4 +1,4 @@
-import { CaisseTransaction, DemandeFonds, Beneficiaire, CompteBancaire, OrdreVirement, ClotureCaisse } from '../types';
+import { CaisseTransaction, DemandeFonds, Beneficiaire, CompteBancaire, OrdreVirement, ClotureCaisse, MasqueDepense } from '../types';
 import { numberToWordsMGA } from './numberToWords';
 
 export const INITIAL_TRANSACTIONS: CaisseTransaction[] = [
@@ -278,3 +278,92 @@ export const INITIAL_CLOTURE: ClotureCaisse = {
   observations: 'Caisse fermée et conforme sans écart. Billets vérifiés.',
   statut: 'Conforme'
 };
+
+export const INITIAL_MASQUES_DEPENSES: MasqueDepense[] = [
+  {
+    id: 'mdep-001',
+    code: 'MDEP-0001',
+    designation: 'Consommables médicaux',
+    libelle: 'Achat consommables médicaux et seringues à usage unique',
+    categorie: 'Consommables Médicaux',
+    beneficiaire: 'Pharmacie Centrale Antananarivo',
+    modePaiement: 'Espèces',
+    montantDefaut: 820000,
+    notes: 'Réf. bon de commande pharmacie',
+    actif: true,
+    ordre: 0,
+    createdAt: '2026-08-01T08:00:00Z',
+    updatedAt: '2026-08-01T08:00:00Z'
+  },
+  {
+    id: 'mdep-002',
+    code: 'MDEP-0002',
+    designation: 'Carburant ambulance',
+    libelle: 'Achat carburant pour groupe électrogène et ambulance SALFA',
+    categorie: 'Carburant & Transport',
+    beneficiaire: 'Station TOTALEnergies Ankorondrano',
+    modePaiement: 'Espèces',
+    montantDefaut: 650000,
+    actif: true,
+    ordre: 1,
+    createdAt: '2026-08-01T08:05:00Z',
+    updatedAt: '2026-08-01T08:05:00Z'
+  },
+  {
+    id: 'mdep-003',
+    code: 'MDEP-0003',
+    designation: 'Fournitures de bureau',
+    libelle: 'Achat fournitures de bureau et consommables administratifs',
+    categorie: 'Fournitures de bureau',
+    beneficiaire: 'Papeterie Analakely',
+    modePaiement: 'Espèces',
+    montantDefaut: 180000,
+    actif: true,
+    ordre: 2,
+    createdAt: '2026-08-01T08:10:00Z',
+    updatedAt: '2026-08-01T08:10:00Z'
+  },
+  {
+    id: 'mdep-004',
+    code: 'MDEP-0004',
+    designation: 'Frais de mission',
+    libelle: 'Frais de mission et déplacement du personnel soignant',
+    categorie: 'Frais de mission',
+    beneficiaire: 'Personnel SALFA',
+    modePaiement: 'Espèces',
+    montantDefaut: 350000,
+    actif: true,
+    ordre: 3,
+    createdAt: '2026-08-01T08:15:00Z',
+    updatedAt: '2026-08-01T08:15:00Z'
+  },
+  {
+    id: 'mdep-005',
+    code: 'MDEP-0005',
+    designation: 'Maintenance équipements',
+    libelle: 'Contrat de maintenance des équipements radiologiques',
+    categorie: 'Maintenance & Équipements',
+    beneficiaire: 'MedTech Madagascar SARL',
+    modePaiement: 'Virement',
+    montantDefaut: 3400000,
+    compteBanqueId: 'bank-001',
+    actif: true,
+    ordre: 4,
+    createdAt: '2026-08-01T08:20:00Z',
+    updatedAt: '2026-08-01T08:20:00Z'
+  },
+  {
+    id: 'mdep-006',
+    code: 'MDEP-0006',
+    designation: 'Eau et électricité',
+    libelle: "Règlement facture d'eau et d'électricité JIRAMA",
+    categorie: 'Eau & Électricité',
+    beneficiaire: 'JIRAMA',
+    modePaiement: 'Chèque',
+    montantDefaut: 420000,
+    actif: true,
+    ordre: 5,
+    createdAt: '2026-08-01T08:25:00Z',
+    updatedAt: '2026-08-01T08:25:00Z'
+  }
+];
