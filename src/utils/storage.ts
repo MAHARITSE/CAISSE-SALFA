@@ -1,29 +1,45 @@
-import { Depense, MasqueDepense, ModePaiement } from '../types';
+import { Ecriture, Mode, Parametres, Sens } from '../types';
 
-const CLE_DEPENSES = 'salfa_caisse_transactions';
-const CLE_MASQUES = 'salfa_caisse_masques_depenses';
+const CLE_ECRITURES = 'salfa_tresorerie_ecritures_v1';
+const CLE_PARAMETRES = 'salfa_tresorerie_parametres_v1';
+const CLE_ANCIENNE_CAISSE = 'salfa_caisse_transactions';
 
-export const CATEGORIES = [
+export const MODES: Mode[] = ['Espèces', 'Chèque', 'Virement', 'Mobile Money'];
+
+export const CATEGORIES_RECETTE = [
+  'Consultations',
+  'Pharmacie',
+  'Laboratoire',
+  'Hospitalisation',
+  'Maternité',
+  'Imagerie',
+  'Subventions & dons',
+  'Remboursements',
+  'Autres recettes',
+];
+
+export const CATEGORIES_DEPENSE = [
+  'Achats médicaments',
   'Consommables médicaux',
-  'Pharmacie & Médicaments',
   'Fournitures de bureau',
-  'Carburant & Transport',
-  'Maintenance & Équipements',
+  'Carburant & transport',
+  'Maintenance & équipements',
+  'Salaires & primes',
   'Frais de mission',
-  'Eau & Électricité',
+  'Honoraires',
+  'Eau & électricité',
+  'Téléphone & internet',
   'Divers',
 ];
 
-export const MODES: ModePaiement[] = ['Espèces', 'Chèque', 'Virement', 'Mobile Money'];
+export const categoriesPour = (sens: Sens): string[] =>
+  sens === 'RECETTE' ? CATEGORIES_RECETTE : CATEGORIES_DEPENSE;
 
 const MODES_CONNUS = new Set<string>(MODES);
-
-const mode = (v: unknown): ModePaiement =>
-  typeof v === 'string' && MODES_CONNUS.has(v) ? (v as ModePaiement) : 'Espèces';
-
+const mode = (v: unknown): Mode => (typeof v === 'string' && MODES_CONNUS.has(v) ? (v as Mode) : 'Espèces');
 const texte = (v: unknown): string => (typeof v === 'string' ? v : '');
-
-const nombre = (v: unknown): number => (typeof v === 'number' && isFinite(v) ? v : 0);
+const montantPositif = (v: unknown): number =>
+  typeof v === 'number' && isFinite(v) && v > 0 ? Math.round(v) : 0;
 
 function lire(cle: string): unknown {
   try {
@@ -34,78 +50,87 @@ function lire(cle: string): unknown {
   }
 }
 
-/** Lit les dépenses enregistrées (y compris l'ancien format de l'application). */
-export function chargerDepenses(): Depense[] {
-  const brut = lire(CLE_DEPENSES);
-  if (!Array.isArray(brut)) return [];
-  return brut
-    .filter((d): d is Record<string, unknown> => !!d && typeof d === 'object')
-    .filter(d => d.type === undefined || d.type === 'DEPENSE')
-    .map(d => ({
-      id: texte(d.id) || `tx-${Math.random().toString(36).slice(2)}`,
-      numero: texte(d.numero) || texte(d.numeroPiece),
-      date: texte(d.date),
-      libelle: texte(d.libelle),
-      montant: nombre(d.montant),
-      categorie: texte(d.categorie) || 'Divers',
-      beneficiaire: texte(d.beneficiaire),
-      modePaiement: mode(d.modePaiement),
-      notes: texte(d.notes) || undefined,
-      createdAt: texte(d.createdAt) || new Date().toISOString(),
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+const parId = (a: Ecriture, b: Ecriture) =>
+  a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
+
+/** Lit le livre journal ; importe une fois les données de l'ancienne caisse. */
+export function chargerEcritures(): Ecriture[] {
+  const brut = lire(CLE_ECRITURES);
+  if (Array.isArray(brut)) {
+    return brut
+      .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+      .map(normaliser)
+      .filter((e): e is Ecriture => e !== null)
+      .sort(parId);
+  }
+
+  const anciennes = lire(CLE_ANCIENNE_CAISSE);
+  if (Array.isArray(anciennes)) {
+    const reprises = anciennes
+      .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+      .map(e =>
+        normaliser({
+          ...e,
+          sens: e.sens ?? e.type,
+          tiers: e.tiers ?? e.beneficiaire,
+          mode: e.mode ?? e.modePaiement,
+          numero: e.numero ?? e.numeroPiece,
+        }),
+      )
+      .filter((e): e is Ecriture => e !== null)
+      .sort(parId);
+    if (reprises.length > 0) {
+      enregistrerEcritures(reprises);
+      return reprises;
+    }
+  }
+
+  return [];
 }
 
-export function enregistrerDepenses(depenses: Depense[]): void {
-  localStorage.setItem(CLE_DEPENSES, JSON.stringify(depenses));
+export function enregistrerEcritures(ecritures: Ecriture[]): void {
+  localStorage.setItem(CLE_ECRITURES, JSON.stringify(ecritures));
 }
 
-/** Lit le masque ; à défaut, propose quelques dépenses types. */
-export function chargerMasques(): MasqueDepense[] {
-  const brut = lire(CLE_MASQUES);
-  if (!Array.isArray(brut)) return masqueParDefaut();
-  const masques = brut
-    .filter((m): m is Record<string, unknown> => !!m && typeof m === 'object')
-    .map(m => ({
-      id: texte(m.id) || `m-${Math.random().toString(36).slice(2)}`,
-      designation: texte(m.designation) || texte(m.libelle),
-      libelle: texte(m.libelle),
-      montant: nombre(m.montant) || nombre(m.montantDefaut),
-      categorie: texte(m.categorie) || 'Divers',
-      beneficiaire: texte(m.beneficiaire),
-      modePaiement: mode(m.modePaiement),
-    }))
-    .filter(m => m.designation && m.libelle);
-  return masques.length > 0 ? masques : masqueParDefaut();
-}
-
-export function enregistrerMasques(masques: MasqueDepense[]): void {
-  localStorage.setItem(CLE_MASQUES, JSON.stringify(masques));
-}
-
-function masqueParDefaut(): MasqueDepense[] {
-  const base = [
-    ['Consommables médicaux', 'Consommables médicaux', 820000],
-    ['Carburant ambulance', 'Carburant ambulance et groupe électrogène', 650000],
-    ['Fournitures de bureau', 'Fournitures de bureau', 180000],
-    ['Frais de mission', 'Frais de mission du personnel', 350000],
-  ] as const;
-  return base.map(([designation, libelle, montant], i) => ({
-    id: `m-${i + 1}`,
-    designation,
-    libelle,
+function normaliser(e: Record<string, unknown>): Ecriture | null {
+  const sens: Sens = e.sens === 'RECETTE' || e.type === 'RECETTE' ? 'RECETTE' : 'DEPENSE';
+  const montant = montantPositif(e.montant);
+  const date = texte(e.date);
+  if (!montant || !date) return null;
+  return {
+    id: texte(e.id) || `e-${Math.random().toString(36).slice(2)}`,
+    numero: texte(e.numero) || texte(e.numeroPiece),
+    date,
+    sens,
+    libelle: texte(e.libelle),
+    categorie: texte(e.categorie) || (sens === 'RECETTE' ? 'Autres recettes' : 'Divers'),
+    tiers: texte(e.tiers) || texte(e.beneficiaire) || undefined,
     montant,
-    categorie: 'Divers',
-    beneficiaire: '',
-    modePaiement: 'Espèces',
-  }));
+    mode: mode(e.mode ?? e.modePaiement),
+    reference: texte(e.reference) || texte(e.notes) || undefined,
+    createdAt: texte(e.createdAt) || new Date().toISOString(),
+  };
 }
 
-export function prochainNumero(depenses: Depense[]): string {
-  const annee = new Date().getFullYear();
-  const prefixe = `DEP-${annee}-`;
-  const max = depenses
-    .filter(d => d.numero.startsWith(prefixe))
-    .reduce((acc, d) => Math.max(acc, Number.parseInt(d.numero.slice(prefixe.length), 10) || 0), 0);
+export function chargerParametres(): Parametres {
+  const brut = lire(CLE_PARAMETRES);
+  if (brut && typeof brut === 'object') {
+    const soldeInitial = (brut as Record<string, unknown>).soldeInitial;
+    if (typeof soldeInitial === 'number' && isFinite(soldeInitial)) return { soldeInitial };
+  }
+  return { soldeInitial: 0 };
+}
+
+export function enregistrerParametres(parametres: Parametres): void {
+  localStorage.setItem(CLE_PARAMETRES, JSON.stringify(parametres));
+}
+
+/** Numéro suivant pour un sens et une année donnés (ex. DP-2026-0007). */
+export function prochainNumero(ecritures: Ecriture[], sens: Sens, date: string): string {
+  const annee = (date || '').slice(0, 4) || String(new Date().getFullYear());
+  const prefixe = `${sens === 'RECETTE' ? 'RC' : 'DP'}-${annee}-`;
+  const max = ecritures
+    .filter(e => e.sens === sens && e.numero.startsWith(prefixe))
+    .reduce((acc, e) => Math.max(acc, Number.parseInt(e.numero.slice(prefixe.length), 10) || 0), 0);
   return `${prefixe}${String(max + 1).padStart(4, '0')}`;
 }

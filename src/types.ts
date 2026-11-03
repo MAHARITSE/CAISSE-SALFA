@@ -1,28 +1,27 @@
-export type ModePaiement = 'Espèces' | 'Chèque' | 'Virement' | 'Mobile Money';
+export type Sens = 'RECETTE' | 'DEPENSE';
 
-export type Onglet = 'saisie' | 'journal';
+export type Mode = 'Espèces' | 'Chèque' | 'Virement' | 'Mobile Money';
 
-/** Une dépense enregistrée dans la caisse. */
-export interface Depense {
+/** Une ligne du livre journal de trésorerie. */
+export interface Ecriture {
   id: string;
-  numero: string; // DEP-2026-0001
+  numero: string; // RC-2026-0001 (recette) / DP-2026-0001 (dépense)
   date: string; // AAAA-MM-JJ
+  sens: Sens;
   libelle: string;
-  montant: number; // MGA
   categorie: string;
-  beneficiaire: string;
-  modePaiement: ModePaiement;
-  notes?: string;
+  tiers?: string;
+  montant: number; // MGA, toujours positif
+  mode: Mode;
+  reference?: string;
   createdAt: string;
 }
 
-/** Une dépense type du masque de saisie. */
-export interface MasqueDepense {
-  id: string;
-  designation: string;
-  libelle: string;
-  montant: number;
-  categorie: string;
-  beneficiaire: string;
-  modePaiement: ModePaiement;
+export interface Parametres {
+  soldeInitial: number; // report à nouveau de la trésorerie
+}
+
+/** Ligne calculée pour l'affichage. */
+export interface LigneJournal extends Ecriture {
+  solde: number; // solde cumulé après l'écriture
 }
