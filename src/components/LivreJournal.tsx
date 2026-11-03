@@ -25,10 +25,7 @@ export const LivreJournal: React.FC<LivreJournalProps> = ({
   onEditer,
   onSupprimer,
 }) => (
-  <section
-    id="journal"
-    className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white"
-  >
+  <section id="journal" className="rounded-lg border border-slate-200 bg-white overflow-hidden">
     <div className="print-only px-4 pt-4 pb-2">
       <p className="text-base font-bold">CAISSE SALFA — Livre journal des recettes et dépenses</p>
       <p className="text-xs">Période : {periode}</p>
@@ -41,9 +38,9 @@ export const LivreJournal: React.FC<LivreJournalProps> = ({
       </span>
     </div>
 
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10">
+        <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200 bg-slate-50">
             <th className="px-3 py-2 font-medium">Date</th>
             <th className="px-3 py-2 font-medium">N°</th>
