@@ -1,0 +1,8 @@
+{
+  "name": "Gestion de Caisse SALFA",
+  "description": "Système de gestion de caisse, demandes de fonds, bénéficiaires et ordres de virement pour SALFA",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
