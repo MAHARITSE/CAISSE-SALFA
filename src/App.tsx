@@ -147,7 +147,7 @@ export function App() {
         />
 
         <div className="grid items-start gap-4 lg:grid-cols-[340px_1fr]">
-          <div className="space-y-3 lg:sticky lg:top-4 no-print">
+          <div className="space-y-3 no-print">
             <SaisieEcriture
               ecritureEnEdition={enEdition}
               numeroSuivant={(sens: Sens, date: string) => prochainNumero(ecritures, sens, date)}

@@ -232,30 +232,38 @@ export const SaisieEcriture: React.FC<SaisieEcritureProps> = ({
         <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">{confirmation}</p>
       ) : null}
 
-      <div className="flex items-center justify-between gap-3 pt-1">
-        {ecritureEnEdition ? (
-          <button
-            type="button"
-            onClick={() => {
-              onAnnulerEdition();
-              setForm(f => ({ ...f, libelle: '', montant: '', reference: '', tiers: '' }));
-              setErreur('');
-              setConfirmation('');
-            }}
-            className="text-xs text-slate-500 hover:text-slate-900"
-          >
-            Annuler la modification
-          </button>
-        ) : (
-          <span className="text-[11px] text-slate-400">Numéro attribué automatiquement</span>
-        )}
+      <div className="space-y-2 pt-1 border-t border-slate-100">
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {ecritureEnEdition ? (
+            <button
+              type="button"
+              onClick={() => {
+                onAnnulerEdition();
+                setForm(f => ({ ...f, libelle: '', montant: '', reference: '', tiers: '' }));
+                setErreur('');
+                setConfirmation('');
+              }}
+              className="text-xs text-slate-500 hover:text-slate-900"
+            >
+              Annuler la modification
+            </button>
+          ) : (
+            <span className="text-[11px] text-slate-400">N° attribué automatiquement</span>
+          )}
+          <span className="text-[11px] text-slate-400">{formatAr(montantNum)}</span>
+        </div>
+
         <button
           type="submit"
-          className={`px-4 py-2 rounded-md text-white text-xs font-semibold ${
+          className={`w-full px-4 py-2.5 rounded-md text-white text-sm font-semibold shadow-sm ${
             estRecette ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
           }`}
         >
-          {ecritureEnEdition ? 'Enregistrer les modifications' : 'Enregistrer'}
+          {ecritureEnEdition
+            ? 'Enregistrer les modifications'
+            : estRecette
+              ? 'Enregistrer la recette'
+              : 'Enregistrer la dépense'}
         </button>
       </div>
     </form>
