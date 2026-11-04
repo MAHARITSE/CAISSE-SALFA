@@ -66,11 +66,12 @@
 @keyframes modal-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
 
 /* En-tête du document : un bandeau à hauteur fixe, où textes et images se placent. */
-.bordereau-entete { position: relative; overflow: visible; break-inside: avoid; }
+.bordereau-entete { break-inside: avoid; }
 .bordereau-entete__image { display: block; width: 100%; height: auto; object-fit: contain; }
 /* Les textes restent dans la colonne centrale ; les images flottent par-dessus. */
-.bordereau-entete__textes { position: absolute; left: 30mm; right: 30mm; top: 0; }
+.bordereau-entete__textes { margin: 0 26mm; }
 .bordereau-entete__textes p { margin: 0; color: #000; line-height: 1.3; }
+/* Images posées sur la feuille : position libre en millimètres, depuis le coin. */
 .bordereau-entete__image-libre { position: absolute; height: auto; object-fit: contain; }
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; }
 
@@ -117,9 +118,11 @@
   padding: 4px 0 8px;
 }
 .bordereau-document {
+  position: relative;
   width: 210mm;
   min-height: 297mm;
-  padding: 6mm 7.6mm;
+  /* Cotes du modèle : 4,6 mm en haut, 8,1 mm à gauche, 4,6 mm en bas. */
+  padding: 4.6mm 4.6mm 4.6mm 8.1mm;
   box-sizing: border-box;
   background: #fff;
   color: #000;
@@ -142,9 +145,9 @@
 /* Le modèle écrit l'en-tête en petites capitales, pas en capitales pleines. */
 .bordereau-entete__textes p { text-transform: lowercase; }
 
-/* Titre du document. */
+/* Titre du document : compact, le tableau doit tenir dans la page. */
 .bordereau-titre {
-  margin: 12mm 0 11mm;
+  margin: 6mm 0 1mm;
   text-align: center;
   font-size: 13.5pt;
   font-weight: 700;
@@ -152,20 +155,21 @@
   text-transform: uppercase;
 }
 
-.bordereau-piece { margin: 0 0 4mm; text-align: right; }
+.bordereau-piece { margin: 0 0 1mm; text-align: right; }
 
 /* « DATE : » et « Objet : » soulignés, valeurs dans une colonne alignée. */
 .bordereau-ligne {
   display: grid;
   grid-template-columns: 19mm 1fr;
   align-items: baseline;
-  margin: 0 0 2mm;
+  margin: 0 0 1mm;
 }
 .bordereau-etiquette { text-decoration: underline; font-weight: 700; }
 
-/* Tableau du modèle : filets pleins, en-tête centré, lignes de 11,6 mm. */
+/* Tableau du modèle : filets pleins, en-tête centré, largeur fixe. */
 .bordereau-table {
-  width: 100%;
+  /* 205,4 − 8,1 mm : la largeur du tableau relevée sur le modèle. */
+  width: 197.3mm;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -178,23 +182,27 @@
 .bordereau-table td { border: 1px solid #000; padding: 0 1.5mm; box-sizing: border-box; }
 .bordereau-table th { text-align: center; font-weight: 700; padding: 1.5mm 1mm; white-space: nowrap; font-size: 9pt; }
 .bordereau-table tbody tr { height: 11.6mm; }
-/* Les lignes laissées vides du modèle sont plus hautes que celles remplies. */
-.bordereau-table tbody tr.bordereau-ligne-vide { height: 21mm; }
+/*
+ * Sur le modèle, les lignes laissées vides ne sont pas découpées : elles
+ * forment un seul grand bloc, sans aucun filet horizontal entre elles.
+ * Le bloc se partage la hauteur laissée libre sur la feuille.
+ */
+.bordereau-table tbody tr.bordereau-ligne-vide { height: var(--hauteur-bloc-vide, 26mm); }
+.bordereau-table tbody tr.bordereau-ligne-vide td { border-top: 0; border-bottom: 0; }
 .bordereau-table td { vertical-align: top; }
-.bordereau-cellule-numero { text-align: center; }
+.bordereau-cellule-numero { text-align: center; padding-right: 0; }
 .bordereau-cellule-montant { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 2.5mm; }
 .bordereau-total-libelle { font-weight: 700; }
 .bordereau-total-montant { font-weight: 700; }
 /* Lignes vides : le filet doit rester visible même sans contenu. */
-.bordereau-ligne-vide td { height: 21mm; }
 
 /* Mention en toutes lettres, sans italique, comme sur les modèles. */
-.bordereau-lettres { margin: 5mm 0 4mm; }
+.bordereau-lettres { margin: 4mm 0 3mm; }
 
 /* Cases de signature : pleine largeur, autant de colonnes que de signataires. */
 .bordereau-signatures {
   display: grid;
-  width: 100%;
+  width: 197.3mm;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid #000;
@@ -210,8 +218,6 @@
 .bordereau-signature:first-child { border-left: 0; }
 .bordereau-signature__titre { margin: 0; text-align: center; font-weight: 700; text-decoration: underline; }
 .bordereau-document { max-width: 100%; }
-.bordereau-signatures > div + div { border-left: 1px solid #0f172a; }
-.bordereau-ligne-vide { height: 26px; }
 
 .print-only { display: none; }
 @media screen { .screen-page-hidden { display: none !important; } }

@@ -48,13 +48,18 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(container.querySelectorAll('.bordereau-signatures > div')).toHaveLength(4);
   });
 
-  it('remplit le tableau à huit lignes et récapitule une pièce sans postes', () => {
+  it('récapitule une pièce sans postes et laisse un seul bloc vide', () => {
     const { container } = render(<BordereauDocument ligne={ligne('DEPENSE', { lignesDetail: undefined, montant: 50_000, reference: 'Q-1' })} entete={enteteParDefaut('depense')} />);
     const corps = container.querySelectorAll('tbody tr');
-    expect(corps).toHaveLength(8);
+    // Une ligne remplie, puis le bloc vide du modèle : les lignes laissées
+    // vides ne sont pas découpées, elles forment un seul cadre.
+    expect(corps).toHaveLength(2);
     expect(within(corps[0] as HTMLElement).getByText('VERSEMENT ESPECE BNI C')).toBeInTheDocument();
     expect(within(corps[0] as HTMLElement).getByText('Q-1')).toBeInTheDocument();
-    expect(container.querySelectorAll('.bordereau-ligne-vide')).toHaveLength(7);
+    expect(container.querySelectorAll('.bordereau-ligne-vide')).toHaveLength(1);
+    // Le bloc vide s'ajuste pour que le tableau garde toujours la même hauteur.
+    const bloc = container.querySelector('.bordereau-ligne-vide') as HTMLElement;
+    expect(parseFloat(bloc.style.height)).toBeGreaterThan(12);
   });
 
   it('reprend l’en-tête de l’hôpital et ses deux logos', () => {

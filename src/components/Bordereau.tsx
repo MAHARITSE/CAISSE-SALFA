@@ -12,11 +12,20 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
   DEPENSE: ['Demandeur', 'Caissier(e)', 'Gestionnaire', 'Médecin Chef'],
 };
 
-/** Nombre de lignes du tableau, comme sur les imprimés à remplir à la main. */
-const LIGNES_MINIMUM = 8;
+/**
+ * Le modèle ne découpe pas les lignes laissées vides : elles forment un seul
+ * bloc sous les lignes remplies.
+ *
+ * Le bloc occupe la place restante, de sorte que le tableau garde toujours la
+ * même hauteur (celle du modèle) quelle que soit la taille de la pièce :
+ * 8 lignes de 11,6 mm et un bloc vide de 26 mm, soit 118,8 mm en tout.
+ */
+const TABLEAU = { hauteurLigne: 11.6, hopitalTotal: 118.8, blocVideMinimum: 12 };
 
-/** Zone imprimée au-dessus du titre : les images libres peuvent y déborder. */
-const BANDEAU_ENTETE = { hauteur: 38, marge: 5 };
+/**
+ * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,
+ * se placent librement sur toute la feuille et ne pèsent pas sur la mise en page.
+ */
 
 /** Alignement du modèle → valeur CSS. */
 const ALIGNEMENT_CSS = { gauche: 'left', centre: 'center', droite: 'right' } as const;
@@ -66,14 +75,10 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
     ? ligne.lignesDetail.map(d => ({ id: d.id, libelle: d.libelle, montant: d.montant, observation: d.reference ?? '' }))
     // Une pièce en montant unique occupe une seule ligne récapitulative.
     : [{ id: 'unique', libelle: ligne.libelle, montant: ligne.montant, observation: ligne.reference ?? '' }];
-  const vides = Math.max(0, LIGNES_MINIMUM - details.length);
 
   return <article className="bordereau-document border border-slate-300 bg-white text-black">
-    {/* Bandeau d'en-tête : hauteur réservée, les images s'y placent librement. */}
-    <header
-      className="bordereau-entete"
-      style={{ height: `${BANDEAU_ENTETE.hauteur}mm`, marginBottom: `${BANDEAU_ENTETE.marge}mm` }}
-    >
+    {/* Les images se posent sur la feuille entière, hors du flux du document. */}
+    <header className="bordereau-entete">
       {entete.mode === 'image' && entete.image
         ? <img src={entete.image} alt="En-tête fourni" className="bordereau-entete__image" />
         : <>
@@ -86,7 +91,7 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
             /* Coordonnées converties depuis le haut de la feuille vers le bandeau. */
             style={{
               left: `${image.x}mm`,
-              top: `${image.y - 1.5}mm`,
+              top: `${image.y}mm`,
               width: `${image.largeur}mm`,
             }}
           />)}
@@ -127,13 +132,17 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
           <td className="bordereau-cellule-montant">{montantModele(d.montant)}</td>
           <td className="bordereau-cellule-observation">{d.observation}</td>
         </tr>)}
-        {Array.from({ length: vides }, (_, i) => <tr key={`vide-${i}`} className="bordereau-ligne-vide">
-          <td>&nbsp;</td>
+        <tr
+          className="bordereau-ligne-vide"
+          aria-hidden="true"
+          style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.hopitalTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
+        >
           <td />
           <td />
           <td />
           <td />
-        </tr>)}
+          <td />
+        </tr>
       </tbody>
       <tfoot>
         <tr>

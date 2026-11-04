@@ -1,10 +1,11 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Settings2, Trash2 } from 'lucide-react';
-import type { Ecriture, LigneJournal } from '../types';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Settings2, Tags, Trash2 } from 'lucide-react';
+import type { Categories, Ecriture, LigneJournal, Sens } from '../types';
 import { dateFr, formatAr } from '../utils/format';
 import { entetesParDefaut, type DocumentEntete, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
 import { ModaleBordereau } from './Bordereau';
 import { EnteteBordereauModal } from './EnteteBordereauModal';
+import { GestionCategoriesModal } from './GestionCategoriesModal';
 
 interface LivreJournalProps {
   lignes: LigneJournal[];
@@ -21,6 +22,9 @@ interface LivreJournalProps {
   /** En-têtes personnalisés des deux bordereaux ; vide = en-têtes livrés. */
   entetes?: EntetesDocuments;
   onEnregistrerEntete?: (document: DocumentEntete, entete: EnteteDocument) => void;
+  /** Catégories de saisie, séparées pour les recettes et les dépenses. */
+  categories?: Categories;
+  onEnregistrerCategories?: (sens: Sens, liste: string[]) => Promise<boolean>;
 }
 
 /** Ce que l'application peut demander au journal depuis l'extérieur. */
@@ -35,7 +39,7 @@ const PAR_PAGE = 50;
  * depuis l'extérieur, juste après son enregistrement.
  */
 export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(function LivreJournal(
-  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete },
+  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, categories, onEnregistrerCategories },
   ref,
 ) {
   const [detailsOuverts, setDetailsOuverts] = useState<Record<string, boolean>>({});
@@ -45,6 +49,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     ouvrirBordereau: (ligne: LigneJournal) => { setBordereauApresEnregistrement(true); setBordereau(ligne); },
   }), []);
   const [entetesOuverts, setEntetesOuverts] = useState(false);
+  const [categoriesOuvertes, setCategoriesOuvertes] = useState(false);
   const [documentEntete, setDocumentEntete] = useState<DocumentEntete>('depense');
   const ouvrirEntetes = (document?: DocumentEntete) => {
     if (document) setDocumentEntete(document);
@@ -60,7 +65,8 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
 
   return <>
     <section id="journal" className="card overflow-hidden" aria-label="Livre journal">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><div className="flex items-center gap-2"><span className="badge badge-neutral">MGA · ariary</span>{onEnregistrerEntete && <button className="btn-secondary" onClick={() => ouvrirEntetes()} title="Modifier l’en-tête des bordereaux"><Settings2 size={15} />En-tête</button>}</div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><div className="flex items-center gap-2"><span className="badge badge-neutral">MGA · ariary</span>{onEnregistrerCategories && <button className="btn-secondary" onClick={() => setCategoriesOuvertes(true)} title="Gérer les catégories de recettes et de dépenses"><Tags size={15} />Catégories</button>}
+              {onEnregistrerEntete && <button className="btn-secondary" onClick={() => ouvrirEntetes()} title="Modifier l’en-tête des bordereaux"><Settings2 size={15} />En-tête</button>}</div></div>
       {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-[11px] text-amber-900">Vue filtrée : les totaux portent sur la sélection. Les soldes restent calculés sur le livre complet, dans l’ordre chronologique.</p>}
       <div className="relative overflow-x-auto">
         <table className="journal-table w-full min-w-[960px] text-xs"><thead><tr className="border-b border-slate-200 bg-slate-50/80 text-left text-[10px] uppercase tracking-wider text-slate-500"><th className="px-4 py-3 font-semibold">Date</th><th className="px-3 py-3 font-semibold">N° pièce</th><th className="px-3 py-3 font-semibold">Libellé & postes</th><th className="px-3 py-3 font-semibold">Catégorie</th><th className="px-3 py-3 text-right font-semibold">Recette</th><th className="px-3 py-3 text-right font-semibold">Dépense</th><th className="px-3 py-3 text-right font-semibold">Solde cumulé</th><th className="no-print px-3 py-3 text-center font-semibold">Action</th></tr></thead>
@@ -101,6 +107,11 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
         imprimerDirectement={bordereauApresEnregistrement}
       />
     </>}
+    {categoriesOuvertes && categories && onEnregistrerCategories && <GestionCategoriesModal
+      categories={categories}
+      onEnregistrer={onEnregistrerCategories}
+      onFermer={() => setCategoriesOuvertes(false)}
+    />}
     {entetesOuverts && onEnregistrerEntete && <EnteteBordereauModal
       entetes={entetes}
       onEnregistrer={entete => { onEnregistrerEntete(documentEntete, entete); setEntetesOuverts(false); }}
