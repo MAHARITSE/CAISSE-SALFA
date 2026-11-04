@@ -59,6 +59,9 @@ garder les versions verrouillées par `package-lock.json`.
 - **Robustesse** : sauvegarde atomique, erreurs de stockage visibles, contrôle de
   révision entre onglets, migration des anciennes données, garde-fou en cas de
   stockage corrompu, boîtes de dialogue accessibles et interface responsive.
+- **Navigation** : une seule barre d’en-tête (journal, analyse, données,
+  modèles), sans panneau latéral ; libellés abrégés et entièrement visibles sur
+  téléphone.
 
 ## Règles de gestion
 

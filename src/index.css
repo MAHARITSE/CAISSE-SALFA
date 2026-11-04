@@ -39,9 +39,7 @@
   .badge-green { @apply bg-emerald-50 text-emerald-700; }
   .badge-red { @apply bg-rose-50 text-rose-700; }
   .badge-neutral { @apply border border-slate-200 bg-slate-50 text-slate-500; }
-  .nav-item { @apply flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-xs font-medium text-brand-100/75 transition-colors hover:bg-white/5 hover:text-white; }
-  .nav-item-active { @apply bg-white/10 font-semibold text-white shadow-[inset_3px_0_0_#83c3af]; }
-  .segmented { @apply inline-flex flex-wrap items-center gap-0.5 rounded-lg bg-slate-100 p-1; }
+      .segmented { @apply inline-flex flex-wrap items-center gap-0.5 rounded-lg bg-slate-100 p-1; }
   .segmented button { @apply rounded-md px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:text-slate-900; }
   .segmented button[aria-pressed="true"] { @apply bg-white font-semibold text-brand-800 shadow-xs; }
   .summary-card { @apply rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_0_rgb(15_23_42/0.025)]; }
@@ -78,7 +76,6 @@
   body { background: #fff; font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .no-print, dialog { display: none !important; }
   .print-only { display: block; }
-  .app-shell > div { padding-left: 0 !important; }
   main { max-width: none !important; padding: 0 !important; margin: 0 !important; }
   main > * { margin: 0 !important; }
   #journal { border: 0; border-radius: 0; box-shadow: none; }
