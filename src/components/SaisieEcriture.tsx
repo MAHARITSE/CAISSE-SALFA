@@ -18,7 +18,7 @@ interface SaisieEcritureProps {
   masques: MasqueSaisie[];
   erreurExterne?: string | null;
   onOuvrirGestionMasques: () => void;
-  onEnregistrer: (ecriture: Ecriture) => boolean;
+  onEnregistrer: (ecriture: Ecriture) => boolean | Promise<boolean>;
   onFermer: () => void;
 }
 
@@ -44,6 +44,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [modifie, setModifie] = useState(false);
   const [confirmerFermeture, setConfirmerFermeture] = useState(false);
   const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
+  const [enregistrement, setEnregistrement] = useState(false);
   const soumission = useRef(false);
   const categories = [...new Set([...categoriesPour(sens), ...(edition ? [edition.categorie] : [])])];
   const numero = edition?.numero ?? (
@@ -81,7 +82,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     else appliquerMasque(m);
   }
 
-  function enregistrer(e: FormEvent) {
+  async function enregistrer(e: FormEvent) {
     e.preventDefault();
     if (soumission.current) return;
     setErreur('');
@@ -105,7 +106,11 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
       };
       const valide = validerEcriture(brouillon);
       soumission.current = true;
-      if (!onEnregistrer(valide)) {
+      setEnregistrement(true);
+      let reussi: boolean;
+      try { reussi = await onEnregistrer(valide); }
+      finally { setEnregistrement(false); }
+      if (!reussi) {
         soumission.current = false;
         setErreur('L’écriture n’a pas été enregistrée. Votre saisie est conservée : corrigez le problème indiqué puis réessayez.');
       }
@@ -122,7 +127,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
         sousTitre={`${numero} · ${estRecette ? 'Encaissement' : 'Décaissement'} en ariary (MGA)`}
         icone={estRecette ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} className="text-rose-600" />}
         enteteClass={estRecette ? 'bg-emerald-50/70' : 'bg-rose-50/70'} onFermer={demanderFermeture}
-        pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'}><Check size={16} />Enregistrer</button></div></div>}>
+        pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'} disabled={enregistrement}><Check size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button></div></div>}>
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min={`${exercice}-01-01`} max={`${exercice}-12-31`} required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>

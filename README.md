@@ -1,9 +1,17 @@
 # CAISSE SALFA — Livre journal de trésorerie
 
 Application de **trésorerie hospitalière** : tenue du livre journal de la caisse
-(recettes, dépenses, bordereaux détaillés), analyse par période et sauvegardes
-locales. Les données restent dans le navigateur ; aucun serveur applicatif ni
-service externe n’est nécessaire.
+(recettes, dépenses, bordereaux détaillés), analyse par période et sauvegardes.
+
+Deux modes, un seul code source :
+
+| Mode | Stockage | Usage |
+| --- | --- | --- |
+| **local** (par défaut) | stockage du navigateur | poste isolé, démonstration, tests |
+| **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
+
+Le mode serveur est produit par `npm run build:wamp` : frontend compilé + API
+PHP/MySQL, **sans aucun Node.js sur le serveur**. Voir `deploy/wamp/INSTALLATION.md`.
 
 ## Démarrer
 
@@ -14,6 +22,12 @@ npm run build      # vérification TypeScript + build de production
 npm run lint       # tsc --noEmit
 npm test           # tests unitaires et intégration (Vitest / Testing Library)
 npm run check      # lint + tests + build
+```
+
+Paquet de déploiement Windows/WAMP (frontend compilé + API PHP + scripts `.bat`) :
+
+```bash
+npm run build:wamp     # compile en mode API et remplit deploy/wamp/frontend
 ```
 
 Tests dans un vrai navigateur (Chromium) :
@@ -50,6 +64,10 @@ garder les versions verrouillées par `package-lock.json`.
 - **Clôture annuelle** : le livre ne grossit pas indéfiniment. Chaque année est
   un exercice ; la clôture fige ses écritures dans une archive, reporte le solde
   sur l’année suivante et bloque toute saisie sur l’année close.
+- **Mode serveur WAMP** : API PHP 8.1+ sans Composer, MySQL/MariaDB, comptes et
+  rôles (`lecteur`, `caissier`, `admin`), sessions à expiration, limitation des
+  tentatives, journal d’audit, verrou optimiste par révision (409 explicite) et
+  revalidation intégrale de chaque écriture côté serveur.
 - **Exports** : CSV compatible Excel (UTF-8 BOM, séparateur `;`), protection
   contre l’injection de formules, colonnes mode/référence/observation, montants
   détaillés non comptés deux fois. Les totaux exportés correspondent à la

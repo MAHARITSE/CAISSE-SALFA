@@ -1,0 +1,5 @@
+# Secrets et données d'installation : ne jamais versionner
+api/salfa-config.php
+api/admin-cree.txt
+sauvegardes/
+*.log

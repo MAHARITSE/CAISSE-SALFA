@@ -10,7 +10,7 @@ import { Confirmation } from './Confirmation';
 interface Props {
   masques: MasqueSaisie[];
   erreurExterne?: string | null;
-  onSauvegarderMasques: (masques: MasqueSaisie[]) => boolean;
+  onSauvegarderMasques: (masques: MasqueSaisie[]) => boolean | Promise<boolean>;
   onFermer: () => void;
 }
 interface Poste { id: string; description: string; montant: string }
@@ -29,6 +29,7 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
   const [erreur, setErreur] = useState('');
   const [modifie, setModifie] = useState(false);
   const [aSupprimer, setASupprimer] = useState<MasqueSaisie | null>(null);
+  const [enregistrement, setEnregistrement] = useState(false);
   const [quitter, setQuitter] = useState<'liste' | 'fermer' | null>(null);
 
   function ouvrir(m?: MasqueSaisie) {
@@ -55,7 +56,7 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
     setPostes(p => { const copie = [...p]; [copie[index], copie[index + delta]] = [copie[index + delta], copie[index]]; return copie; });
     setModifie(true);
   }
-  function enregistrer(e: FormEvent) {
+  async function enregistrer(e: FormEvent) {
     e.preventDefault(); setErreur('');
     if (!nom.trim() || !postes.length) { setErreur('Un modèle doit avoir un nom et au moins un poste.'); return; }
     if (postes.some(p => !p.description.trim() || (p.montant.trim() && parserMontant(p.montant) === null))) {
@@ -66,7 +67,11 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
       description: description.trim() || undefined,
       lignes: postes.map(p => ({ description: p.description.trim(), montantDefaut: p.montant.trim() ? parserMontant(p.montant)! : undefined })),
     };
-    if (onSauvegarderMasques(editionId ? masques.map(x => x.id === editionId ? m : x) : [...masques, m])) {
+    setEnregistrement(true);
+    let reussi: boolean;
+    try { reussi = await onSauvegarderMasques(editionId ? masques.map(x => x.id === editionId ? m : x) : [...masques, m]); }
+    finally { setEnregistrement(false); }
+    if (reussi) {
       setFormulaire(false); setModifie(false);
     } else setErreur('Le modèle n’a pas été enregistré. Votre saisie reste disponible.');
   }
@@ -76,7 +81,7 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
     <Modale titre={formulaire ? editionId ? 'Modifier le modèle' : 'Nouveau modèle de saisie' : 'Modèles de saisie'}
       sousTitre="Préparez vos bordereaux récurrents. Les écritures déjà enregistrées ne sont pas modifiées."
       icone={<Layers size={21} />} onFermer={fermer}
-      pied={formulaire ? <div className="flex justify-end gap-2"><button className="btn-secondary" onClick={() => { if (modifie) setQuitter('liste'); else setFormulaire(false); }}>Retour aux modèles</button><button className="btn-primary" type="submit" form={formId}><Save size={16} />Enregistrer le modèle</button></div> : <div className="flex items-center justify-between gap-3"><p className="text-xs text-slate-500">{masques.length} modèle(s) enregistré(s)</p><button className="btn-secondary" onClick={fermer}>Fermer</button></div>}>
+      pied={formulaire ? <div className="flex justify-end gap-2"><button className="btn-secondary" onClick={() => { if (modifie) setQuitter('liste'); else setFormulaire(false); }}>Retour aux modèles</button><button className="btn-primary" type="submit" form={formId} disabled={enregistrement}><Save size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer le modèle'}</button></div> : <div className="flex items-center justify-between gap-3"><p className="text-xs text-slate-500">{masques.length} modèle(s) enregistré(s)</p><button className="btn-secondary" onClick={fermer}>Fermer</button></div>}>
       {!formulaire ? <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><div className="segmented">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(f => <button key={f} aria-pressed={filtre === f} onClick={() => setFiltre(f)}>{f === 'TOUS' ? 'Tous' : f === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><button className="btn-primary" onClick={() => ouvrir()}><Plus size={16} />Nouveau modèle</button></div>
         {!visibles.length && <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center"><Layers className="mx-auto mb-3 text-slate-300" size={30} /><p className="text-sm font-medium">Aucun modèle pour cette vue</p><p className="mt-1 text-xs text-slate-500">Créez un modèle adapté à vos opérations.</p></div>}
@@ -94,7 +99,7 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
       </form>}
       {(erreur || erreurExterne) && <div role="alert" className="mt-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"><AlertCircle size={16} className="shrink-0" /><div>{erreur}{erreurExterne && <p className="mt-1">{erreurExterne}</p>}</div></div>}
     </Modale>
-    {aSupprimer && <Confirmation titre="Supprimer ce modèle ?" danger libelleConfirmer="Supprimer le modèle" onAnnuler={() => setASupprimer(null)} onConfirmer={() => { if (onSauvegarderMasques(masques.filter(m => m.id !== aSupprimer.id))) setASupprimer(null); }}><p>Le modèle « {aSupprimer.nom} » sera supprimé. Les écritures qui l’ont utilisé restent intactes.</p></Confirmation>}
+    {aSupprimer && <Confirmation titre="Supprimer ce modèle ?" danger libelleConfirmer="Supprimer le modèle" onAnnuler={() => setASupprimer(null)} onConfirmer={async () => { if (await onSauvegarderMasques(masques.filter(m => m.id !== aSupprimer.id))) setASupprimer(null); }}><p>Le modèle « {aSupprimer.nom} » sera supprimé. Les écritures qui l’ont utilisé restent intactes.</p></Confirmation>}
     {quitter && <Confirmation titre="Abandonner les modifications ?" libelleConfirmer="Abandonner" onAnnuler={() => setQuitter(null)} onConfirmer={() => { const action = quitter; setQuitter(null); if (action === 'fermer') onFermer(); else { setFormulaire(false); setModifie(false); } }}><p>Les modifications du modèle ne sont pas enregistrées.</p></Confirmation>}
   </>;
 }

@@ -10,7 +10,7 @@ interface SyntheseProps {
   /** La clôture n'est proposée qu'une fois l'année révolue. */
   cloturePossible: boolean;
   onCloturer: () => void;
-  onSoldeInitial: (montant: number) => boolean;
+  onSoldeInitial: (montant: number) => boolean | Promise<boolean>;
   recettes: number;
   depenses: number;
   soldeFin: number;
@@ -23,14 +23,18 @@ export function Synthese({ soldeInitial, exercice, reportPrecedent, cloturePossi
   const [edition, setEdition] = useState(false);
   const [valeur, setValeur] = useState('');
   const [erreur, setErreur] = useState('');
+  const [enCours, setEnCours] = useState(false);
   const id = useId();
   const net = recettes - depenses;
-  function enregistrer(e: FormEvent) {
+  async function enregistrer(e: FormEvent) {
     e.preventDefault();
     const montant = parserMontant(valeur, true);
     if (montant === null) { setErreur('Saisissez un montant entier en ariary ; un solde négatif est autorisé.'); return; }
-    if (onSoldeInitial(montant)) { setEdition(false); setErreur(''); }
-    else setErreur('Le solde n’a pas été enregistré.');
+    setEnCours(true);
+    try {
+      if (await onSoldeInitial(montant)) { setEdition(false); setErreur(''); }
+      else setErreur('Le solde n’a pas été enregistré.');
+    } finally { setEnCours(false); }
   }
   return <>
     <section className="no-print grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label={`Synthèse de ${periode}`}>
@@ -40,6 +44,6 @@ export function Synthese({ soldeInitial, exercice, reportPrecedent, cloturePossi
       <article className="summary-card"><div className="flex items-center justify-between"><span className="summary-label">Solde d’ouverture · exercice {exercice}</span><span className="summary-icon bg-slate-100 text-slate-500"><Landmark size={19} /></span></div><div className="flex items-center justify-between gap-2"><p className="summary-value">{formatAr(soldeInitial)}</p><button className="icon-button" aria-label="Modifier le solde d’ouverture du livre" title="Modifier le solde initial" onClick={() => { setValeur(String(soldeInitial)); setErreur(''); setEdition(true); }}><Pencil size={15} /></button></div><p className="summary-note">{reportPrecedent ? `Report de la clôture ${reportPrecedent.annee} : ${formatAr(reportPrecedent.solde)}` : 'Report antérieur à l’historique conservé'}</p>
         {cloturePossible && <button className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-50 hover:underline" onClick={onCloturer}><CalendarCheck size={13} />Clôturer l’exercice {exercice}</button>}</article>
     </section>
-    {edition && <Modale titre="Solde d’ouverture du livre" sousTitre="Ce montant sert de point de départ à tous les calculs." icone={<Landmark size={21} />} largeur="petite" onFermer={() => setEdition(false)} pied={<div className="flex justify-end gap-2"><button className="btn-secondary" onClick={() => setEdition(false)}>Annuler</button><button className="btn-primary" type="submit" form={id}><Save size={16} />Enregistrer</button></div>}><form id={id} onSubmit={enregistrer} className="space-y-4"><div className="rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">Il s’agit du solde précédant la première écriture du livre, et non du solde d’ouverture du mois affiché. Le modifier recalcule tous les soldes. Les écritures ne changent pas.</div><div><label className="label" htmlFor={id}>Solde initial (Ar)</label><input id={id} className="field text-lg font-semibold tabular-nums" inputMode="numeric" value={valeur} onChange={e => setValeur(e.target.value)} autoFocus required /><p className="mt-1 text-[11px] text-slate-500">Entier uniquement. Vous pouvez saisir un montant négatif, par exemple -50000.</p></div>{(erreur || erreurExterne) && <p role="alert" className="text-xs text-rose-700">{erreur} {erreurExterne}</p>}</form></Modale>}
+    {edition && <Modale titre="Solde d’ouverture du livre" sousTitre="Ce montant sert de point de départ à tous les calculs." icone={<Landmark size={21} />} largeur="petite" onFermer={() => setEdition(false)} pied={<div className="flex justify-end gap-2"><button className="btn-secondary" onClick={() => setEdition(false)}>Annuler</button><button className="btn-primary" type="submit" form={id} disabled={enCours}><Save size={16} />{enCours ? 'Enregistrement…' : 'Enregistrer'}</button></div>}><form id={id} onSubmit={enregistrer} className="space-y-4"><div className="rounded-lg bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">Il s’agit du solde précédant la première écriture du livre, et non du solde d’ouverture du mois affiché. Le modifier recalcule tous les soldes. Les écritures ne changent pas.</div><div><label className="label" htmlFor={id}>Solde initial (Ar)</label><input id={id} className="field text-lg font-semibold tabular-nums" inputMode="numeric" value={valeur} onChange={e => setValeur(e.target.value)} autoFocus required /><p className="mt-1 text-[11px] text-slate-500">Entier uniquement. Vous pouvez saisir un montant négatif, par exemple -50000.</p></div>{(erreur || erreurExterne) && <p role="alert" className="text-xs text-rose-700">{erreur} {erreurExterne}</p>}</form></Modale>}
   </>;
 }

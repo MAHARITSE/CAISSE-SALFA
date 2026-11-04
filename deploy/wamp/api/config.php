@@ -1,0 +1,83 @@
+<?php
+/**
+ * CAISSE SALFA — API REST PHP/MySQL
+ * Configuration lue depuis api/salfa-config.php (créé par outils/installer.bat).
+ * Aucune dépendance externe : PDO + extensions standard de WAMP.
+ */
+
+declare(strict_types=1);
+
+if (!defined('SALFA_API')) {
+    define('SALFA_API', true);
+}
+
+const SALFA_ANNEE_MIN = 1900;
+const SALFA_ANNEE_MAX = 9999;
+const SALFA_MONTANT_MAX = 999999999999;
+const SALFA_MAX_DETAILS = 200;
+const SALFA_MAX_ECRITURES = 10000;
+const SALFA_MAX_CLOTURES = 400;
+const SALFA_DEFAUT_LIMITE = 60;      // tentatives par fenêtre
+const SALFA_DEFAUT_FENETRE = 60;     // secondes
+
+function salfa_config(): array
+{
+    static $config = null;
+    if ($config !== null) {
+        return $config;
+    }
+    $fichier = __DIR__ . '/salfa-config.php';
+    $valeurs = [
+        'hote' => '127.0.0.1',
+        'port' => 3306,
+        'base' => 'caisse_salfa',
+        'utilisateur' => 'root',
+        'mot_de_passe' => '',
+        'prefixe' => 'salfa_',
+        'prefixe_session' => 'salfa_session_',
+        'mode_session' => 'mixte',      // 'mixte' (PHP + MySQL) ou 'mysql' (sessions uniquement en base)
+        'sel_session' => 'changez-ce-sel',
+        'debug' => false,
+        'limite_requetes' => SALFA_DEFAUT_LIMITE,
+        'fenetre_requetes' => SALFA_DEFAUT_FENETRE,
+        'timezone' => 'Indian/Antananarivo',
+    ];
+    if (is_file($fichier)) {
+        /** @var array $importe */
+        $importe = require $fichier;
+        if (is_array($importe)) {
+            $valeurs = array_merge($valeurs, $importe);
+        }
+    }
+    if (getenv('SALFA_DB_HOST') !== false) {
+        $valeurs['hote'] = (string) getenv('SALFA_DB_HOST');
+    }
+    if (getenv('SALFA_DB_NAME') !== false) {
+        $valeurs['base'] = (string) getenv('SALFA_DB_NAME');
+    }
+    if (getenv('SALFA_DB_USER') !== false) {
+        $valeurs['utilisateur'] = (string) getenv('SALFA_DB_USER');
+    }
+    if (getenv('SALFA_DB_PASSWORD') !== false) {
+        $valeurs['mot_de_passe'] = (string) getenv('SALFA_DB_PASSWORD');
+    }
+    date_default_timezone_set((string) $valeurs['timezone']);
+    return $config = $valeurs;
+}
+
+function salfa_est_installe(): bool
+{
+    return is_file(__DIR__ . '/salfa-config.php') || getenv('SALFA_DB_NAME') !== false;
+}
+
+function salfa_prefixe(): string
+{
+    $p = (string) salfa_config()['prefixe'];
+    return preg_match('/^[a-zA-Z0-9_]{1,32}$/', $p) ? $p : 'salfa_';
+}
+
+function salfa_prefixe_session(): string
+{
+    $p = (string) salfa_config()['prefixe_session'];
+    return preg_match('/^[a-zA-Z0-9_]{1,32}$/', $p) ? $p : 'salfa_session_';
+}
