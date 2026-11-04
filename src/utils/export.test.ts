@@ -23,6 +23,7 @@ describe('exports et saisie des montants', () => {
     const recettes = donnees.reduce((s, r) => s + (Number(r[8]) || 0), 0);
     expect(recettes).toBe(10000);
     expect(csv).toContain('F-1;Note;');
+    expect(csv).not.toContain(';Mode;');
     expect(csv).toContain('Q-1');
     expect(csv).toContain('SOLDE DE CLÔTURE');
   });

@@ -28,12 +28,12 @@ export function genererLivreCsv(lignes: LigneJournal[], options: OptionsExport):
     ligne(['Vue', options.selection ? 'Sélection filtrée' : 'Période complète']),
     ligne(['Solde d’ouverture', options.soldeOuverture]),
     '',
-    ligne(['Date', 'N° pièce', 'Libellé', 'Catégorie', 'Tiers / service', 'Mode', 'Référence', 'Observation', 'Recette (MGA)', 'Dépense (MGA)', 'Solde cumulé (MGA)']),
+    ligne(['Date', 'N° pièce', 'Libellé', 'Catégorie', 'Tiers / service', 'Référence', 'Observation', 'Recette (MGA)', 'Dépense (MGA)', 'Solde cumulé (MGA)']),
     ligne(['', '', 'Report à nouveau', '', '', '', '', '', '', '', options.soldeOuverture]),
     ...lignes.flatMap(l => {
       const detail = l.lignesDetail && l.lignesDetail.length > 0;
       const principale = ligne([
-        dateFr(l.date), l.numero, l.libelle, l.categorie, l.tiers ?? '', l.mode ?? 'Non précisé',
+        dateFr(l.date), l.numero, l.libelle, l.categorie, l.tiers ?? '',
         l.reference ?? '', l.observation ?? '',
         !detail && l.sens === 'RECETTE' ? l.montant : '',
         !detail && l.sens === 'DEPENSE' ? l.montant : '',

@@ -3,8 +3,8 @@ import { ecritureTest, livreTest } from '../test/fixtures';
 import { estDateValide, validerEcriture, validerSauvegarde } from './validation';
 
 describe('validation financière et calendaire', () => {
-  it('accepte une écriture valide et conserve mode, références et observation', () => {
-    const e = ecritureTest({ reference: 'F-1', observation: 'Note', mode: 'Virement', lignesDetail: [{ id: 'd1', libelle: 'Consultation', reference: 'Q-1', montant: 10000 }] });
+  it('accepte une écriture valide et conserve références et observation', () => {
+    const e = ecritureTest({ reference: 'F-1', observation: 'Note', lignesDetail: [{ id: 'd1', libelle: 'Consultation', reference: 'Q-1', montant: 10000 }] });
     expect(validerEcriture(e)).toEqual(e);
   });
   it('rejette les dates impossibles et les dates non normalisées', () => {

@@ -4,7 +4,9 @@ export const MONTANT_MAX = 999_999_999_999;
 export const MAX_ECRITURES = 10_000;
 export const MAX_DETAILS = 200;
 export const MAX_IMPORT_OCTETS = 8 * 1024 * 1024;
-export const MODES_PAIEMENT = ['Espèces', 'Chèque', 'Virement', 'Mobile money', 'Autre'];
+/** L'établissement ne gère que la caisse en espèces ; le champ mode est retiré.
+ *  Les éventuelles écritures importées qui portent un autre mode restent lisibles. */
+export const MODE_UNIQUE = 'Espèces';
 
 export const CATEGORIES_RECETTE = [
   'Recettes journalières', 'Consultations', 'Pharmacie', 'Laboratoire',

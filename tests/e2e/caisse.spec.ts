@@ -9,6 +9,8 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   await page.getByRole('button', { name: 'Nouvelle recette', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle recette', exact: true });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Mode de paiement')).toHaveCount(0);
+  await expect(dialog.getByText('Caisse en espèces — aucun autre mode n’est géré')).toBeVisible();
   await dialog.getByLabel(/Libellé de l’écriture/).fill('Recettes journalières');
   await dialog.getByLabel('Référence de la pièce').fill('Bordereau F-1');
   await dialog.getByLabel('Observation', { exact: true }).fill('Contrôle navigateur');
@@ -29,7 +31,7 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   await page.reload();
   await expect(page.locator('#journal').getByText('Recettes journalières', { exact: true }).first()).toBeVisible();
   const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('salfa_tresorerie_livre_v2')!));
-  expect(stocke.ecritures[0]).toMatchObject({ montant: 10000, mode: 'Espèces', reference: 'Bordereau F-1', observation: 'Contrôle navigateur' });
+  expect(stocke.ecritures[0]).toMatchObject({ montant: 10000, reference: 'Bordereau F-1', observation: 'Contrôle navigateur' });
   expect(stocke.ecritures[0].lignesDetail[0].reference).toBe('Q-1');
 
   const telechargement = page.waitForEvent('download');

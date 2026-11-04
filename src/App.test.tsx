@@ -24,19 +24,18 @@ describe('parcours de caisse', () => {
     const user = userEvent.setup();
     render(<App />);
     await ajouterRecette(user);
-    expect(lire().ecritures[0]).toMatchObject({ libelle: 'Recette test', montant: 15000, mode: 'Espèces', numero: `RC-${annee}-0001` });
+    expect(lire().ecritures[0]).toMatchObject({ libelle: 'Recette test', montant: 15000, numero: `RC-${annee}-0001` });
 
     await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
     const depense = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     await user.type(within(depense).getByLabelText(/Libellé de l’écriture/), 'Carburant ambulance');
-    await user.selectOptions(within(depense).getByLabelText('Mode de paiement'), 'Virement');
     await user.click(within(depense).getByRole('button', { name: 'Détail par postes' }));
     await user.type(within(depense).getByLabelText('Poste', { exact: true }), 'Gasoil');
     await user.type(within(depense).getByLabelText('Référence / quittance'), 'Q-1');
     await user.type(within(depense).getByLabelText('Montant (Ar)', { exact: true }), '5000');
     await user.click(within(depense).getByRole('button', { name: 'Ajouter' }));
     await user.click(within(depense).getByRole('button', { name: 'Enregistrer' }));
-    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, mode: 'Virement', lignesDetail: [{ libelle: 'Gasoil', reference: 'Q-1', montant: 5000 }] });
+    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, lignesDetail: [{ libelle: 'Gasoil', reference: 'Q-1', montant: 5000 }] });
 
     await user.click(screen.getByRole('button', { name: /1 postes/ }));
     expect(screen.getByText('Q-1')).toBeInTheDocument();

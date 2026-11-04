@@ -18,6 +18,7 @@ export interface Ecriture {
   tiers?: string;
   montant: number;
   lignesDetail?: LigneDetail[];
+  /** Ancien champ conservé pour relire les sauvegardes : l'application ne gère que les espèces. */
   mode?: string;
   reference?: string;
   observation?: string;
@@ -71,6 +72,5 @@ export interface FiltresJournal {
   toutAfficher: boolean;
   sens: 'TOUS' | Sens;
   categorie: string;
-  mode: string;
   recherche: string;
 }

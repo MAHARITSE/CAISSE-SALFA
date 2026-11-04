@@ -52,9 +52,8 @@ export function filtrerJournal(journal: LigneJournal[], f: FiltresJournal): Lign
     if (!f.toutAfficher && e.date.slice(0, 7) !== f.mois) return false;
     if (f.sens !== 'TOUS' && e.sens !== f.sens) return false;
     if (f.categorie && e.categorie !== f.categorie) return false;
-    if (f.mode && (e.mode || 'Non précisé') !== f.mode) return false;
     if (!q) return true;
-    const champs = [e.libelle, e.categorie, e.numero, e.tiers, e.reference, e.observation, e.mode,
+    const champs = [e.libelle, e.categorie, e.numero, e.tiers, e.reference, e.observation,
       ...(e.lignesDetail?.flatMap(l => [l.libelle, l.reference]) ?? [])];
     return champs.some(c => c && normaliserRecherche(c).includes(q));
   });

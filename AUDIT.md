@@ -10,7 +10,7 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
 
 | Constat | Risque | Correction |
 | --- | --- | --- |
-| Mode de paiement absent du formulaire et perdu au rechargement | Donnée métier perdue | Champ mode, persistance, filtre, analyse et colonne CSV |
+| Mode de paiement perdu au rechargement | Donnée métier perdue | Persistance du mode historique, puis suppression du champ : la caisse ne gère que les espèces |
 | Références des sous-postes perdues à l’édition/enregistrement | Bordereau incomplet | Référence conservée par poste, éditable et exportée |
 | Référence et observation fusionnées | Information ambiguë | Champs distincts, stockage et export séparés |
 | Total détaillé pouvant diverger de la somme des postes ; postes à zéro écartés en silence | Totaux faux | Validation stricte du total et de chaque poste ; recalcul explicite seulement à la migration avec avertissement |
@@ -33,8 +33,10 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
   automatique du livre remplacé.
 - Export brut de secours pour les anciennes clés et les données corrompues.
 - Annulation de la dernière suppression.
-- Analyse par catégorie et par mode de paiement, ratio dépenses/recettes.
-- Filtres par catégorie et mode, recherche insensible aux accents.
+- Analyse par catégorie et ratio dépenses/recettes.
+- Filtres par catégorie, recherche insensible aux accents.
+- Mode de paiement retiré de l’interface et des exports : la caisse ne traite que
+  les espèces. Les anciennes écritures portant un autre mode restent lisibles.
 - Modèles avec montants par défaut, réordonnancement des postes et confirmation
   avant remplacement d’une saisie.
 - Pagination à l’écran ; impression de toute la sélection.

@@ -31,12 +31,12 @@ garder les versions verrouillées par `package-lock.json`.
 ## Fonctionnalités
 
 - **Livre journal** : recettes et dépenses, solde cumulé chronologique, report à
-  nouveau du mois, recherche insensible aux accents, filtres par type, catégorie
-  et mode de paiement, pagination à l’écran.
+  nouveau du mois, recherche insensible aux accents, filtres par type et
+  catégorie, pagination à l’écran.
 - **Saisie contrôlée** : date calendaire valide, montants entiers en ariary,
-  mode de paiement, référence de pièce et observation distinctes, catégorie,
-  tiers/service. Le total d’une écriture détaillée doit être exactement égal à
-  la somme de ses postes.
+  référence de pièce et observation distinctes, catégorie, tiers/service. Le
+  total d’une écriture détaillée doit être exactement égal à la somme de ses
+  postes.
 - **Bordereaux détaillés** : postes, références/quittances, modèles réutilisables
   avec montants par défaut facultatifs et ordre des postes conservé.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
@@ -45,8 +45,8 @@ garder les versions verrouillées par `package-lock.json`.
 - **Annulation de suppression** : la dernière écriture supprimée peut être
   restaurée depuis le journal tant qu’elle n’a pas été remplacée par une autre
   opération de suppression.
-- **Analyse** : répartition des recettes et dépenses par catégorie, mouvements
-  par mode de paiement, ratio dépenses/recettes de la période.
+- **Analyse** : répartition des recettes et dépenses par catégorie et ratio
+  dépenses/recettes de la période.
 - **Exports** : CSV compatible Excel (UTF-8 BOM, séparateur `;`), protection
   contre l’injection de formules, colonnes mode/référence/observation, montants
   détaillés non comptés deux fois. Les totaux exportés correspondent à la
@@ -62,6 +62,9 @@ garder les versions verrouillées par `package-lock.json`.
 
 ## Règles de gestion
 
+- L’application ne gère qu’un seul mode de paiement : **les espèces**. Le champ
+  n’est plus demandé à la saisie ; les écritures anciennes qui portent un autre
+  mode restent lisibles telles quelles jusqu’à leur modification.
 - Les montants sont des **entiers MGA**. Les décimales, les notations scientifiques
   et les valeurs vides ne sont pas converties silencieusement en zéro.
 - Le **solde d’ouverture du livre** précède tout l’historique conservé. Ce n’est
@@ -90,8 +93,8 @@ Les anciennes clés sont lues au premier lancement si la nouvelle clé est absen
 - `salfa_tresorerie_parametres_v1` ;
 - `salfa_tresorerie_masques_v1`.
 
-La migration conserve les clés d’origine. Elle reprend le mode de paiement et
-les références, attribue les numéros manquants sans collision et recalcule les
+La migration conserve les clés d’origine. Elle reprend les références, attribue
+les numéros manquants sans collision et recalcule les
 anciens totaux détaillés incohérents à partir des postes positifs, avec un
 avertissement explicite. Les données invalides bloquent la migration plutôt que
 d’être écartées en silence.
@@ -122,7 +125,7 @@ src/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
     LivreJournal.tsx              journal, détails, bordereau imprimable
     Synthese.tsx                  indicateurs et solde initial
-    Analyse.tsx                   statistiques par catégorie et mode
+    Analyse.tsx                   statistiques par catégorie et ratio
     DonneesSauvegardes.tsx        export/import JSON et secours brut
     GestionMasquesModal.tsx       modèles de bordereaux
     Modale.tsx / Confirmation.tsx dialogues natifs accessibles

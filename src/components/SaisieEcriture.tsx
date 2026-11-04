@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, ListPlus } from 'lucide-react';
 import type { Ecriture, MasqueSaisie, Sens } from '../types';
-import { categoriesPour, MAX_DETAILS, MODES_PAIEMENT, MONTANT_MAX } from '../utils/constants';
+import { categoriesPour, MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
 import { aujourdHui, formatAr, parserMontant } from '../utils/format';
 import { identifiant } from '../utils/ledger';
 import { validerEcriture } from '../utils/validation';
@@ -31,7 +31,6 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
   const [libelle, setLibelle] = useState(edition?.libelle ?? '');
   const [categorie, setCategorie] = useState(edition?.categorie ?? categoriesPour(sens)[0]);
   const [tiers, setTiers] = useState(edition?.tiers ?? '');
-  const [mode, setMode] = useState(edition ? edition.mode ?? '' : 'Espèces');
   const [reference, setReference] = useState(edition?.reference ?? '');
   const [observation, setObservation] = useState(edition?.observation ?? '');
   const [montantSimple, setMontantSimple] = useState(edition?.lignesDetail?.length ? '' : edition ? String(edition.montant) : '');
@@ -46,7 +45,6 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
   const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
   const soumission = useRef(false);
   const categories = [...new Set([...categoriesPour(sens), ...(edition ? [edition.categorie] : [])])];
-  const modes = [...new Set([...MODES_PAIEMENT, ...(mode ? [mode] : [])])];
   const numero = edition?.numero ?? (/^\d{4}-\d{2}-\d{2}$/.test(date) ? numeroSuivant(sens, date) : 'Attribué à l’enregistrement');
   const total = detaille ? lignes.reduce((s, l) => s + (parserMontant(l.montant) ?? 0), 0) : parserMontant(montantSimple) ?? 0;
   const changer = () => setModifie(true);
@@ -93,7 +91,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
       const brouillon: Ecriture = {
         id: edition?.id ?? identifiant(), numero, date, sens,
         libelle: libelle.trim(), categorie,
-        tiers: tiers.trim() || undefined, mode: mode || undefined,
+        tiers: tiers.trim() || undefined,
         reference: reference.trim() || undefined, observation: observation.trim() || undefined,
         montant,
         lignesDetail: detaille ? lignes.map(l => ({ id: l.id, libelle: l.description.trim(), reference: l.reference.trim() || undefined, montant: parserMontant(l.montant)! })) : undefined,
@@ -122,7 +120,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min="1900-01-01" max="9999-12-31" required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
-            <div><label className="label" htmlFor={`${formId}-mode`}>Mode de paiement</label><select id={`${formId}-mode`} className="field" value={mode} onChange={e => setMode(e.target.value)}><option value="">Non précisé</option>{modes.map(m => <option key={m}>{m}</option>)}</select></div>
+            <div className="flex items-end"><p className="flex h-[38px] w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-500"><span className="size-1.5 rounded-full bg-emerald-500" />Caisse en espèces — aucun autre mode n’est géré</p></div>
           </div>
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(e.target.value)} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. Recettes journalières — caisse principale' : 'Ex. Achat de carburant — ambulance'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
           <div className="grid gap-4 sm:grid-cols-2">

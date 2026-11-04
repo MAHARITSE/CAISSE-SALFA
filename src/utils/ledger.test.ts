@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ecritureTest, livreTest } from '../test/fixtures';
 import { calculerJournal, enregistrerEcriture, filtrerJournal, prochainNumero, restaurerEcriture, soldeOuverture, supprimerEcriture, totaliser } from './ledger';
 
-const filtres = { mois: '2026-11', toutAfficher: false, sens: 'TOUS' as const, categorie: '', mode: '', recherche: '' };
+const filtres = { mois: '2026-11', toutAfficher: false, sens: 'TOUS' as const, categorie: '', recherche: '' };
 
 describe('calculs du livre', () => {
   it('reporte le solde des mois précédents et trie stablement les écritures', () => {
