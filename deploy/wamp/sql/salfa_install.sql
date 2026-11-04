@@ -1,9 +1,22 @@
+-- ============================================================================
 -- CAISSE SALFA — schéma MySQL / MariaDB pour WAMP
--- À exécuter sur une base vide (phpMyAdmin ou outils/installer.bat).
--- Préfixe : salfa_  (modifiable via api/salfa-config.php, mais le SQL doit suivre).
+-- ============================================================================
+-- IMPORT DANS phpMyAdmin :
+--   onglet « Importer »  ->  choisir ce fichier  ->  Exécuter
+--   (inutile de sélectionner une base : ce fichier la crée lui-même)
+--
+-- Pour un autre nom de base, modifiez les deux lignes CREATE DATABASE et USE
+-- ci-dessous, ainsi que api/salfa-config.php.
+-- ============================================================================
 
 SET NAMES utf8mb4;
 SET time_zone = '+03:00';
+
+CREATE DATABASE IF NOT EXISTS `caisse_salfa`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE `caisse_salfa`;
 
 CREATE TABLE IF NOT EXISTS salfa_livre (
   id TINYINT UNSIGNED NOT NULL PRIMARY KEY,

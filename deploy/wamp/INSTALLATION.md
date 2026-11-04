@@ -81,10 +81,27 @@ depuis le navigateur : `http://localhost/caisse-salfa/api/index.php?action=verif
 
 1. Copier `index.html`, `assets/`, `api/`, `data/`, `.htaccess` dans
    `C:\wamp64\www\caisse-salfa`.
-2. Créer la base et importer `sql/salfa_install.sql` (phpMyAdmin).
-3. Copier `api/salfa-config.modele.php` en `data/salfa-config.php` et renseigner
-   les accès MySQL (remplacer aussi `sel_session`).
-4. Créer un compte : `outils\creer-admin.bat`.
+2. **Importer `sql/salfa_install.sql` dans phpMyAdmin.** Le fichier crée lui-même
+   la base `caisse_salfa` : inutile de la créer avant, et inutile de sélectionner
+   une base dans le menu de gauche.
+3. Créer un compte : `outils\creer-admin.bat` — il crée aussi
+   `data/salfa-config.php` si le fichier est absent, en vous demandant les accès
+   MySQL.
+4. Vérifier : `outils\verifier.bat`.
+
+### Import phpMyAdmin : erreur « #1046 — Aucune base n'a été sélectionnée »
+
+Cette erreur signifie que l'import a été lancé depuis le niveau **serveur**.
+Les deux solutions fonctionnent :
+
+- **recommandé** : réimporter le fichier `sql/salfa_install.sql` actuel — il
+  commence désormais par `CREATE DATABASE IF NOT EXISTS` puis `USE`, donc il
+  n'a plus besoin d'une base présélectionnée ;
+- ou cliquer d'abord sur `caisse_salfa` dans la colonne de gauche, puis onglet
+  **Importer**.
+
+Pour savoir où vous en êtes, exécutez `sql/verifier-import.sql` (onglet **SQL**) :
+il indique le nombre de tables présentes, l'état du livre et celui des comptes.
 
 ---
 
