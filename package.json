@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "check": "npm run lint && npm test && npm run build",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "build:wamp": "node scripts/build-wamp.mjs"
+    "build:wamp": "node scripts/build-wamp.mjs",
+    "test:sql": "python3 tests/sql/scinder.py deploy/wamp/sql/salfa_install.sql && python3 tests/sql/scinder.py --liste deploy/wamp/sql/salfa_roles.sql && python3 tests/sql/scinder.py --liste deploy/wamp/sql/verifier-import.sql"
   },
   "dependencies": {
     "lucide-react": "^1.67.0",

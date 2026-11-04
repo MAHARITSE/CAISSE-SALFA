@@ -91,17 +91,46 @@ depuis le navigateur : `http://localhost/caisse-salfa/api/index.php?action=verif
 
 ### Import phpMyAdmin : erreur « #1046 — Aucune base n'a été sélectionnée »
 
-Cette erreur signifie que l'import a été lancé depuis le niveau **serveur**.
-Les deux solutions fonctionnent :
+Cette erreur signifie que l'import a été lancé depuis le niveau **serveur**, alors
+que le script ne contenait pas encore son `USE`.
 
-- **recommandé** : réimporter le fichier `sql/salfa_install.sql` actuel — il
-  commence désormais par `CREATE DATABASE IF NOT EXISTS` puis `USE`, donc il
-  n'a plus besoin d'une base présélectionnée ;
-- ou cliquer d'abord sur `caisse_salfa` dans la colonne de gauche, puis onglet
-  **Importer**.
+**Le `salfa_install.sql` livré dans ce paquet ne peut pas produire cette erreur** :
+il commence par `CREATE DATABASE IF NOT EXISTS` puis `USE`, et c'est la 3e et la
+4e instruction du fichier. Si vous la voyez quand même, le fichier importé n'est
+pas celui du paquet — c'est une copie plus ancienne. Vérifiez avant tout :
+
+```
+head -20 sql\salfa_install.sql
+```
+
+Les lignes 15 et 19 doivent afficher `CREATE DATABASE IF NOT EXISTS `caisse_salfa``
+et `USE `caisse_salfa`;`. Trouvez le fichier réellement déposé sur le serveur
+(`C:\wamp64\www\caisse-salfa\sql\`), pas celui resté dans votre dossier de
+téléchargement.
+
+Deuxième cause possible : phpMyAdmin a importé le fichier **partiellement**.
+Dans ce cas le message n'est pas un #1046 mais une erreur sur une instruction
+précise — lisez son numéro, il tombe sur une ligne du fichier.
+
+Si le doute persiste, deux solutions de repli, dans cet ordre :
+
+- **cliquer d'abord sur `caisse_salfa`** dans la colonne de gauche, puis onglet
+  **Importer** : le `USE` devient superflu ;
+- **passer par l'installateur** (recommandé) : `outils\installer.bat` crée la
+  base, les tables et le compte administrateur en une fois, via l'API, sans
+  phpMyAdmin.
 
 Pour savoir où vous en êtes, exécutez `sql/verifier-import.sql` (onglet **SQL**) :
 il indique le nombre de tables présentes, l'état du livre et celui des comptes.
+
+Un contrôle automatique accompagne le fichier :
+
+```
+python3 tests/sql/scinder.py sql/salfa_install.sql
+```
+
+Il rejoue le découpage instruction par instruction comme phpMyAdmin, et vérifie
+que `CREATE DATABASE` puis `USE` précèdent bien la première table.
 
 ---
 
