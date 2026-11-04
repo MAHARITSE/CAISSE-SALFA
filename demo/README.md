@@ -31,16 +31,34 @@ dépenses couvrent les achats, le carburant, l’électricité, la maintenance, 
 missions, les fournitures et les honoraires. Décembre, janvier et novembre
 auraient des pièces propres à chaque mois : le générateur en prévoit.
 
-## Charger le jeu d’essai
+## Chargement automatique en développement
 
-**Méthode 1 — page de démonstration** (mode local, sans serveur) :
+`npm run dev` installe le jeu d’essai **tout seul** au premier chargement de
+l’application, à une condition stricte : **aucun livre ne doit déjà exister**
+dans le navigateur. Vos données réelles ne sont donc jamais écrasées.
 
-1. Ouvrir `demo/charger-demo.html` depuis le serveur de développement
-   (`http://localhost:3000/demo/charger-demo.html`) ;
+Le script correspondant (`demo/amorce.js`, branché par le plugin `amorce-demo`
+de `vite.config.ts`) est absent de `vite build` et du paquet WAMP : le
+déploiement ne contient aucune donnée de démonstration.
+
+| URL | Effet |
+|---|---|
+| `/` | installe le jeu d’essai si le navigateur est vide |
+| `/?demo=1` | remplace le livre courant (l’ancien est recopié en session) |
+| `/?demo=0` | ne charge rien, même si le navigateur est vide |
+
+Pour repartir de zéro : vider les données du site (ou `localStorage`) puis
+recharger.
+
+## Chargement manuel
+
+**Méthode 1 — page de démonstration** :
+
+1. ouvrir `http://localhost:3000/demo/charger-demo.html` ;
 2. cliquer sur « Charger et ouvrir l’application ».
 
 Le livre déjà présent, s’il existe, est conservé sous une clé
-`essai_precedent_*` du navigateur avant remplacement.
+`essai_precedent_*` avant remplacement.
 
 **Méthode 2 — import classique** (fonctionne aussi en mode WAMP/MySQL) :
 
