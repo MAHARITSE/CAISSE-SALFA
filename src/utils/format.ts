@@ -44,3 +44,11 @@ export function parserMontant(saisie: string, autoriserNegatif = false): number 
   if (!Number.isSafeInteger(montant) || Math.abs(montant) > MONTANT_MAX) return null;
   return montant;
 }
+
+/**
+ * Masque de saisie des libellés : les majuscules restent actives (caps lock).
+ * La longueur ne change pas, le curseur n'est donc pas déplacé.
+ */
+export function masqueMajuscules(texte: string): string {
+  return texte.toUpperCase();
+}

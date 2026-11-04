@@ -48,7 +48,7 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   expect(total).toBe(10000);
   expect(csv).toContain('CONSULTATION');
 
-  await page.getByRole('button', { name: /^Bordereau RC-/ }).first().click();
+  await page.getByRole('button', { name: /^Imprimer le bordereau RC-/ }).first().click();
   const bordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
   await expect(bordereau.getByText('Total des recettes', { exact: true })).toBeVisible();
   await page.emulateMedia({ media: 'print' });

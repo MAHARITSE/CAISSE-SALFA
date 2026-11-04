@@ -26,7 +26,8 @@ describe('parcours de caisse', () => {
     const user = userEvent.setup();
     render(<App />);
     await ajouterRecette(user);
-    expect(lire().ecritures[0]).toMatchObject({ libelle: 'Recette test', montant: 15000, numero: `RC-${annee}-0001` });
+    // Le masque garde les majuscules actives : le libellé est enregistré en capitales.
+    expect(lire().ecritures[0]).toMatchObject({ libelle: 'RECETTE TEST', montant: 15000, numero: `RC-${annee}-0001` });
 
     await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
     const depense = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
@@ -38,7 +39,7 @@ describe('parcours de caisse', () => {
     await user.click(within(depense).getByRole('button', { name: 'Ajouter' }));
     expect(within(depense).queryByLabelText('Référence / quittance')).not.toBeInTheDocument();
     await user.click(within(depense).getByRole('button', { name: 'Enregistrer' }));
-    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, lignesDetail: [{ libelle: 'Gasoil', montant: 5000 }] });
+    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, lignesDetail: [{ libelle: 'GASOIL', montant: 5000 }] });
 
     // Le bordereau s'ouvre automatiquement après enregistrement.
     const bordereau = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
@@ -91,7 +92,7 @@ describe('parcours de caisse', () => {
     expect(lire().entetes.recette.lignes[0].texte).toBe('SALFA — DEPARTEMENT DE SANTE');
 
     // L'autorisation de recette garde l'en-tête livré…
-    await user.click(screen.getByRole('button', { name: `Bordereau RC-${annee}-0001` }));
+    await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(autorisation).getByText('SALFA — DEPARTEMENT DE SANTE')).toBeInTheDocument();
     expect(within(autorisation).getByText('AUTORISATION DE RECETTE')).toBeInTheDocument();
@@ -111,7 +112,7 @@ describe('parcours de caisse', () => {
     await user.type(within(depense).getByLabelText('Montant (Ar)', { exact: true }), '3000');
     await user.click(within(depense).getByRole('button', { name: 'Ajouter' }));
     await user.click(within(depense).getByRole('button', { name: 'Enregistrer' }));
-    await user.click(screen.getAllByRole('button', { name: `Bordereau DP-${annee}-0001` })[0]);
+    await user.click(screen.getAllByRole('button', { name: `Imprimer le bordereau DP-${annee}-0001` })[0]);
     const engagement = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
     expect(within(engagement).getByText('ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
@@ -182,11 +183,11 @@ describe('parcours de caisse', () => {
     await user.type(within(dialog).getByLabelText(/Montant total/), '1000');
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
     expect(within(dialog).getByRole('alert')).toHaveTextContent('stockage du navigateur est plein');
-    expect(within(dialog).getByLabelText(/Libellé de l’écriture/)).toHaveValue('À conserver');
+    expect(within(dialog).getByLabelText(/Libellé de l’écriture/)).toHaveValue('À CONSERVER');
     expect(localStorage.getItem(CLE_LIVRE)).toBeNull();
     spy.mockRestore();
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
-    expect(lire().ecritures[0].libelle).toBe('À conserver');
+    expect(lire().ecritures[0].libelle).toBe('À CONSERVER');
   });
 
   it('refuse une écriture basée sur une révision périmée par un autre onglet', async () => {

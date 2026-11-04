@@ -56,7 +56,12 @@ garder les versions verrouillées par `package-lock.json`.
   montants par défaut facultatifs et ordre des postes conservé. Un seul poste
   complété suffit ; les lignes laissées vides sont ignorées à l’enregistrement.
 - **Impression immédiate** : le bordereau imprimable s’ouvre automatiquement
-  après l’enregistrement d’une pièce détaillée, prêt à être imprimé.
+  après l’enregistrement d’une pièce, prêt à être imprimé. La colonne « Action »
+  du journal propose l’impression, la modification et la suppression de chaque
+  pièce, y compris celles saisies en montant unique.
+- **Masques de saisie** : les montants s’écrivent avec séparation des milliers
+  (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
+  majuscules.
 - **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
   recette ont chacun leur propre en-tête, modifiable depuis le bouton
   « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et
