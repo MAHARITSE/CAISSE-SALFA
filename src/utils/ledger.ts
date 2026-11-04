@@ -1,5 +1,5 @@
-import type { DonneesCaisse, Ecriture, FiltresJournal, LigneJournal, Sens } from '../types';
-import { masquesParDefaut } from './constants';
+import type { DonneesCaisse, Ecriture, ExerciceCloture, FiltresJournal, LigneJournal, Sauvegarde, Sens } from '../types';
+import { ANNEE_MAX, ANNEE_MIN, masquesParDefaut, MONTANT_MAX } from './constants';
 import { dateValide, exiger, validerDonnees } from './validation';
 
 export function identifiant(prefixe = 'e'): string {
@@ -7,8 +7,112 @@ export function identifiant(prefixe = 'e'): string {
   return `${prefixe}-${aleatoire}`;
 }
 
-export function creerDonnees(): DonneesCaisse {
-  return { ecritures: [], parametres: { soldeInitial: 0 }, masques: masquesParDefaut(), compteurs: {} };
+export function creerDonnees(annee = new Date().getFullYear()): DonneesCaisse {
+  return {
+    ecritures: [], parametres: { soldeInitial: 0, exercice: annee, reportPrecedent: null },
+    masques: masquesParDefaut(), compteurs: {}, exercicesClotures: [],
+  };
+}
+
+const anneeDe = (date: string): number => Number(date.slice(0, 4));
+
+/** Un livre ne contient qu'un exercice : une saisie hors exercice est refusée, pas décalée. */
+export function exigerExercice(donnees: DonneesCaisse, date: string): void {
+  const annee = anneeDe(date);
+  exiger(annee === donnees.parametres.exercice,
+    `La date doit appartenir à l’exercice ${donnees.parametres.exercice} ouvert. Clôturez l’exercice pour passer à l’année suivante.`);
+}
+
+/** Solde de clôture de l'exercice ouvert, hors filtres. */
+export function soldeCloture(donnees: DonneesCaisse): number {
+  const journal = calculerJournal(donnees);
+  return journal.length ? journal[journal.length - 1].solde : donnees.parametres.soldeInitial;
+}
+
+/**
+ * Clôture l'exercice ouvert : ses écritures deviennent une archive figée et le suivant
+ * repart avec le solde reporté, sans historique cumulé interminable.
+ * La validation finale garantit qu'une clôture invalide n'est jamais enregistrée.
+ */
+export function cloturerExercice(donnees: DonneesCaisse, clotureLe = new Date().toISOString()): DonneesCaisse {
+  const soldeInitial = donnees.parametres.soldeInitial;
+  const exercice = donnees.parametres.exercice ?? new Date().getFullYear();
+  // Un même exercice ne peut être clôturé qu'une fois : on ne réécrit jamais une archive.
+  exiger(!donnees.exercicesClotures.some(c => c.annee === exercice),
+    `L’exercice ${exercice} est déjà clôturé : ses écritures ne comptent plus dans le livre.`);
+  exiger(exercice < ANNEE_MAX, 'Année maximale atteinte : impossible d’ouvrir un exercice suivant.');
+  const { recettes, depenses } = totaliser(donnees.ecritures);
+  const soldeFin = soldeInitial + recettes - depenses;
+  exiger(Number.isSafeInteger(soldeFin) && Math.abs(soldeFin) <= MONTANT_MAX,
+    'Le solde de clôture dépasse la plage autorisée. Vérifiez les montants avant de clôturer.');
+  const archive: ExerciceCloture = {
+    annee: exercice, clotureLe,
+    soldeOuverture: soldeInitial, recettes, depenses, soldeCloture: soldeFin,
+    ecritures: [...donnees.ecritures].sort(comparerEcritures),
+  };
+  const cloture: DonneesCaisse = {
+    ecritures: [],
+    parametres: {
+      soldeInitial: soldeFin,
+      exercice: exercice + 1,
+      reportPrecedent: { annee: exercice, solde: soldeFin },
+    },
+    masques: donnees.masques,
+    compteurs: donnees.compteurs,
+    exercicesClotures: [...donnees.exercicesClotures, archive].sort((a, b) => a.annee - b.annee),
+  };
+  // Revalide l'ensemble : une clôture incohérente n'est jamais enregistrée.
+  return { ...validerDonnees(cloture), exercicesClotures: cloture.exercicesClotures };
+}
+
+/** Clôture automatique des années passées d'un livre créé avant la gestion des exercices. */
+export function migrerExercicesLegacy(livre: Sauvegarde, anneeCourante: number): { livre: Sauvegarde; avertissement: string | null } {
+  const exercice = livre.parametres?.exercice;
+  const annees = [...new Set(livre.ecritures.map(e => anneeDe(e.date)))].sort((a, b) => a - b);
+  if (typeof exercice === 'number' && annees.every(a => a === exercice)) {
+    return { livre, avertissement: null };
+  }
+  const cible = typeof exercice === 'number'
+    ? Math.max(exercice, ...annees)
+    : Math.max(anneeCourante, ...annees);
+  let solde = livre.parametres?.soldeInitial ?? 0;
+  const archives: ExerciceCloture[] = [];
+  // Chaîne continue depuis la première année mouvementée : une année vide est archivée à zéro,
+  // mais un livre qui commence cette année n'invente pas d'exercice antérieur.
+  for (let annee = annees.length ? annees[0] : cible; annee < cible; annee++) {
+    const ecritures = livre.ecritures.filter(e => anneeDe(e.date) === annee).sort(comparerEcritures);
+    const { recettes, depenses } = totaliser(ecritures);
+    archives.push({
+      annee, clotureLe: `${annee}-12-31T23:59:59.000Z`,
+      soldeOuverture: solde, recettes, depenses, soldeCloture: solde + recettes - depenses,
+      ecritures,
+    });
+    solde += recettes - depenses;
+  }
+  const restantes = livre.ecritures.filter(e => anneeDe(e.date) === cible);
+  const derniere = archives[archives.length - 1];
+  const dejaArchivees = new Set((livre.exercicesClotures ?? []).map(c => c.annee));
+  const nouvelles = archives.filter(a => !dejaArchivees.has(a.annee));
+  return {
+    livre: {
+      ...livre,
+      ecritures: restantes,
+      parametres: {
+        soldeInitial: derniere ? derniere.soldeCloture : livre.parametres?.soldeInitial ?? 0,
+        exercice: cible,
+        reportPrecedent: derniere ? { annee: derniere.annee, solde: derniere.soldeCloture } : null,
+      },
+      exercicesClotures: [...(livre.exercicesClotures ?? []), ...nouvelles].sort((a, b) => a.annee - b.annee),
+    },
+    avertissement: nouvelles.length
+      ? `Vos données couvraient plusieurs années : les exercices ${nouvelles.map(a => a.annee).join(', ')} ont été clôturés automatiquement et archivés. L’exercice ${cible} est maintenant ouvert. Vérifiez l’onglet « Exercices & clôtures » puis téléchargez une sauvegarde.`
+      : null,
+  };
+}
+
+export function exigerAnnee(annee: number): void {
+  exiger(Number.isInteger(annee) && annee >= ANNEE_MIN && annee <= ANNEE_MAX,
+    `Année invalide : une année entre ${ANNEE_MIN} et ${ANNEE_MAX} est attendue.`);
 }
 
 /** Tri stable, même date et même horodatage : l'identifiant départage les pièces. */
@@ -79,6 +183,7 @@ export function prochainNumero(donnees: DonneesCaisse, sens: Sens, date: string)
 
 export function enregistrerEcriture(donnees: DonneesCaisse, saisie: Ecriture): DonneesCaisse {
   const ancienne = donnees.ecritures.find(e => e.id === saisie.id);
+  exigerExercice(donnees, saisie.date);
   let ecriture: Ecriture;
   const compteurs = { ...donnees.compteurs };
   if (ancienne) {
@@ -100,6 +205,7 @@ export function supprimerEcriture(donnees: DonneesCaisse, id: string): DonneesCa
 }
 
 export function restaurerEcriture(donnees: DonneesCaisse, ecriture: Ecriture): DonneesCaisse {
+  exigerExercice(donnees, ecriture.date);
   exiger(!donnees.ecritures.some(e => e.id === ecriture.id || e.numero.toLowerCase() === ecriture.numero.toLowerCase()),
     'Cette pièce existe déjà : annulation impossible.');
   return validerDonnees({ ...donnees, ecritures: [...donnees.ecritures, ecriture] });

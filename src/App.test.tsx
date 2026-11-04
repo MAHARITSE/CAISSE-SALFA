@@ -6,6 +6,8 @@ import App from './App';
 import type { Sauvegarde } from './types';
 import { ecritureTest, livreTest } from './test/fixtures';
 import { CLE_ECRITURES, CLE_LIVRE, sauvegarderLivre } from './utils/storage';
+import { enregistrerEcriture } from './utils/ledger';
+import { parametresTest } from './test/fixtures';
 import { aujourdHui } from './utils/format';
 
 const lire = (): Sauvegarde => JSON.parse(localStorage.getItem(CLE_LIVRE)!);
@@ -156,5 +158,38 @@ describe('parcours de caisse', () => {
     expect(lire().ecritures[0].mode).toBe('Chèque');
     expect(spy.mock.calls.filter(c => c[0] === CLE_LIVRE)).toHaveLength(1);
     expect(localStorage.getItem(CLE_ECRITURES)).toBeTruthy();
+  });
+
+  it('clôture l’exercice, reporte le solde et bloque toute saisie sur l’année close', async () => {
+    const user = userEvent.setup();
+    const annee = new Date().getFullYear();
+    // Livre d'une année révolue : la saisie doit être bloquée jusqu'à la clôture.
+    let donnees = enregistrerEcriture(livreTest({ parametres: parametresTest({ soldeInitial: 1000, exercice: annee - 1 }) }),
+      ecritureTest({ date: `${annee - 1}-12-24`, montant: 5000 }));
+    donnees = enregistrerEcriture(donnees, ecritureTest({ id: 'e-dep', numero: `DP-${annee - 1}-0001`, sens: 'DEPENSE', categorie: 'Divers', date: `${annee - 1}-12-28`, montant: 2000 }));
+    sauvegarderLivre(livreTest(donnees), 0);
+    render(<App />);
+    expect(screen.getByText(`L’exercice ${annee - 1} doit être clôturé.`)).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: `Clôturer l’exercice ${annee - 1}` })[0]);
+    const dialogue = screen.getByRole('dialog', { name: `Clôturer l’exercice ${annee - 1} ?` });
+    expect(within(dialogue).getByText('4 000 Ar')).toBeInTheDocument();
+    await user.click(within(dialogue).getByRole('button', { name: new RegExp(`Clôturer ${annee - 1} et ouvrir ${annee}`) }));
+
+    const stocke = lire();
+    expect(stocke.parametres).toEqual({ soldeInitial: 4000, exercice: annee, reportPrecedent: { annee: annee - 1, solde: 4000 } });
+    expect(stocke.ecritures).toHaveLength(0);
+    expect(stocke.exercicesClotures).toHaveLength(1);
+    expect(stocke.exercicesClotures[0]).toMatchObject({ annee: annee - 1, recettes: 5000, depenses: 2000, soldeCloture: 4000 });
+    expect(stocke.exercicesClotures[0].ecritures).toHaveLength(2);
+
+    // L'onglet Exercices expose l'archive et l'exercice en cours.
+    await user.click(screen.getAllByRole('button', { name: 'Exercices & clôtures' })[0]);
+    expect(screen.getByRole('heading', { name: `Exercice en cours · ${annee}` })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Exercices clôturés' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Télécharger l’archive ${annee - 1}` })).toBeInTheDocument();
+    // La saisie est de nouveau possible, sur le nouvel exercice.
+    await user.click(screen.getAllByRole('button', { name: 'Livre journal' })[0]);
+    await ajouterRecette(user, 'Recette nouvelle année', '1500');
+    expect(lire().ecritures[0]).toMatchObject({ montant: 1500, numero: `RC-${annee}-0001` });
   });
 });

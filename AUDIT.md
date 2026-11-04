@@ -33,6 +33,9 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
   automatique du livre remplacé.
 - Export brut de secours pour les anciennes clés et les données corrompues.
 - Annulation de la dernière suppression.
+- Clôture annuelle : archive figée de l’exercice, solde reporté, exercice
+  suivant vide, blocage des saisies hors exercice, onglet Exercices & clôtures,
+  export d’une archive autonome et conversion des livres multi-années.
 - Analyse par catégorie et ratio dépenses/recettes.
 - Filtres par catégorie, recherche insensible aux accents.
 - Mode de paiement retiré de l’interface et des exports : la caisse ne traite que
@@ -47,10 +50,10 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
 ## Vérifications effectuées
 
 - `npm run lint` : TypeScript strict, paramètres et locaux inutilisés refusés.
-- `npm test` : **34 tests** unitaires et d’intégration passés.
-- `npm run test:e2e` : **3 parcours Chromium** passés (desktop, mobile,
-  multi-onglets), incluant saisie détaillée, persistance, CSV, bordereau,
-  impression, focus modal et absence de débordement mobile.
+- `npm test` : **40 tests** unitaires et d’intégration passés.
+- `npm run test:e2e` : **5 parcours Chromium** passés (desktop, mobile,
+  multi-onglets, clôture annuelle, conversion d’un livre multi-années), incluant saisie détaillée, persistance, CSV,
+  bordereau, impression, focus modal et absence de débordement mobile.
 - `npm run build` : build de production réussi.
 - `npm audit --omit=dev` : **0 vulnérabilité connue** sur les dépendances de
   production au moment de l’audit.
@@ -58,14 +61,17 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
 Couverture notable : migration legacy, conservation des références/modes,
 réparation signalée des totaux, numérotation après suppression, conflit de
 révision, quota de stockage plein, stockage corrompu, import JSON invalide,
-restauration confirmée, neutralisation CSV et non-double-comptage.
+restauration confirmée, neutralisation CSV et non-double-comptage,
+clôture d’exercice, chaîne des soldes reportés et conversion d’un livre
+multi-années.
 
 ## Limites et recommandations
 
 - Le stockage local n’est pas chiffré et n’est pas une base de données
   multi-utilisateur. Il n’y a ni authentification ni synchronisation serveur.
 - La suppression reste possible et l’historique n’est pas une piste d’audit
-  immuable. Pour un usage comptable réglementé, ajouter un backend, des rôles,
+  immuable ; l’archive d’exercice est figée dans l’application, mais une
+  sauvegarde restaurée peut toujours la remplacer. Pour un usage comptable réglementé, ajouter un backend, des rôles,
   une journalisation immuable et une politique de clôture/contre-passation.
 - Exporter une sauvegarde JSON après chaque session et conserver plusieurs
   copies hors du navigateur. Ne pas effacer les données du site sans sauvegarde.

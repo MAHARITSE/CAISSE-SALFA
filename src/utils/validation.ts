@@ -1,5 +1,5 @@
-import type { DonneesCaisse, Ecriture, LigneDetail, MasqueSaisie, Sauvegarde, Sens } from '../types';
-import { MAX_DETAILS, MAX_ECRITURES, MONTANT_MAX } from './constants';
+import type { DonneesCaisse, Ecriture, ExerciceCloture, LigneDetail, MasqueSaisie, Parametres, Sauvegarde, Sens } from '../types';
+import { ANNEE_MAX, ANNEE_MIN, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MONTANT_MAX } from './constants';
 
 /** Une erreur de validation est toujours bloquante : aucune ligne n'est écartée en silence. */
 export function exiger(condition: unknown, message: string): asserts condition {
@@ -124,6 +124,53 @@ function validerMasque(valeur: unknown, index: number): MasqueSaisie {
   };
 }
 
+function validerParametres(valeur: unknown): Parametres {
+  const p = objet(valeur, 'Paramètres');
+  exiger(typeof p.soldeInitial === 'number' && Number.isSafeInteger(p.soldeInitial) && Math.abs(p.soldeInitial) <= MONTANT_MAX,
+    'Le solde d’ouverture doit être un montant entier valide (un solde négatif est autorisé).');
+  const exercice: number | undefined = p.exercice == null ? undefined : (p.exercice as number);
+  exiger(exercice === undefined || (Number.isInteger(exercice) && exercice >= ANNEE_MIN && exercice <= ANNEE_MAX),
+    `Exercice invalide : une année entre ${ANNEE_MIN} et ${ANNEE_MAX} est attendue.`);
+  let reportPrecedent: Parametres['reportPrecedent'] = null;
+  if (p.reportPrecedent != null) {
+    const r = objet(p.reportPrecedent, 'Report de l’exercice précédent');
+    exiger(exercice !== undefined && typeof r.annee === 'number' && Number.isInteger(r.annee) && r.annee === exercice - 1,
+      'Le report doit provenir de l’exercice immédiatement précédent.');
+    exiger(typeof r.solde === 'number' && Number.isSafeInteger(r.solde) && Math.abs(r.solde) <= MONTANT_MAX,
+      'Le solde reporté doit être un montant entier valide.');
+    reportPrecedent = { annee: r.annee, solde: r.solde };
+  }
+  return { soldeInitial: p.soldeInitial, exercice, reportPrecedent };
+}
+
+function validerCloture(valeur: unknown, index: number): ExerciceCloture {
+  const c = objet(valeur, `Exercice clôturé ${index + 1}`);
+  exiger(typeof c.annee === 'number' && Number.isInteger(c.annee) && c.annee >= ANNEE_MIN && c.annee <= ANNEE_MAX,
+    `Exercice clôturé ${index + 1} : année invalide.`);
+  const montant = (v: unknown, champ: string): number => {
+    exiger(typeof v === 'number' && Number.isSafeInteger(v) && Math.abs(v) <= MONTANT_MAX,
+      `Exercice ${c.annee} : ${champ} doit être un montant entier valide.`);
+    return v;
+  };
+  const ecritures = tableau(c.ecritures, `Exercice ${c.annee}.écritures`, MAX_ECRITURES)
+    .map((e, i) => validerEcriture(e, `Exercice ${c.annee}, écriture ${i + 1}`));
+  for (const e of ecritures) {
+    exiger(Number(e.date.slice(0, 4)) === c.annee, `Exercice ${c.annee} : l’écriture ${e.numero} porte une autre année.`);
+  }
+  const soldeOuverture = montant(c.soldeOuverture, 'le solde d’ouverture');
+  const recettes = montant(c.recettes, 'le total des recettes');
+  const depenses = montant(c.depenses, 'le total des dépenses');
+  const soldeCloture = montant(c.soldeCloture, 'le solde de clôture');
+  exiger(recettes + depenses <= MAX_ECRITURES * MONTANT_MAX, `Exercice ${c.annee} : totaux incohérents.`);
+  exiger(soldeOuverture + recettes - depenses === soldeCloture,
+    `Exercice ${c.annee} : le solde de clôture ne correspond pas aux mouvements archivés.`);
+  return {
+    annee: c.annee,
+    clotureLe: horodatage(c.clotureLe, `Exercice ${c.annee}.clôture`),
+    soldeOuverture, recettes, depenses, soldeCloture, ecritures,
+  };
+}
+
 export function validerDonnees(valeur: unknown): DonneesCaisse {
   const d = objet(valeur, 'Livre');
   const liste = tableau(d.ecritures, 'Écritures', MAX_ECRITURES);
@@ -137,8 +184,7 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
     numeros.add(e.numero.toLowerCase());
   }
   const p = objet(d.parametres, 'Paramètres');
-  exiger(typeof p.soldeInitial === 'number' && Number.isSafeInteger(p.soldeInitial) && Math.abs(p.soldeInitial) <= MONTANT_MAX,
-    'Le solde d’ouverture doit être un montant entier valide (un solde négatif est autorisé).');
+  const parametres = validerParametres(p);
   const masques = tableau(d.masques, 'Masques', 500).map(validerMasque);
   const idsMasques = new Set<string>();
   for (const m of masques) {
@@ -153,12 +199,40 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
       `Compteur ${cle} : entier positif invalide.`);
     compteurs[cle] = v;
   }
-  let solde = p.soldeInitial;
+  const exercicesClotures = tableau(d.exercicesClotures ?? [], 'Exercices clôturés', MAX_CLOTURES)
+    .map(validerCloture).sort((a, b) => a.annee - b.annee);
+  const annees = new Set<number>();
+  for (const c of exercicesClotures) {
+    exiger(!annees.has(c.annee), `L’exercice ${c.annee} est archivé en double.`);
+    if (parametres.exercice !== undefined) {
+      exiger(c.annee < parametres.exercice, `L’exercice clôturé ${c.annee} ne peut pas être postérieur à l’exercice ouvert ${parametres.exercice}.`);
+    }
+    annees.add(c.annee);
+  }
+  // Chaîne de clôture continue : chaque exercice clôturé se termine par le solde qui ouvre le suivant.
+  for (const c of exercicesClotures) {
+    const suivant = exercicesClotures.find(x => x.annee === c.annee + 1);
+    if (suivant) {
+      exiger(suivant.soldeOuverture === c.soldeCloture,
+        `Exercices ${c.annee} et ${suivant.annee} : le solde reporté ne correspond pas à la clôture précédente.`);
+    } else if (parametres.exercice !== undefined && c.annee + 1 === parametres.exercice) {
+      exiger(parametres.soldeInitial === c.soldeCloture,
+        `Le solde d’ouverture de ${parametres.exercice} ne correspond pas à la clôture de ${c.annee}.`);
+    }
+    if (parametres.exercice !== undefined && c.annee < parametres.exercice - 1) {
+      exiger(exercicesClotures.some(x => x.annee === c.annee + 1),
+        `Exercice ${c.annee + 1} manquant : la chaîne des clôtures doit être continue jusqu’à ${parametres.exercice}.`);
+    }
+  }
+  let solde = parametres.soldeInitial;
   for (const e of ecritures) {
+    // Un livre ancien sans exercice reste lisible ; il est normalisé à l'ouverture.
+    exiger(parametres.exercice === undefined || Number(e.date.slice(0, 4)) === parametres.exercice,
+      `L’écriture ${e.numero} appartient à ${e.date.slice(0, 4)}, hors de l’exercice ${parametres.exercice} ouvert.`);
     solde += e.sens === 'RECETTE' ? e.montant : -e.montant;
     exiger(Number.isSafeInteger(solde), 'Le solde cumulé dépasse la précision numérique fiable. Réduisez les montants du livre.');
   }
-  return { ecritures, parametres: { soldeInitial: p.soldeInitial }, masques, compteurs };
+  return { ecritures, parametres, masques, compteurs, exercicesClotures };
 }
 
 export function validerSauvegarde(valeur: unknown): Sauvegarde {

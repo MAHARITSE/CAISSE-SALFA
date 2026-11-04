@@ -10,5 +10,13 @@ export function ecritureTest(overrides: Partial<Ecriture> = {}): Ecriture {
 }
 
 export function livreTest(overrides: Partial<Sauvegarde> = {}): Sauvegarde {
-  return { format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: '2026-11-03T09:00:00.000Z', ...creerDonnees(), ...overrides };
+  return {
+    format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: '2026-11-03T09:00:00.000Z',
+    ...creerDonnees(2026), ...overrides,
+  };
+}
+
+/** Paramètres complets pour un exercice de test. */
+export function parametresTest(overrides: Partial<Sauvegarde['parametres']> = {}) {
+  return { soldeInitial: 0, exercice: 2026, reportPrecedent: null, ...overrides };
 }

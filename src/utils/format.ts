@@ -8,6 +8,8 @@ export const formatAr = (montant: number): string => `${nombre(montant)} Ar`;
 export const aujourdHui = (date = new Date()): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 export const moisCourant = (): string => aujourdHui().slice(0, 7);
+export const anneeCourante = (): number => Number(aujourdHui().slice(0, 4));
+export const libelleExercice = (annee: number): string => `Exercice ${annee}`;
 
 export const dateFr = (iso: string): string => {
   const [a, m, j] = iso.split('-');

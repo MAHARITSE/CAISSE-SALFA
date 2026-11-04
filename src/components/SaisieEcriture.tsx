@@ -11,7 +11,8 @@ import { Confirmation } from './Confirmation';
 interface SaisieEcritureProps {
   ecritureEnEdition: Ecriture | null;
   sensInitial: Sens;
-  numeroSuivant: (sens: Sens, date: string) => string;
+  exercice: number;
+  numeroSuivant: (sens: Sens, date: string) => string | null;
   suggestionsLibelle: string[];
   suggestionsTiers: string[];
   masques: MasqueSaisie[];
@@ -23,7 +24,7 @@ interface SaisieEcritureProps {
 
 interface LigneBrouillon { id: string; description: string; reference: string; montant: string }
 
-export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
+export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
   const sens = edition?.sens ?? sensInitial;
   const estRecette = sens === 'RECETTE';
   const formId = useId();
@@ -45,7 +46,12 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
   const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
   const soumission = useRef(false);
   const categories = [...new Set([...categoriesPour(sens), ...(edition ? [edition.categorie] : [])])];
-  const numero = edition?.numero ?? (/^\d{4}-\d{2}-\d{2}$/.test(date) ? numeroSuivant(sens, date) : 'Attribué à l’enregistrement');
+  const numero = edition?.numero ?? (
+    /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? Number(date.slice(0, 4)) === exercice
+        ? numeroSuivant(sens, date) ?? 'Attribué à l’enregistrement'
+        : `Hors exercice ${exercice}`
+      : 'Attribué à l’enregistrement');
   const total = detaille ? lignes.reduce((s, l) => s + (parserMontant(l.montant) ?? 0), 0) : parserMontant(montantSimple) ?? 0;
   const changer = () => setModifie(true);
 
@@ -119,7 +125,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
         pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'}><Check size={16} />Enregistrer</button></div></div>}>
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min="1900-01-01" max="9999-12-31" required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
+            <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min={`${exercice}-01-01`} max={`${exercice}-12-31`} required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
             <div className="flex items-end"><p className="flex h-[38px] w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-500"><span className="size-1.5 rounded-full bg-emerald-500" />Caisse en espèces — aucun autre mode n’est géré</p></div>
           </div>
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(e.target.value)} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. Recettes journalières — caisse principale' : 'Ex. Achat de carburant — ambulance'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
@@ -153,6 +159,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, numero
               <p className="text-[11px] text-slate-500">Le total est calculé automatiquement. Chaque poste doit être complété ; les références sont conservées dans le bordereau et l’export.</p>
             </>}
           </section>
+          {Number(date.slice(0, 4)) !== exercice && <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"><AlertCircle size={17} className="shrink-0" /><p>Cette date n’appartient pas à l’exercice {exercice} ouvert. Les écritures doivent toutes être rattachées à l’année en cours de clôture.</p></div>}
           {(erreur || erreurExterne) && <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800"><AlertCircle size={17} className="shrink-0" /><div>{erreur && <p>{erreur}</p>}{erreurExterne && <p className="mt-1">{erreurExterne}</p>}</div></div>}
           <p className="text-[11px] text-slate-500">* Champs obligatoires. {edition ? 'Le numéro et la date de création d’origine sont conservés.' : 'Le numéro définitif est attribué au moment de l’enregistrement.'}</p>
         </form>

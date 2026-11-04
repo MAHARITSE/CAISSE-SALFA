@@ -101,3 +101,83 @@ test('deux onglets : les numéros restent uniques après actualisation inter-ong
   expect(stocke.ecritures).toHaveLength(2);
   expect(new Set(stocke.ecritures.map((e: { numero: string }) => e.numero)).size).toBe(2);
 });
+
+test('clôture annuelle : archive figée, solde reporté et saisie sur le nouvel exercice', async ({ page }) => {
+  const annee = new Date().getFullYear();
+  await page.addInitScript(() => {
+    const an = new Date().getFullYear();
+    const ecriture = (id: string, numero: string, sens: string, montant: number, jour: string) => ({
+      id, numero, date: `${an - 1}-${jour}`, sens,
+      libelle: sens === 'RECETTE' ? 'Recettes de fin d’année' : 'Achat de carburant',
+      categorie: sens === 'RECETTE' ? 'Recettes journalières' : 'Divers',
+      montant, createdAt: '2025-12-01T08:00:00.000Z',
+    });
+    localStorage.setItem('salfa_tresorerie_livre_v2', JSON.stringify({
+      format: 'CAISSE-SALFA', version: 1, revision: 1, updatedAt: new Date().toISOString(),
+      parametres: { soldeInitial: 1000, exercice: an - 1, reportPrecedent: null },
+      ecritures: [ecriture('a', `RC-${an - 1}-0001`, 'RECETTE', 5000, '12-24'), ecriture('b', `DP-${an - 1}-0001`, 'DEPENSE', 2000, '12-28')],
+      masques: [], compteurs: { [`RC-${an - 1}`]: 1, [`DP-${an - 1}`]: 1 }, exercicesClotures: [],
+    }));
+  });
+  await page.goto('/');
+  await expect(page.getByText(`L’exercice ${annee - 1} doit être clôturé.`)).toBeVisible();
+  const telechargement = page.waitForEvent('download');
+  await page.getByRole('button', { name: `Clôturer l’exercice ${annee - 1}` }).first().click();
+  const dialogue = page.getByRole('dialog', { name: `Clôturer l’exercice ${annee - 1} ?` });
+  await expect(dialogue).toBeVisible();
+  await expect(dialogue.getByText('4 000 Ar').first()).toBeVisible();
+  await dialogue.getByRole('button', { name: `Clôturer ${annee - 1} et ouvrir ${annee}` }).click();
+  const sauvegarde = await telechargement;
+  expect(sauvegarde.suggestedFilename()).toContain(`avant_cloture_${annee - 1}`);
+  await expect(page.getByText(`Exercice ${annee}`, { exact: false }).first()).toBeVisible();
+  const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('salfa_tresorerie_livre_v2')!));
+  expect(stocke.parametres.exercice).toBe(annee);
+  expect(stocke.parametres.soldeInitial).toBe(4000);
+  expect(stocke.ecritures).toHaveLength(0);
+  expect(stocke.exercicesClotures[0]).toMatchObject({ annee: annee - 1, soldeCloture: 4000 });
+  await page.getByRole('button', { name: 'Exercices & clôtures' }).click();
+  await expect(page.getByRole('table').getByText(String(annee - 1), { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Télécharger l’archive ${annee - 1}` })).toBeVisible();
+  // Une saisie sur l'exercice ouvert reste possible ; la date est bornée à l'exercice.
+  await page.getByRole('button', { name: 'Livre journal' }).click();
+  await page.getByRole('button', { name: 'Nouvelle recette', exact: true }).click();
+  const saisie = page.getByRole('dialog', { name: 'Nouvelle recette' });
+  await expect(saisie.getByLabel(/Date de l’opération/)).toHaveAttribute('min', `${annee}-01-01`);
+  await saisie.getByLabel(/Libellé de l’écriture/).fill('Recette nouvel exercice');
+  await saisie.getByLabel(/Montant total/).fill('2500');
+  await saisie.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+  await expect(page.getByText('Recette nouvel exercice', { exact: true })).toBeVisible();
+});
+
+test('livre antérieur multi-années : converti sans perte et signalé', async ({ page }) => {
+  const annee = new Date().getFullYear();
+  await page.addInitScript(() => {
+    const an = new Date().getFullYear();
+    const e = (id: string, numero: string, sens: string, montant: number, date: string) => ({
+      id, numero, date, sens, libelle: sens === 'RECETTE' ? 'Recettes du jour' : 'Achat carburant',
+      categorie: sens === 'RECETTE' ? 'Recettes journalières' : 'Divers', montant, createdAt: '2024-01-01T08:00:00.000Z',
+    });
+    if (localStorage.getItem('salfa_tresorerie_livre_v2')) return;
+    localStorage.setItem('salfa_tresorerie_livre_v2', JSON.stringify({
+      format: 'CAISSE-SALFA', version: 1, revision: 3, updatedAt: new Date().toISOString(),
+      parametres: { soldeInitial: 1000 },
+      ecritures: [
+        e('a', `RC-${an - 2}-0001`, 'RECETTE', 5000, `${an - 2}-06-10`),
+        e('b', `DP-${an - 2}-0001`, 'DEPENSE', 2000, `${an - 2}-07-10`),
+        e('c', `RC-${an}-0001`, 'RECETTE', 1500, `${an}-02-10`),
+      ],
+      masques: [], compteurs: {},
+    }));
+  });
+  await page.goto('/');
+  await expect(page.getByText(/clôturés automatiquement et archivés/)).toBeVisible();
+  await expect(page.getByText('Stockage à vérifier')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Livre de caisse' })).toBeVisible();
+  const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('salfa_tresorerie_livre_v2')!));
+  expect(stocke.parametres.exercice).toBe(annee);
+  expect(stocke.parametres.soldeInitial).toBe(4000);
+  expect(stocke.ecritures).toHaveLength(1);
+  expect(stocke.exercicesClotures.map((c: { annee: number }) => c.annee)).toEqual([annee - 2, annee - 1]);
+  await page.getByRole('button', { name: 'Exercices & clôtures' }).click();
+  await expect(page.getByRole('table').getByText(String(annee - 2), { exact: true })).toBeVisible();
+});

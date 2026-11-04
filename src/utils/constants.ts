@@ -7,6 +7,9 @@ export const MAX_IMPORT_OCTETS = 8 * 1024 * 1024;
 /** L'établissement ne gère que la caisse en espèces ; le champ mode est retiré.
  *  Les éventuelles écritures importées qui portent un autre mode restent lisibles. */
 export const MODE_UNIQUE = 'Espèces';
+export const ANNEE_MIN = 1900;
+export const ANNEE_MAX = 9999;
+export const MAX_CLOTURES = 400;
 
 export const CATEGORIES_RECETTE = [
   'Recettes journalières', 'Consultations', 'Pharmacie', 'Laboratoire',

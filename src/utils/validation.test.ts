@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ecritureTest, livreTest } from '../test/fixtures';
+import { ecritureTest, livreTest, parametresTest } from '../test/fixtures';
 import { estDateValide, validerEcriture, validerSauvegarde } from './validation';
 
 describe('validation financière et calendaire', () => {
@@ -27,11 +27,28 @@ describe('validation financière et calendaire', () => {
     expect(() => validerSauvegarde(livreTest({ ecritures: [e, { ...e, id: 'autre' }] }))).toThrow('Numéro de pièce en double');
   });
   it('autorise un solde initial négatif mais refuse un solde initial hors limites', () => {
-    expect(validerSauvegarde(livreTest({ parametres: { soldeInitial: -500 } })).parametres.soldeInitial).toBe(-500);
-    expect(() => validerSauvegarde(livreTest({ parametres: { soldeInitial: Number.MAX_SAFE_INTEGER }, ecritures: [ecritureTest()] }))).toThrow('solde d’ouverture');
+    expect(validerSauvegarde(livreTest({ parametres: parametresTest({ soldeInitial: -500 }) })).parametres.soldeInitial).toBe(-500);
+    expect(() => validerSauvegarde(livreTest({ parametres: parametresTest({ soldeInitial: Number.MAX_SAFE_INTEGER }), ecritures: [ecritureTest()] }))).toThrow('solde d’ouverture');
   });
   it('valide le format et la version des sauvegardes', () => {
     expect(() => validerSauvegarde({ ...livreTest(), version: 2 })).toThrow('Version');
     expect(() => validerSauvegarde({ ...livreTest(), format: 'AUTRE' })).toThrow('CAISSE SALFA');
+  });
+
+  it('refuse un livre incohérent : écriture hors exercice, archive postérieure ou report rompu', () => {
+    const archive = { annee: 2025, clotureLe: '2025-12-31T18:00:00.000Z', soldeOuverture: 0, recettes: 1000, depenses: 0, soldeCloture: 1000, ecritures: [] };
+    const base = { parametres: parametresTest({ soldeInitial: 1000, exercice: 2026, reportPrecedent: { annee: 2025, solde: 1000 } }), exercicesClotures: [archive] };
+    expect(validerSauvegarde(livreTest(base)).exercicesClotures).toHaveLength(1);
+    expect(() => validerSauvegarde(livreTest({ parametres: parametresTest(), ecritures: [ecritureTest({ date: '2025-11-03' })] })))
+      .toThrow('hors de l’exercice 2026');
+    expect(() => validerSauvegarde(livreTest({ ...base, parametres: parametresTest({ soldeInitial: 999, exercice: 2026 }) })))
+      .toThrow('ne correspond pas à la clôture de 2025');
+    expect(() => validerSauvegarde(livreTest({ ...base, exercicesClotures: [{ ...archive, soldeCloture: 1200 }] })))
+      .toThrow('solde de clôture ne correspond pas');
+    expect(() => validerSauvegarde(livreTest({ ...base, exercicesClotures: [archive, { ...archive, annee: 2026 }] })))
+      .toThrow('ne peut pas être postérieur');
+    const trou = { annee: 2023, clotureLe: '2023-12-31T18:00:00.000Z', soldeOuverture: 0, recettes: 0, depenses: 0, soldeCloture: 0, ecritures: [] };
+    expect(() => validerSauvegarde(livreTest({ parametres: parametresTest({ exercice: 2026 }), exercicesClotures: [trou] })))
+      .toThrow('chaîne des clôtures');
   });
 });

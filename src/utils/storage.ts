@@ -134,14 +134,15 @@ export function chargerLivre(): ChargementLivre {
   try {
     const brut = localStorage.getItem(CLE_LIVRE);
     if (brut !== null) {
-      return { livre: validerSauvegarde(decoder(brut, 'Livre enregistré')), erreur: null, avertissement: null, migration: false };
+      const livre = validerSauvegarde(decoder(brut, 'Livre enregistré'));
+      return { livre, erreur: null, avertissement: null, migration: false, normalisation: livre.parametres.exercice === undefined, };
     }
     const { donnees, avertissement } = migrer();
-    return { livre: { ...vide, ...donnees }, erreur: null, avertissement, migration: avertissement !== null };
+    return { livre: { ...vide, ...donnees }, erreur: null, avertissement, migration: avertissement !== null, normalisation: false, };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Le stockage local est inaccessible.';
     return {
-      livre: vide, migration: false, avertissement: null,
+      livre: vide, migration: false, avertissement: null, normalisation: false,
       erreur: `${message} Les modifications sont bloquées pour protéger vos données. Téléchargez les données de secours dans « Données & sauvegardes », puis rechargez ou restaurez une sauvegarde valide.`,
     };
   }
@@ -161,6 +162,7 @@ export function sauvegarderLivre(livre: Sauvegarde, revisionAttendue: number, re
   try { brut = localStorage.getItem(CLE_LIVRE); }
   catch (e) { throw erreurStockage(e); }
   let revisionActuelle = 0;
+  let successeur = false;
   if (brut !== null) {
     let actuel: Sauvegarde | null;
     try { actuel = validerSauvegarde(decoder(brut, 'Livre enregistré')); }
@@ -171,15 +173,19 @@ export function sauvegarderLivre(livre: Sauvegarde, revisionAttendue: number, re
       actuel = null;
     }
     if (actuel) {
-      exiger(actuel.revision === revisionAttendue,
+      // La restauration est une action explicite et vérifiée : elle constitue la révision suivante.
+      successeur = recuperation && actuel.revision === revisionAttendue - 1;
+      exiger(actuel.revision === revisionAttendue || successeur,
         'Le livre a été modifié dans un autre onglet. Rechargez les données avant d’enregistrer pour éviter d’écraser une écriture.');
       revisionActuelle = actuel.revision;
     }
   } else {
-    exiger(revisionAttendue === 0 || recuperation, 'Le stockage a été supprimé dans un autre onglet. Rechargez le livre avant de continuer.');
+    // Le chargement ne doit jamais créer de valeur vide : seule une migration ou une restauration explicite peut initialiser.
+    exiger(revisionAttendue === 0 || recuperation,
+      'Le stockage a été supprimé dans un autre onglet. Rechargez le livre avant de continuer.');
   }
   const suivant: Sauvegarde = {
-    ...propre, revision: Math.max(revisionActuelle, revisionAttendue) + 1,
+    ...propre, revision: (successeur ? revisionActuelle : Math.max(revisionActuelle, revisionAttendue)) + 1,
     updatedAt: new Date().toISOString(), exportedAt: undefined,
   };
   try { localStorage.setItem(CLE_LIVRE, JSON.stringify(suivant)); }

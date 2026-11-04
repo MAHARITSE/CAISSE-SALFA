@@ -47,6 +47,9 @@ garder les versions verrouillées par `package-lock.json`.
   opération de suppression.
 - **Analyse** : répartition des recettes et dépenses par catégorie et ratio
   dépenses/recettes de la période.
+- **Clôture annuelle** : le livre ne grossit pas indéfiniment. Chaque année est
+  un exercice ; la clôture fige ses écritures dans une archive, reporte le solde
+  sur l’année suivante et bloque toute saisie sur l’année close.
 - **Exports** : CSV compatible Excel (UTF-8 BOM, séparateur `;`), protection
   contre l’injection de formules, colonnes mode/référence/observation, montants
   détaillés non comptés deux fois. Les totaux exportés correspondent à la
@@ -56,6 +59,11 @@ garder les versions verrouillées par `package-lock.json`.
 - **Sauvegardes JSON** : export complet, vérification avant import, aperçu,
   confirmation explicite et sauvegarde automatique du livre actuel avant
   remplacement. Un export brut de secours est disponible pour le diagnostic.
+- **Onglet Exercices & clôtures** : exercice en cours, solde reporté, historique
+  des clôtures et téléchargement d’une archive autonome par exercice.
+- **Livres antérieurs** : un livre créé avant cette version reste lisible ; il
+  est converti à l’ouverture, les années passées étant archivées et l’année
+  courante ouverte, avec un avertissement explicite.
 - **Robustesse** : sauvegarde atomique, erreurs de stockage visibles, contrôle de
   révision entre onglets, migration des anciennes données, garde-fou en cas de
   stockage corrompu, boîtes de dialogue accessibles et interface responsive.
@@ -65,6 +73,17 @@ garder les versions verrouillées par `package-lock.json`.
 
 ## Règles de gestion
 
+- **Un exercice = une année civile.** Le livre en cours ne contient que les
+  écritures de l’année ouverte ; les années précédentes sont des archives
+  figées, consultables et exportables, mais non modifiables.
+- **La clôture est explicite.** Elle télécharge d’abord une sauvegarde complète,
+  archive les écritures, reporte le solde en solde d’ouverture de l’année
+  suivante et remet la saisie à zéro. L’opération est irréversible.
+- **Une saisie doit appartenir à l’exercice ouvert.** Le sélecteur de date est
+  borné au 1er janvier–31 décembre de cet exercice ; une date hors exercice est
+  refusée, jamais décalée.
+- Si la nouvelle année a commencé sans clôture, une bannière le signale : les
+  saisies restent bloquées sur l’année ouverte jusqu’à la clôture.
 - L’application ne gère qu’un seul mode de paiement : **les espèces**. Le champ
   n’est plus demandé à la saisie ; les écritures anciennes qui portent un autre
   mode restent lisibles telles quelles jusqu’à leur modification.
@@ -95,6 +114,10 @@ Les anciennes clés sont lues au premier lancement si la nouvelle clé est absen
 - `salfa_tresorerie_ecritures_v1` ou `salfa_caisse_transactions` ;
 - `salfa_tresorerie_parametres_v1` ;
 - `salfa_tresorerie_masques_v1`.
+
+Un livre antérieur sans exercice est normalisé une seule fois, sans perte :
+ses écritures des années passées sont archivées (montant et totaux conservés)
+et l’année la plus récente reste ouverte.
 
 La migration conserve les clés d’origine. Elle reprend les références, attribue
 les numéros manquants sans collision et recalcule les
@@ -129,12 +152,13 @@ src/
     LivreJournal.tsx              journal, détails, bordereau imprimable
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
+    Exercices.tsx                 exercice en cours, clôtures et archives
     DonneesSauvegardes.tsx        export/import JSON et secours brut
     GestionMasquesModal.tsx       modèles de bordereaux
     Modale.tsx / Confirmation.tsx dialogues natifs accessibles
     ErrorBoundary.tsx             garde-fou d’affichage
   utils/
-    ledger.ts                     calculs, tri, numérotation, mutations
+    ledger.ts                     calculs, numérotation, mutations, clôture annuelle
     validation.ts                 validation stricte des données
     storage.ts                    stockage atomique et migration
     backup.ts                     sauvegardes JSON et secours

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { livreTest } from '../test/fixtures';
+import { ecritureTest, livreTest, parametresTest } from '../test/fixtures';
 import { CLE_ECRITURES, CLE_LIVRE, CLE_MASQUES, CLE_PARAMETRES, chargerLivre, sauvegarderLivre } from './storage';
 
 describe('persistance et migration', () => {
@@ -41,7 +41,7 @@ describe('persistance et migration', () => {
   it('refuse d’écraser une révision plus récente provenant d’un autre onglet', () => {
     const livre = livreTest();
     const premier = sauvegarderLivre(livre, 0);
-    expect(() => sauvegarderLivre({ ...livre, parametres: { soldeInitial: 999 } }, 0)).toThrow('autre onglet');
+    expect(() => sauvegarderLivre({ ...livre, parametres: parametresTest({ soldeInitial: 999 }) }, 0)).toThrow('autre onglet');
     expect(JSON.parse(localStorage.getItem(CLE_LIVRE)!).revision).toBe(premier.revision);
   });
   it('signale un quota plein sans prétendre que la modification est enregistrée', () => {
@@ -58,5 +58,25 @@ describe('persistance et migration', () => {
     expect(spy.mock.calls[0][0]).toBe(CLE_LIVRE);
     expect(JSON.parse(spy.mock.calls[0][1])).toMatchObject({ revision: 1, compteurs: { 'RC-2026': 4 } });
     expect(livre.exportedAt).toBeUndefined();
+  });
+
+  it('reprend un livre enregistré avant les exercices sans perte ; l’application le normalise', () => {
+    // Livre de l'ancienne version : aucun exercice dans les paramètres.
+    const base = { ...ecritureTest(), createdAt: '2025-12-24T08:00:00.000Z' };
+    localStorage.setItem(CLE_LIVRE, JSON.stringify({
+      ...livreTest(), parametres: { soldeInitial: 1000 },
+      ecritures: [
+        { ...base, id: 'e-2025', numero: 'RC-2025-0001', date: '2025-12-24', montant: 3000 },
+        { ...base, id: 'e-2026', numero: 'RC-2026-0001', date: '2026-01-10' },
+      ],
+    }));
+    const chargement = chargerLivre();
+    expect(chargement.erreur).toBeNull();
+    expect(chargement.normalisation).toBe(true);
+    expect(chargement.livre.ecritures).toHaveLength(2);
+    // Une restauration explicite d'un livre lu est acceptée une seule fois, en révision suivante.
+    const converti = sauvegarderLivre(chargement.livre, chargement.livre.revision, true);
+    expect(converti.revision).toBe(1);
+    expect(() => sauvegarderLivre(chargement.livre, chargement.livre.revision, true)).toThrow('autre onglet');
   });
 });

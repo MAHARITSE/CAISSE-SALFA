@@ -29,6 +29,23 @@ export interface Ecriture {
 export interface Parametres {
   /** Solde antérieur à l'historique conservé dans ce livre. */
   soldeInitial: number;
+  /** Année de l'exercice ouvert. Absente uniquement pour un livre antérieur aux exercices. */
+  exercice?: number;
+  /** Résultat de l'exercice précédent repris à l'ouverture, Null si le livre a commencé sans clôture. */
+  reportPrecedent: { annee: number; solde: number } | null;
+}
+
+/** Archive figée d'un exercice clôturé ; elle n'est pas modifiable et ne compte plus dans les soldes. */
+export interface ExerciceCloture {
+  annee: number;
+  clotureLe: string;
+  /** Solde d'ouverture de l'exercice clôturé. */
+  soldeOuverture: number;
+  recettes: number;
+  depenses: number;
+  /** Solde repris par l'exercice suivant. */
+  soldeCloture: number;
+  ecritures: Ecriture[];
 }
 
 export interface LigneJournal extends Ecriture {
@@ -49,6 +66,8 @@ export interface DonneesCaisse {
   masques: MasqueSaisie[];
   /** Compteurs persistants : supprimer une pièce ne libère pas son numéro. */
   compteurs: Record<string, number>;
+  /** Exercices déjà clôturés, du plus ancien au plus récent. */
+  exercicesClotures: ExerciceCloture[];
 }
 
 /** Même format pour le stockage local et les sauvegardes JSON importables. */
@@ -65,6 +84,8 @@ export interface ChargementLivre {
   erreur: string | null;
   avertissement: string | null;
   migration: boolean;
+  /** Livre lu sans exercice explicite (ancienne version) : à normaliser et réenregistrer. */
+  normalisation: boolean;
 }
 
 export interface FiltresJournal {
