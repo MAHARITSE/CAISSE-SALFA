@@ -65,6 +65,77 @@ describe('parcours de caisse', () => {
     expect(lire().compteurs[`DP-${annee}`]).toBe(1);
   });
 
+  it('personnalise l’en-tête d’un seul bordereau et l’imprime sur la bonne pièce', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    // Une pièce détaillée est nécessaire : le bordereau imprimable s'ouvre depuis le détail.
+    await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
+    const nouvelle = screen.getByRole('dialog', { name: 'Nouvelle recette' });
+    await user.type(within(nouvelle).getByLabelText(/Libellé de l’écriture/), 'Recettes du jour');
+    await user.type(within(nouvelle).getByLabelText(/Montant total/), '12000');
+    await user.click(within(nouvelle).getByRole('button', { name: 'Détail par postes' }));
+    await user.type(within(nouvelle).getByLabelText('Poste', { exact: true }), 'Consultations');
+    await user.type(within(nouvelle).getByLabelText('Montant (Ar)', { exact: true }), '12000');
+    await user.click(within(nouvelle).getByRole('button', { name: 'Ajouter' }));
+    await user.click(within(nouvelle).getByRole('button', { name: 'Enregistrer' }));
+    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    const modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
+    // Onglet « Engagement de dépense » : on remplace la première ligne.
+    await user.clear(within(modale).getByLabelText('Nom principal de l’établissement'));
+    await user.type(within(modale).getByLabelText('Nom principal de l’établissement'), 'CAISSE CENTRALE SALFA');
+    await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
+
+    expect(lire().entetes.depense.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
+    expect(lire().entetes.recette.lignes[0].texte).toBe('SALFA — DEPARTEMENT DE SANTE');
+
+    // L'autorisation de recette garde l'en-tête livré…
+    await user.click(screen.getByRole('button', { name: `Bordereau RC-${annee}-0001` }));
+    const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
+    expect(within(autorisation).getByText('SALFA — DEPARTEMENT DE SANTE')).toBeInTheDocument();
+    expect(within(autorisation).getByText('AUTORISATION DE RECETTE')).toBeInTheDocument();
+    expect(within(autorisation).queryByText('CAISSE CENTRALE SALFA')).not.toBeInTheDocument();
+    await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
+    expect(screen.getByRole('dialog', { name: 'En-tête des bordereaux' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Autorisation de recette' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+
+    // …l'engagement de dépense, lui, reprend la personnalisation.
+    await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
+    const depense = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
+    await user.type(within(depense).getByLabelText(/Libellé de l’écriture/), 'Achat urgent');
+    await user.type(within(depense).getByLabelText(/Montant total/), '3000');
+    await user.click(within(depense).getByRole('button', { name: 'Détail par postes' }));
+    await user.type(within(depense).getByLabelText('Poste', { exact: true }), 'Achat urgent');
+    await user.type(within(depense).getByLabelText('Montant (Ar)', { exact: true }), '3000');
+    await user.click(within(depense).getByRole('button', { name: 'Ajouter' }));
+    await user.click(within(depense).getByRole('button', { name: 'Enregistrer' }));
+    await user.click(screen.getAllByRole('button', { name: `Bordereau DP-${annee}-0001` })[0]);
+    const engagement = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
+    expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
+    expect(within(engagement).getByText('ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
+  });
+
+  it('restaure l’en-tête fourni sans toucher à l’autre document', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    let modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
+    await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
+    await user.clear(within(modale).getByLabelText('Église / tutelle'));
+    await user.type(within(modale).getByLabelText('Église / tutelle'), 'FLM — SYNODE');
+    await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
+    expect(lire().entetes.recette.lignes[1].texte).toBe('FLM — SYNODE');
+
+    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
+    await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
+    await user.click(within(modale).getByRole('button', { name: 'Restaurer l’en-tête fourni' }));
+    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('FIANGONANA LOTERANA MALAGASY');
+    await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
+    expect(lire().entetes.recette.lignes[1].texte).toBe('FIANGONANA LOTERANA MALAGASY');
+    expect(within(modale).queryByLabelText('Église / tutelle')).not.toBeInTheDocument();
+  });
+
   it('conserve la saisie et affiche une erreur explicite quand le stockage est plein', async () => {
     const user = userEvent.setup();
     render(<App />);

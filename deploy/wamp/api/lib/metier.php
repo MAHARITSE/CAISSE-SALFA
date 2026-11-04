@@ -118,6 +118,100 @@ function salfa_inserer_ecriture(array $valide, ?int $anneeArchive): void
     }
 }
 
+/**
+ * Enregistre l'en-tête d'un bordereau.
+ *
+ * Le serveur ne fait pas confiance au navigateur : le mode est ramené à une
+ * valeur connue, les images ne sont acceptées que si elles sont de vraies
+ * data URL PNG/JPEG sous la limite, et les lignes sont filtrées puis bornées.
+ */
+function salfa_enregistrer_entete(string $document, array $entete): void
+{
+    $mode = ($entete['mode'] ?? 'textes') === 'image' ? 'image' : 'textes';
+    $image = salfa_image_entete($entete['image'] ?? null, MAX_IMAGE_ENTETE);
+    $logoGauche = salfa_image_entete($entete['logoGauche'] ?? null, MAX_LOGO_ENTETE);
+    $logoDroit = salfa_image_entete($entete['logoDroit'] ?? null, MAX_LOGO_ENTETE);
+
+    $lignes = [];
+    $brutes = is_array($entete['lignes'] ?? null) ? $entete['lignes'] : [];
+    foreach (array_slice($brutes, 0, MAX_LIGNES_ENTETE) as $ligne) {
+        if (!is_array($ligne)) {
+            continue;
+        }
+        $texte = trim((string) ($ligne['texte'] ?? ''));
+        if (mb_strlen($texte) > 200) {
+            $texte = mb_substr($texte, 0, 200);
+        }
+        $taille = (int) ($ligne['taille'] ?? 9);
+        $lignes[] = [
+            'texte' => $texte,
+            'gras' => ($ligne['gras'] ?? false) === true,
+            'taille' => $taille >= 6 && $taille <= 40 ? $taille : 9,
+        ];
+    }
+    if (count($lignes) < MAX_LIGNES_ENTETE) {
+        while (count($lignes) < MAX_LIGNES_ENTETE) {
+            $lignes[] = ['texte' => '', 'gras' => false, 'taille' => 9];
+        }
+    }
+
+    $rempli = array_values(array_filter($lignes, static fn (array $l): bool => trim($l['texte']) !== ''));
+    if ($mode === 'image' && $image === '') {
+        throw new SalFaErreur('Choisissez l’image de l’en-tête avant d’enregistrer.', 400, 'entete_vide');
+    }
+    if ($mode === 'textes' && $rempli === []) {
+        throw new SalFaErreur('Renseignez au moins une ligne de texte avant d’enregistrer.', 400, 'entete_vide');
+    }
+
+    salfa_executer(
+        'INSERT INTO ' . salfa_table('entetes') . ' (document, mode, image, lignes, logo_gauche, logo_droit) VALUES (?, ?, ?, ?, ?, ?)'
+            . ' ON DUPLICATE KEY UPDATE mode = VALUES(mode), image = VALUES(image), lignes = VALUES(lignes),'
+            . ' logo_gauche = VALUES(logo_gauche), logo_droit = VALUES(logo_droit)',
+        [
+            $document,
+            $mode,
+            $image === '' ? null : $image,
+            json_encode($lignes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            $logoGauche === '' ? null : $logoGauche,
+            $logoDroit === '' ? null : $logoDroit,
+        ]
+    );
+    salfa_incrementer_revision();
+}
+
+/** Les en-têtes enregistrés, prêts à être renvoyés au navigateur. */
+function salfa_charger_entetes(): array
+{
+    $lignes = salfa_pdo()->query('SELECT * FROM ' . salfa_table('entetes'))->fetchAll();
+    $entetes = [];
+    foreach ($lignes as $l) {
+        $texte = json_decode((string) ($l['lignes'] ?? ''), true);
+        $entetes[(string) $l['document']] = [
+            'mode' => ((string) $l['mode']) === 'image' ? 'image' : 'textes',
+            'image' => (string) ($l['image'] ?? ''),
+            'lignes' => is_array($texte) ? $texte : [],
+            'logoGauche' => (string) ($l['logo_gauche'] ?? ''),
+            'logoDroit' => (string) ($l['logo_droit'] ?? ''),
+        ];
+    }
+    return $entetes;
+}
+
+/** N'accepte qu'une data URL PNG/JPEG sous la limite annoncée. */
+function salfa_image_entete($valeur, int $limite): string
+{
+    if (!is_string($valeur) || $valeur === '') {
+        return '';
+    }
+    if (!preg_match('#^data:image/(png|jpeg);base64,[A-Za-z0-9+/=\s]+$#', $valeur)) {
+        throw new SalFaErreur('Les images de l’en-tête doivent être des PNG ou JPEG.', 400, 'image_invalide');
+    }
+    if (strlen($valeur) > $limite) {
+        throw new SalFaErreur('Image trop lourde pour l’en-tête (1 Mo maximum).', 400, 'image_trop_lourde');
+    }
+    return $valeur;
+}
+
 function salfa_enregistrer_masques(array $masques): void
 {
     $valides = salfa_valider_masques($masques);
@@ -364,6 +458,11 @@ function salfa_restaurer_sauvegarde(array $corps): void
         throw new SalFaErreur('Modèles invalides.', 400, 'sauvegarde_invalide');
     }
     $masquesValides = salfa_valider_masques($masques);
+    // Les en-têtes imprimables suivent la sauvegarde ; un livre antérieur n'en a pas.
+    $entetesSauvegarde = $sauvegarde['entetes'] ?? null;
+    if ($entetesSauvegarde !== null && !is_array($entetesSauvegarde)) {
+        throw new SalFaErreur('En-têtes de bordereau invalides.', 400, 'sauvegarde_invalide');
+    }
     $compteurs = $sauvegarde['compteurs'] ?? [];
     if (!is_array($compteurs)) {
         throw new SalFaErreur('Compteurs invalides.', 400, 'sauvegarde_invalide');
@@ -384,6 +483,14 @@ function salfa_restaurer_sauvegarde(array $corps): void
             salfa_executer('INSERT INTO ' . salfa_table('masques') . ' (id, nom, sens, description, ordre) VALUES (?, ?, ?, ?, ?)', [$m['id'], $m['nom'], $m['sens'], $m['description'] ?: null, $m['ordre']]);
             foreach ($m['lignes'] as $ligne) {
                 salfa_executer('INSERT INTO ' . salfa_table('masque_lignes') . ' (masque_id, description, montant_defaut, ordre) VALUES (?, ?, ?, ?)', [$m['id'], $ligne['description'], $ligne['montantDefaut'], $ligne['ordre']]);
+            }
+        }
+        if (is_array($entetesSauvegarde)) {
+            foreach (['depense', 'recette'] as $document) {
+                if (is_array($entetesSauvegarde[$document] ?? null)) {
+                    // La validation lève avant toute écriture partielle : la transaction protège le reste.
+                    salfa_enregistrer_entete($document, $entetesSauvegarde[$document]);
+                }
             }
         }
         foreach ($ecritures as $valide) {

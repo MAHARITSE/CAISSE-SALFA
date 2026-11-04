@@ -40,9 +40,14 @@ salfa_point('verifier', function (): array {
             $tables = salfa_pdo()->query('SHOW TABLES LIKE ' . salfa_pdo()->quote($prefixe . '%'))->fetchAll(PDO::FETCH_COLUMN);
             $admin = (int) salfa_pdo()->query('SELECT COUNT(*) FROM ' . salfa_table('utilisateurs') . " WHERE role = 'admin' AND actif = 1")->fetchColumn();
             $ajouter('connexion MySQL', true, 'base « ' . salfa_config()['base'] . ' » sur ' . salfa_config()['hote']);
-            $ajouter('tables', count($tables) >= 12, count($tables) . ' table(s) trouvée(s) : ' . implode(', ', $tables));
+            $ajouter('tables', count($tables) >= 13, count($tables) . ' table(s) trouvée(s) : ' . implode(', ', $tables));
             $ajouter('compte administrateur', $admin > 0, $admin > 0 ? $admin . ' compte(s) actif(s)' : 'aucun : lancez outils\creer-admin.bat');
             $livre = salfa_charger_livre();
+            $entetes = array_values(array_filter(
+                array_keys((array) ($livre['entetes'] ?? [])),
+                static fn (string $cle): bool => $cle === 'depense' || $cle === 'recette'
+            ));
+            $ajouter('en-têtes de bordereau', true, $entetes === [] ? 'livrés par défaut' : 'personnalisés : ' . implode(', ', $entetes));
             $ajouter('livre', true, 'révision ' . $livre['revision'] . ', exercice ' . ($livre['parametres']['exercice'] ?? 'non défini'));
         } catch (Throwable $e) {
             $base = 'en échec';

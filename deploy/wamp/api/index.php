@@ -32,6 +32,7 @@ salfa_point('index', function (): void {
         'ecritures-supprimer' => 'ecritures-supprimer',
         'ecritures-restaurer' => 'ecritures-restaurer',
         'masques' => 'masques',
+        'entete' => 'entete',
         'solde-initial' => 'solde-initial',
         'cloture' => 'cloture',
         'restauration' => 'restauration',

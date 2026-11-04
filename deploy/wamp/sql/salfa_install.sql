@@ -84,6 +84,18 @@ CREATE TABLE IF NOT EXISTS salfa_masque_lignes (
   CONSTRAINT fk_lignes_masque FOREIGN KEY (masque_id) REFERENCES salfa_masques(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- En-tête imprimable de chaque bordereau (engagement de dépense, autorisation de recette).
+-- Les images sont stockées en data URL PNG/JPEG, bornées côté application à 1 Mo.
+CREATE TABLE IF NOT EXISTS salfa_entetes (
+  document ENUM('depense','recette') NOT NULL PRIMARY KEY,
+  mode ENUM('image','textes') NOT NULL DEFAULT 'textes',
+  image MEDIUMTEXT NULL,
+  lignes MEDIUMTEXT NULL,
+  logo_gauche MEDIUMTEXT NULL,
+  logo_droit MEDIUMTEXT NULL,
+  modifie_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS salfa_compteurs (
   cle VARCHAR(20) NOT NULL PRIMARY KEY,
   valeur INT UNSIGNED NOT NULL DEFAULT 0

@@ -65,6 +65,17 @@
 .modal-shell::backdrop { background: rgb(15 23 42 / .48); backdrop-filter: blur(3px); }
 @keyframes modal-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
 
+/* En-tête des bordereaux : rendu identique dans l'aperçu, la modale et l'impression. */
+.entete-bordereau { display: flex; align-items: center; gap: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 10px 12px; }
+.entete-bordereau__logos { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 0 0 auto; }
+.entete-bordereau__logos img { max-height: 70px; max-width: 74px; object-fit: contain; }
+.entete-bordereau__textes { flex: 1 1 auto; min-width: 0; text-align: center; line-height: 1.35; }
+.entete-bordereau__textes p { margin: 0; font-size: 11px; color: #334155; overflow-wrap: anywhere; }
+.entete-bordereau__titre { font-size: 15px !important; font-weight: 800; letter-spacing: .04em; color: #0f172a !important; }
+.entete-bordereau__image { display: block; width: 100%; height: auto; object-fit: contain; }
+.entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; width: 100%; }
+.entete-bordereau--compact { border: 0; border-radius: 0; padding: 0; gap: 10px; }
+
 .print-only { display: none; }
 @media screen { .screen-page-hidden { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
@@ -91,6 +102,10 @@
   .print-bordereau { page: bordereau; padding: 0; }
   .bordereau-document { font-size: 11px; }
   .bordereau-document table { font-size: 10px; }
+  .bordereau-entete { break-inside: avoid; }
+  .entete-bordereau { border: 0; border-radius: 0; padding: 0; }
+  .entete-bordereau__textes p { font-size: 11px; }
+  .entete-bordereau__titre { font-size: 16px !important; }
   @page { size: A4 landscape; margin: 12mm; }
   @page bordereau { size: A4 portrait; margin: 15mm; }
 }

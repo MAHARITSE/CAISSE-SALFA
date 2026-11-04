@@ -1,5 +1,6 @@
 import type { DonneesCaisse, Ecriture, ExerciceCloture, LigneDetail, MasqueSaisie, Parametres, Sauvegarde, Sens } from '../types';
 import { ANNEE_MAX, ANNEE_MIN, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MONTANT_MAX } from './constants';
+import { normaliserEntetes } from './entete';
 
 /** Une erreur de validation est toujours bloquante : aucune ligne n'est écartée en silence. */
 export function exiger(condition: unknown, message: string): asserts condition {
@@ -232,7 +233,9 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
     solde += e.sens === 'RECETTE' ? e.montant : -e.montant;
     exiger(Number.isSafeInteger(solde), 'Le solde cumulé dépasse la précision numérique fiable. Réduisez les montants du livre.');
   }
-  return { ecritures, parametres, masques, compteurs, exercicesClotures };
+  // Un livre antérieur aux en-têtes personnalisables retombe sur les en-têtes livrés.
+  const entetes = normaliserEntetes(d.entetes);
+  return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes };
 }
 
 export function validerSauvegarde(valeur: unknown): Sauvegarde {

@@ -3,13 +3,13 @@
 -- ============================================================================
 -- À exécuter dans phpMyAdmin APRÈS salfa_install.sql :
 --   onglet SQL -> coller ce fichier -> Exécuter
--- Vous devez voir 12 lignes, et la dernière colonne « attendu » à OK.
+-- Vous devez voir 13 tables, et la colonne « etat » à OK.
 -- ============================================================================
 
 SELECT 'tables salfa_ présentes' AS controle,
        COUNT(*) AS trouve,
-       12 AS attendu,
-       IF(COUNT(*) = 12, 'OK', 'INCOMPLET — relancez salfa_install.sql') AS etat
+       13 AS attendu,
+       IF(COUNT(*) = 13, 'OK', 'INCOMPLET — relancez salfa_install.sql') AS etat
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = 'caisse_salfa'
   AND TABLE_NAME LIKE 'salfa%';
@@ -19,6 +19,14 @@ SELECT 'livre initialisé' AS controle,
        (SELECT COUNT(*) FROM caisse_salfa.salfa_livre WHERE id = 1) AS trouve,
        1 AS attendu,
        IF((SELECT COUNT(*) FROM caisse_salfa.salfa_livre WHERE id = 1) = 1, 'OK', 'MANQUANT') AS etat;
+
+-- Les en-têtes personnalisés des bordereaux (facultatif) : table prête, encore vide.
+SELECT 'table des en-têtes de bordereau' AS controle,
+       (SELECT COUNT(*) FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = 'caisse_salfa' AND TABLE_NAME = 'salfa_entetes') AS trouve,
+       1 AS attendu,
+       IF((SELECT COUNT(*) FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = 'caisse_salfa' AND TABLE_NAME = 'salfa_entetes') = 1, 'OK', 'MANQUANTE') AS etat;
 
 -- Aucun compte : l'étape suivante est outils\creer-admin.bat (normal au premier import).
 SELECT 'comptes utilisateurs' AS controle,

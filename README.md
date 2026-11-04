@@ -54,6 +54,14 @@ garder les versions verrouillées par `package-lock.json`.
   postes.
 - **Bordereaux détaillés** : postes, références/quittances, modèles réutilisables
   avec montants par défaut facultatifs et ordre des postes conservé.
+- **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
+  recette ont chacun leur propre en-tête, modifiable depuis le bouton
+  « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et
+  logos » (huit lignes de texte, deux logos facultatifs, aperçu immédiat) ou
+  « Image complète » (PNG/JPEG d’1 Mo maximum). « Restaurer l’en-tête fourni »
+  revient au modèle livré, pour le seul document affiché. L’en-tête suit le
+  livre : il est enregistré localement ou dans MySQL (`salfa_entetes`) et
+  transporté par les sauvegardes JSON.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
@@ -174,6 +182,7 @@ src/
   components/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
     LivreJournal.tsx              journal, détails, bordereau imprimable
+    EnteteBordereauModal.tsx      en-tête modifiable des deux bordereaux
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
     Exercices.tsx                 exercice en cours, clôtures et archives
@@ -189,6 +198,7 @@ src/
     export.ts                     CSV sûr et téléchargements
     format.ts                     dates locales et montants
     constants.ts                  catégories, modes, limites, modèles
+    entete.ts                     modèle, validation et valeurs par défaut des en-têtes
   test/                           configuration et fixtures de tests
 tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 ```

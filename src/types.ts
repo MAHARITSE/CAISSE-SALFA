@@ -1,3 +1,6 @@
+import type { EntetesDocuments } from './utils/entete';
+
+export type { EntetesDocuments };
 export type Sens = 'RECETTE' | 'DEPENSE';
 
 /** Les montants sont des entiers en ariary (MGA), jamais des flottants. */
@@ -68,6 +71,8 @@ export interface DonneesCaisse {
   compteurs: Record<string, number>;
   /** Exercices déjà clôturés, du plus ancien au plus récent. */
   exercicesClotures: ExerciceCloture[];
+  /** En-têtes imprimables de l'engagement de dépense et de l'autorisation de recette. */
+  entetes: EntetesDocuments;
 }
 
 /** Même format pour le stockage local et les sauvegardes JSON importables. */
