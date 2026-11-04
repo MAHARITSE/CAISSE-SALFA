@@ -1,28 +1,12 @@
-# CAISSE SALFA — routeur de l'API (Apache / WAMP)
-# /api/livre  →  /api/index.php?r=livre
-
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /caisse-salfa/api/
-
-  # Les fichiers réellement présents restent servis directement.
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  RewriteRule ^(.*)$ index.php?r=$1 [QSA,L]
-</IfModule>
-
-# Aucun listing de répertoire, aucune exécution des fichiers de sauvegarde.
-Options -Indexes
+# CAISSE SALFA — dossiers internes de l'API
+# Stratégie « deny all » : si un futur fichier est ajouté ici par erreur,
+# il restera inaccessible tant que son accès n'est pas explicitly autorisé.
+# Les seuls points d'entrée publics sont api/points/*.php.
 
 <IfModule mod_authz_core.c>
-  <FilesMatch "^(salfa-config\.php|.*\.sql|.*\.log)$">
-    Require all denied
-  </FilesMatch>
+  Require all denied
 </IfModule>
-
-<IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Cache-Control "no-store"
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
 </IfModule>
