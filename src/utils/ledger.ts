@@ -228,13 +228,16 @@ export function changerSoldeInitial(donnees: DonneesCaisse, soldeInitial: number
   return validerDonnees({ ...donnees, parametres: { soldeInitial } });
 }
 
-/** Enregistre l'en-tête d'un seul document, sans toucher à l'autre. */
-export function enregistrerEntete(donnees: DonneesCaisse, document: DocumentEntete, entete: EnteteDocument): DonneesCaisse {
-  const entetes = normaliserEntetes({ ...donnees.entetes, [document]: entete });
-  const propre = entetes[document];
+/**
+ * Enregistre l'en-tête, commun aux deux imprimés.
+ * `document` est conservé pour les appelants : il ne désigne plus qu'un
+ * document d'où l'on ouvre l'éditeur, l'en-tête étant partagé.
+ */
+export function enregistrerEntete(donnees: DonneesCaisse, _document: DocumentEntete, entete: EnteteDocument): DonneesCaisse {
+  const propre = normaliserEntetes(entete);
   exiger(propre.mode === 'image' ? propre.image !== '' : propre.lignes.some(l => l.texte.trim() !== ''),
     'L’en-tête est vide : choisissez une image ou renseignez au moins une ligne de texte.');
-  return { ...donnees, entetes };
+  return { ...donnees, entetes: propre };
 }
 
 /** Remplace les catégories d'un sens, sans toucher à l'autre liste. */

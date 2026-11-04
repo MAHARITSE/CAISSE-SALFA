@@ -61,8 +61,34 @@ function salfa_verrouiller_livre(): null
  *
  * @return array<string, mixed>
  */
+/**
+ * Ajoute la colonne des images libres de l'en-tête à une base déjà installée.
+ *
+ * `CREATE TABLE IF NOT EXISTS` ne touche pas une table existante : sans cette
+ * migration, un site mis à jour garderait un en-tête sans images. L'opération
+ * est idempotente et silencieuse en cas de droits insuffisants : l'en-tête
+ * reste alors utilisable en mode « textes ».
+ */
+function salfa_migrer_images_entete(): void
+{
+    static $faite = false;
+    if ($faite) {
+        return;
+    }
+    $faite = true;
+    try {
+        $colonnes = salfa_pdo()->query('SHOW COLUMNS FROM ' . salfa_table('entetes') . " LIKE 'images'")->fetchAll();
+        if ($colonnes === []) {
+            salfa_pdo()->exec('ALTER TABLE ' . salfa_table('entetes') . ' ADD COLUMN images MEDIUMTEXT NULL AFTER lignes');
+        }
+    } catch (Throwable $e) {
+        // Base en lecture seule ou droits limités : on continue sans images libres.
+    }
+}
+
 function salfa_charger_livre(): array
 {
+    salfa_migrer_images_entete();
     $pdo = salfa_pdo();
     $libre = $pdo->query('SELECT * FROM ' . salfa_table('livre') . ' WHERE id = 1')->fetch();
     if (!$libre) {

@@ -70,7 +70,7 @@ describe('parcours de caisse', () => {
     expect(lire().compteurs[`DP-${annee}`]).toBe(1);
   });
 
-  it('personnalise l’en-tête d’un seul bordereau et l’imprime sur la bonne pièce', async () => {
+  it('personnalise l’en-tête commun et l’imprime sur les deux pièces', async () => {
     const user = userEvent.setup();
     render(<App />);
     // Une pièce détaillée est nécessaire : le bordereau imprimable s'ouvre depuis le détail.
@@ -85,27 +85,24 @@ describe('parcours de caisse', () => {
     await user.click(within(nouvelle).getByRole('button', { name: 'Enregistrer' }));
     await user.click(screen.getByRole('button', { name: 'En-tête' }));
     const modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
-    // Onglet « Engagement de dépense » : on remplace la première ligne.
-    await user.clear(within(modale).getByLabelText('Nom principal de l’établissement'));
-    await user.type(within(modale).getByLabelText('Nom principal de l’établissement'), 'CAISSE CENTRALE SALFA');
+    // Un seul en-tête : la première ligne vaut pour les deux imprimés.
+    await user.clear(within(modale).getByLabelText('Texte de la ligne 1'));
+    await user.type(within(modale).getByLabelText('Texte de la ligne 1'), 'CAISSE CENTRALE SALFA');
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
 
-    expect(lire().entetes.depense.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
-    expect(lire().entetes.recette.lignes[0].texte).toBe('FIANGONANA LOTERANA MALAGASY');
+    expect(lire().entetes.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
 
-    // L'autorisation de recette garde l'en-tête livré…
+    // L'autorisation de recette reprend cet en-tête…
     await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
-    expect(within(autorisation).getByText('FIANGONANA LOTERANA MALAGASY')).toBeInTheDocument();
+    expect(within(autorisation).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
     expect(within(autorisation).getByText('AUTORISATION DE RECETTES')).toBeInTheDocument();
     expect(autorisation).toHaveTextContent(`ARC-${annee}-0001`);
-    expect(within(autorisation).queryByText('CAISSE CENTRALE SALFA')).not.toBeInTheDocument();
     await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
     expect(screen.getByRole('dialog', { name: 'En-tête des bordereaux' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Autorisation de recette' })).toHaveAttribute('aria-selected', 'true');
     await user.click(screen.getByRole('button', { name: 'Annuler' }));
 
-    // …l'engagement de dépense, lui, reprend la personnalisation.
+    // …et l'engagement de dépense aussi : c'est le même papier à en-tête.
     await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
     const depense = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     await user.type(within(depense).getByLabelText(/Libellé de l’écriture/), 'Achat urgent');
@@ -123,25 +120,31 @@ describe('parcours de caisse', () => {
     expect(engagement).toHaveTextContent(`AED-${annee}-0001`);
   });
 
-  it('restaure l’en-tête fourni sans toucher à l’autre document', async () => {
+  it('restaure l’en-tête fourni, images comprises', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'En-tête' }));
     let modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
-    await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
-    await user.clear(within(modale).getByLabelText('Église / tutelle'));
-    await user.type(within(modale).getByLabelText('Église / tutelle'), 'FLM — SYNODE');
+    // L'éditeur n'affiche que la ligne choisie : on sélectionne la deuxième.
+    await user.click(within(modale).getByText('Église / tutelle'));
+    await user.clear(within(modale).getByLabelText('Texte de la ligne 2'));
+    await user.type(within(modale).getByLabelText('Texte de la ligne 2'), 'FLM — SYNODE');
+    // Une image retirée doit revenir avec la restauration.
+    await user.click(modale.querySelectorAll('.entete-feuille__image')[0]);
+    await user.click(within(modale).getByRole('button', { name: /Retirer/ }));
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
-    expect(lire().entetes.recette.lignes[1].texte).toBe('FLM — SYNODE');
+    expect(lire().entetes.lignes[1].texte).toBe('FLM — SYNODE');
+    expect(lire().entetes.images).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: 'En-tête' }));
     modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
-    await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
-    await user.click(within(modale).getByRole('button', { name: 'Restaurer l’en-tête fourni' }));
-    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
+    await user.click(within(modale).getByRole('button', { name: /Restaurer l’en-tête fourni/ }));
+    await user.click(within(modale).getByText('Église / tutelle'));
+    expect(within(modale).getByLabelText('Texte de la ligne 2')).toHaveValue('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
+    expect(modale.querySelectorAll('.entete-feuille__image')).toHaveLength(2);
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
-    expect(lire().entetes.recette.lignes[1].texte).toBe('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
-    expect(within(modale).queryByLabelText('Église / tutelle')).not.toBeInTheDocument();
+    expect(lire().entetes.lignes[1].texte).toBe('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
+    expect(lire().entetes.images).toHaveLength(2);
   });
 
   it('enregistre avec un seul poste renseigné et ignore les lignes vides', async () => {

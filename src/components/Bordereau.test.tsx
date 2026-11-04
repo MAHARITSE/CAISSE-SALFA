@@ -65,10 +65,25 @@ describe('bordereau imprimable conforme aux modèles', () => {
       'HOPITALY LOTERANA TOLIARY TANAMBAO - BP : 99',
       'E-mail: salfa.tulear@gmail.com',
     ]) expect(screen.getByText(texte)).toBeInTheDocument();
-    // Les deux logos du modèle encadrent l'en-tête.
-    const logos = container.querySelectorAll('.bordereau-entete__logo img');
+    // Les deux logos du modèle sont des images placées librement sur la feuille.
+    const logos = container.querySelectorAll('.bordereau-entete__image-libre');
     expect(logos).toHaveLength(2);
     for (const logo of logos) expect(logo.getAttribute('src')).toBeTruthy();
+    // Le premier est calé à gauche, le second à droite, comme sur les imprimés.
+    expect((logos[0] as HTMLElement).style.left).toBe('7.6mm');
+    expect((logos[1] as HTMLElement).style.left).toBe('181mm');
+  });
+
+  it('imprime chaque ligne avec sa police, sa taille et son alignement', () => {
+    const entete = enteteParDefaut();
+    entete.lignes[1] = { ...entete.lignes[1], police: 'Georgia', taille: 12.5, italique: true, souligne: true, alignement: 'droite' };
+    const { container } = render(<BordereauDocument ligne={ligne('DEPENSE')} entete={entete} />);
+    const paragraphe = container.querySelectorAll('.bordereau-ligne-entete')[1] as HTMLElement;
+    expect(paragraphe.style.fontFamily).toContain('Georgia');
+    expect(paragraphe.style.fontSize).toBe('12.5pt');
+    expect(paragraphe.style.fontStyle).toBe('italic');
+    expect(paragraphe.style.textDecoration).toBe('underline');
+    expect(paragraphe.style.textAlign).toBe('right');
   });
 
   it('présente le document comme une feuille A4 portrait', () => {

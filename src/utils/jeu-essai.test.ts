@@ -20,7 +20,9 @@ describe('jeu d’essai livré', () => {
     const avecDetails = livre.ecritures.filter(e => e.lignesDetail?.length);
     expect(avecDetails).toHaveLength(52);
     expect(new Set(livre.ecritures.map(e => e.sens))).toEqual(new Set(['RECETTE', 'DEPENSE']));
-    expect(livre.entetes).toHaveProperty('depense');
-    expect(livre.entetes).toHaveProperty('recette');
+    // Un seul en-tête, commun aux deux imprimés.
+    expect(livre.entetes).toHaveProperty('lignes');
+    expect(livre.entetes).not.toHaveProperty('depense');
+    expect(livre.entetes.images.length).toBeGreaterThanOrEqual(2);
   });
 });

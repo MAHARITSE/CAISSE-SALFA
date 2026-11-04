@@ -65,19 +65,42 @@
 .modal-shell::backdrop { background: rgb(15 23 42 / .48); backdrop-filter: blur(3px); }
 @keyframes modal-enter { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
 
-/* En-tête des bordereaux : rendu identique dans l'aperçu, la modale et l'impression. */
-.entete-bordereau { display: flex; align-items: center; gap: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 10px 12px; }
-.entete-bordereau__logos { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 0 0 auto; }
-.entete-bordereau__logos img { max-height: 70px; max-width: 74px; object-fit: contain; }
-.entete-bordereau__textes { flex: 1 1 auto; min-width: 0; text-align: center; line-height: 1.35; }
-.entete-bordereau__textes p { margin: 0; font-size: 11px; color: #334155; overflow-wrap: anywhere; }
-.entete-bordereau__titre { font-weight: 800; letter-spacing: .04em; color: #0f172a !important; }
-/* Dans la feuille A4, la taille de chaque ligne vient de son style en points. */
-.bordereau-entete .entete-bordereau__textes p { color: #000; }
-.bordereau-entete .entete-bordereau__titre { color: #000 !important; }
-.entete-bordereau__image { display: block; width: 100%; height: auto; object-fit: contain; }
-.entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; width: 100%; }
-.entete-bordereau--compact { border: 0; border-radius: 0; padding: 0; gap: 10px; }
+/* En-tête du document : un bandeau à hauteur fixe, où textes et images se placent. */
+.bordereau-entete { position: relative; overflow: visible; break-inside: avoid; }
+.bordereau-entete__image { display: block; width: 100%; height: auto; object-fit: contain; }
+/* Les textes restent dans la colonne centrale ; les images flottent par-dessus. */
+.bordereau-entete__textes { position: absolute; left: 30mm; right: 30mm; top: 0; }
+.bordereau-entete__textes p { margin: 0; color: #000; line-height: 1.3; }
+.bordereau-entete__image-libre { position: absolute; height: auto; object-fit: contain; }
+.entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; }
+
+/* Feuille A4 de l'éditeur : on y dépose les images et on les glisse. */
+.entete-feuille {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(15 23 42 / .10);
+  touch-action: none;
+}
+.entete-feuille__bandeau { position: absolute; left: 0; right: 0; }
+.entete-feuille__textes { position: absolute; left: 0; right: 0; top: 0; }
+.entete-feuille__textes p { margin: 0; color: #000; }
+.entete-feuille__image { position: absolute; }
+.entete-feuille__image--active { outline: 2px solid #0d9488; outline-offset: 2px; }
+.entete-feuille__aide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55%;
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  color: #cbd5e1;
+  pointer-events: none;
+}
+
 /* ------------------------------------------------------------------ *
  * Document imprimé : une vraie feuille A4 portrait.
  *

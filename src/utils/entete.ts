@@ -6,22 +6,52 @@ import logoDroit from '../assets/logo-salfa-droit.png?inline';
 /**
  * Modèle d'en-tête des documents SALFA.
  *
- * Chaque document imprimable (engagement de dépense, autorisation de recette)
- * possède son propre en-tête, modifiable depuis l'onglet « En-têtes ».
- * Le même principe que les bulletins de SALAIRE SALFA est repris :
- *  - « Image complète » : une seule image scannée ou préparée ailleurs ;
- *  - « Textes et logos » : titres, coordonnées, numéros fiscaux et deux logos,
- *    mis en page en HTML — net à l'écran comme à l'impression.
+ * Un seul en-tête pour les deux imprimés : la demande d'engagement de dépense
+ * et l'autorisation de recette portent le même papier à en-tête. Chaque ligne
+ * se règle comme dans un traitement de texte (police, taille, gras, italique,
+ * souligné, alignement) et les images se placent librement sur la feuille,
+ * en millimètres, comme on glisserait un logo dans Word.
  */
 
 export type DocumentEntete = 'depense' | 'recette';
+export type Alignement = 'gauche' | 'centre' | 'droite';
+
+/** Polices proposées : celles dont l'ordinateur de bureau dispose à coup sûr. */
+export const POLICES: Array<{ valeur: string; libelle: string }> = [
+  { valeur: 'Arial', libelle: 'Arial' },
+  { valeur: 'Times New Roman', libelle: 'Times New Roman' },
+  { valeur: 'Courier New', libelle: 'Courier New' },
+  { valeur: 'Georgia', libelle: 'Georgia' },
+  { valeur: 'Verdana', libelle: 'Verdana' },
+  { valeur: 'Trebuchet MS', libelle: 'Trebuchet MS' },
+];
 
 export interface LigneEntete {
   texte: string;
-  /** Texte principal mis en gras. */
+  /** Mise en valeur : gras du modèle. */
   gras: boolean;
-  /** Taille en points, appliquée à l'impression. */
+  /** Taille en points, appliquée à l'écran comme à l'impression. */
   taille: number;
+  police: string;
+  italique: boolean;
+  souligne: boolean;
+  alignement: Alignement;
+  /** Alignement d'origine du modèle, nommé ainsi dans la sauvegarde. */
+  caps?: boolean;
+}
+
+/** Image placée librement : position du coin haut-gauche et largeur, en mm. */
+export interface ImageEntete {
+  id: string;
+  /** Data URL PNG ou JPEG. */
+  source: string;
+  /** Bord gauche, depuis le bord gauche de la feuille. */
+  x: number;
+  /** Bord supérieur, depuis le haut de la feuille. */
+  y: number;
+  /** Largeur imprimée ; la hauteur suit les proportions de l'image. */
+  largeur: number;
+  alt: string;
 }
 
 export interface EnteteDocument {
@@ -29,21 +59,20 @@ export interface EnteteDocument {
   /** Image complète utilisée quand mode === 'image' (data URL PNG ou JPEG). */
   image: string;
   lignes: LigneEntete[];
-  logoGauche: string;
-  logoDroit: string;
+  images: ImageEntete[];
 }
 
-export interface EntetesDocuments {
-  depense: EnteteDocument;
-  recette: EnteteDocument;
-}
+/** L'en-tête est commun : une seule valeur pour les deux documents. */
+export type EntetesDocuments = EnteteDocument;
 
 export const MAX_IMAGE_OCTETS = 1024 * 1024;
 /** Les logos voyagent dans la sauvegarde : limite plus basse que l'image complète. */
 export const MAX_LOGO_OCTETS = 300 * 1024;
-export const MAX_LIGNES_ENTETE = 8;
+export const MAX_LIGNES_ENTETE = 24;
+/** Une feuille A4 tient largement vingt images d'en-tête. */
+export const MAX_IMAGES_ENTETE = 20;
 
-/** Repères affichés dans l'éditeur, dans l'ordre des lignes livrées. */
+/** Repères proposés dans l'éditeur, dans l'ordre des lignes livrées. */
 export const LIBELLES_LIGNES: string[] = [
   'Nom principal de l’établissement',
   'Église / tutelle',
@@ -84,9 +113,9 @@ export function numeroDocument(numeroPiece: string): string | null {
 }
 
 /**
- * En-tête des imprimés officiels de l'hôpital, relevé sur les deux modèles
- * fournis. La casse est celle des modèles : les lignes 1, 4 et 6 en capitales,
- * les autres en petites capitales.
+ * En-tête des imprimés officiels de l'hôpital, relevé sur les modèles fournis.
+ * Les lignes 1, 4 et 6 sont en capitales grasses, les autres en petites
+ * capitales.
  */
 const ENTETE_LIVRE = [
   'FIANGONANA LOTERANA MALAGASY',
@@ -98,75 +127,142 @@ const ENTETE_LIVRE = [
   'E-mail: salfa.tulear@gmail.com',
 ];
 
-/** Logos des imprimés, embarqués dans le paquet (aucun accès réseau). */
-const LOGO_GAUCHE = logoGauche;
-const LOGO_DROIT = logoDroit;
-
-/**
- * Tailles du modèle : la première ligne en capitales grasses, les lignes 4 et 6
- * en capitales grasses un peu plus petites, les autres en petites capitales.
- */
+/** Tailles du modèle, en points. */
 const TAILLES_LIVREES = [11, 9, 9, 9.5, 9, 9.5, 8.5];
 
-function lignesParDefaut(prefixe: string[]): LigneEntete[] {
-  return prefixe.map((texte, index) => ({
+/**
+ * Positions des deux logos sur la feuille A4, en millimètres, mesurées sur les
+ * modèles : la croix SALFA à gauche, l'emblème du synode à droite.
+ */
+const IMAGES_LIVREES: Array<Omit<ImageEntete, 'source'>> = [
+  { id: 'logo-gauche', x: 7.6, y: 13, largeur: 15, alt: 'Logo SALFA' },
+  { id: 'logo-droit', x: 181, y: 13, largeur: 18, alt: 'Emblème du synode' },
+];
+const SOURCES_LIVREES: Record<string, string> = {
+  'logo-gauche': logoGauche,
+  'logo-droit': logoDroit,
+};
+
+function ligneLivree(texte: string, index: number): LigneEntete {
+  return {
     texte,
     gras: index === 0 || index === 3 || index === 5,
-    taille: TAILLES_LIVREES[index] ?? 10,
-  }));
-}
-
-export function enteteParDefaut(_document: DocumentEntete): EnteteDocument {
-  return {
-    mode: 'textes',
-    image: '',
-    lignes: lignesParDefaut(ENTETE_LIVRE),
-    logoGauche: LOGO_GAUCHE,
-    logoDroit: LOGO_DROIT,
+    taille: TAILLES_LIVREES[index] ?? 9,
+    police: 'Arial',
+    italique: false,
+    souligne: false,
+    alignement: 'centre',
   };
 }
 
+/**
+ * L'en-tête livré. `_document` est conservé pour que l'appelant n'ait pas à
+ * savoir qu'il n'existe qu'un seul en-tête : les deux imprimés partagent le même.
+ */
+export function enteteParDefaut(_document?: DocumentEntete): EnteteDocument {
+  return {
+    mode: 'textes',
+    image: '',
+    lignes: ENTETE_LIVRE.map(ligneLivree),
+    images: IMAGES_LIVREES.map(image => ({ ...image, source: SOURCES_LIVREES[image.id] ?? '' })),
+  };
+}
+
+/** Un seul en-tête, commun aux deux documents. */
 export function entetesParDefaut(): EntetesDocuments {
-  return { depense: enteteParDefaut('depense'), recette: enteteParDefaut('recette') };
+  return enteteParDefaut('depense');
 }
 
 const estImage = (valeur: unknown): valeur is string =>
   typeof valeur === 'string' && (valeur === '' || /^data:image\/(png|jpeg);base64,[a-z0-9+/=\s]+$/i.test(valeur));
 
-/** Lecture tolérante : toute anomalie retombe sur l'en-tête livré, jamais sur une page cassée. */
-export function normaliserEntete(valeur: unknown, document: DocumentEntete): EnteteDocument {
+const nombreBorne = (valeur: unknown, defaut: number, min: number, max: number): number =>
+  typeof valeur === 'number' && Number.isFinite(valeur) ? Math.min(max, Math.max(min, valeur)) : defaut;
+
+const estAlignement = (valeur: unknown): valeur is Alignement =>
+  valeur === 'gauche' || valeur === 'centre' || valeur === 'droite';
+
+function ligneNormalisee(valeur: unknown, index: number, defaut: EnteteDocument): LigneEntete | null {
+  if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return null;
+  const item = valeur as Record<string, unknown>;
+  const texte = typeof item.texte === 'string' ? item.texte.slice(0, 200) : (defaut.lignes[index]?.texte ?? '');
+  // Demi-points conservés : les tailles du modèle (9,5 · 10,5) ne doivent pas dériver.
+  // Hors bornes, la valeur est ramenée dans l'intervalle plutôt que perdue.
+  const taille = typeof item.taille === 'number' && Number.isFinite(item.taille)
+    ? Math.round(Math.min(40, Math.max(6, item.taille)) * 2) / 2
+    : 9;
+  const police = POLICES.some(p => p.valeur === item.police) ? String(item.police) : 'Arial';
+  return {
+    texte,
+    taille,
+    police,
+    gras: item.gras === true,
+    italique: item.italique === true,
+    souligne: item.souligne === true,
+    alignement: estAlignement(item.alignement) ? item.alignement : 'centre',
+  };
+}
+
+function imageNormalisee(valeur: unknown, index: number): ImageEntete | null {
+  if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return null;
+  const item = valeur as Record<string, unknown>;
+  if (!estImage(item.source) || item.source === '') return null;
+  const id = typeof item.id === 'string' && item.id !== '' ? item.id.slice(0, 60) : `image-${index + 1}`;
+  return {
+    id,
+    source: item.source,
+    // La feuille mesure 210 × 297 mm : une image ne peut pas en sortir complètement.
+    x: Math.round(nombreBorne(item.x, 7.6, -20, 210) * 10) / 10,
+    y: Math.round(nombreBorne(item.y, 13, -20, 297) * 10) / 10,
+    largeur: Math.round(nombreBorne(item.largeur, 16, 3, 120) * 10) / 10,
+    alt: typeof item.alt === 'string' ? item.alt.slice(0, 120) : 'Image de l’en-tête',
+  };
+}
+
+/**
+ * Lecture tolérante : toute anomalie retombe sur l'en-tête livré, jamais sur une
+ * page cassée. Les livres enregistrés avec les deux anciens logos
+ * (`logoGauche` / `logoDroit`) reprennent leurs images à la même place.
+ */
+export function normaliserEntete(valeur: unknown, document: DocumentEntete = 'depense'): EnteteDocument {
   const defaut = enteteParDefaut(document);
   if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return defaut;
   const brut = valeur as Record<string, unknown>;
   const mode = brut.mode === 'image' ? 'image' : 'textes';
-  const lignes: LigneEntete[] = Array.isArray(brut.lignes)
-    ? brut.lignes.slice(0, MAX_LIGNES_ENTETE).map((ligne, index) => {
-      const item = ligne !== null && typeof ligne === 'object' ? ligne as Record<string, unknown> : {};
-      const texte = typeof item.texte === 'string' ? item.texte.slice(0, 200) : (defaut.lignes[index]?.texte ?? '');
-      // Demi-points conservés : les tailles du modèle (9,5 · 10,5) ne doivent pas dériver.
-      const taille = typeof item.taille === 'number' && item.taille >= 6 && item.taille <= 40
-        ? Math.round(item.taille * 2) / 2
-        : 9;
-      return { texte, taille, gras: item.gras === true };
-    })
+
+  const lignes = Array.isArray(brut.lignes)
+    ? brut.lignes.slice(0, MAX_LIGNES_ENTETE).map((ligne, i) => ligneNormalisee(ligne, i, defaut)).filter((l): l is LigneEntete => l !== null)
     : defaut.lignes;
+
+  let images = Array.isArray(brut.images)
+    ? brut.images.slice(0, MAX_IMAGES_ENTETE).map(imageNormalisee).filter((i): i is ImageEntete => i !== null)
+    : [];
+
+  // Reprise des livres antérieurs : les deux logos deviennent deux images placées.
+  if (!Array.isArray(brut.images)) {
+    const anciens: Array<[string, unknown]> = [['logo-gauche', brut.logoGauche], ['logo-droit', brut.logoDroit]];
+    for (const [id, source] of anciens) {
+      if (!estImage(source) || source === '') continue;
+      const modele = IMAGES_LIVREES.find(i => i.id === id);
+      images.push({ ...(modele ?? { x: 7.6, y: 13, largeur: 16, alt: 'Image de l’en-tête' }), id, source });
+    }
+  }
+
   return {
     mode,
     image: estImage(brut.image) ? brut.image : '',
     lignes: lignes.length ? lignes : defaut.lignes,
-    logoGauche: estImage(brut.logoGauche) ? brut.logoGauche : '',
-    logoDroit: estImage(brut.logoDroit) ? brut.logoDroit : '',
+    images,
   };
 }
 
+/** Un seul en-tête : la valeur lue est celle des deux documents. */
 export function normaliserEntetes(valeur: unknown): EntetesDocuments {
-  const defaut = entetesParDefaut();
-  if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return defaut;
+  if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return entetesParDefaut();
   const brut = valeur as Record<string, unknown>;
-  return {
-    depense: normaliserEntete(brut.depense, 'depense'),
-    recette: normaliserEntete(brut.recette, 'recette'),
-  };
+  // Format antérieur : un en-tête par document. Le document de la dépense fait foi.
+  const source = 'depense' in brut || 'recette' in brut ? brut.depense : brut;
+  return normaliserEntete(source, 'depense');
 }
 
 /** Vrai si deux jeux d'en-têtes sont identiques (aucune modification à enregistrer). */
@@ -175,12 +271,8 @@ export function entetesIdentiques(a: EntetesDocuments, b: EntetesDocuments): boo
 }
 
 /** Poids total des images, pour prévenir avant d'envoyer une sauvegarde trop lourde. */
-export function poidsImages(entetes: EntetesDocuments): number {
-  let total = 0;
-  for (const entete of Object.values(entetes)) {
-    total += entete.image.length + entete.logoGauche.length + entete.logoDroit.length;
-  }
-  return total;
+export function poidsImages(entete: EntetesDocuments): number {
+  return entete.image.length + entete.images.reduce((total, image) => total + image.source.length, 0);
 }
 
 /** Lit un fichier image local, en vérifiant type, poids et décodage. */

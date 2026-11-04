@@ -4,7 +4,6 @@ import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
 import { montantEnLettres } from '../utils/nombreEnLettres';
 import { numeroDocument, TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
-import { ApercuEntete } from './EnteteBordereauModal';
 import { Modale } from './Modale';
 
 /** Cases de signature, propres à chaque document. */
@@ -16,6 +15,12 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
 /** Nombre de lignes du tableau, comme sur les imprimés à remplir à la main. */
 const LIGNES_MINIMUM = 8;
 
+/** Zone imprimée au-dessus du titre : les images libres peuvent y déborder. */
+const BANDEAU_ENTETE = { hauteur: 38, marge: 5 };
+
+/** Alignement du modèle → valeur CSS. */
+const ALIGNEMENT_CSS = { gauche: 'left', centre: 'center', droite: 'right' } as const;
+
 /** Montant du modèle officiel : séparateur de milliers insécable et deux décimales. */
 function montantModele(montant: number): string {
   const [entier, decimales] = montant.toFixed(2).split('.');
@@ -23,12 +28,35 @@ function montantModele(montant: number): string {
 }
 
 /**
+ * Groupe typographique de l'en-tête : chaque ligne garde police, taille, style
+ * et alignement, comme dans un traitement de texte.
+ */
+function LignesEntete({ entete }: { entete: EnteteDocument }) {
+  const lignes = entete.lignes.filter(ligne => ligne.texte.trim() !== '');
+  if (!lignes.length) return <p className="entete-bordereau__vide">Aucune ligne renseignée.</p>;
+  return <>
+    {lignes.map((ligne, index) => <p
+      key={index}
+      className="bordereau-ligne-entete"
+      style={{
+        fontFamily: `'${ligne.police}', sans-serif`,
+        fontSize: `${ligne.taille}pt`,
+        fontWeight: ligne.gras ? 700 : 400,
+        fontStyle: ligne.italique ? 'italic' : 'normal',
+        textDecoration: ligne.souligne ? 'underline' : 'none',
+        textAlign: ALIGNEMENT_CSS[ligne.alignement],
+      }}
+    >{ligne.texte}</p>)}
+  </>;
+}
+
+/**
  * Document officiel imprimable : page A4 portrait, en-tête de l'hôpital, titre,
  * date, objet, tableau à cinq colonnes, total, somme en toutes lettres et cases
  * de signature.
  *
- * Les proportions sont celles relevées sur les deux imprimés fournis, mesurées
- * en millimètres sur une page A4 : marges de 7,6 mm, colonnes du tableau
+ * Les proportions sont celles relevées sur les imprimés fournis, mesurées en
+ * millimètres sur une page A4 : marges de 7,6 mm, colonnes du tableau
  * 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de 11,6 mm, cases de signature
  * pleine largeur (65,5 mm pour trois signataires, 49,4 mm pour quatre).
  */
@@ -41,21 +69,28 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
   const vides = Math.max(0, LIGNES_MINIMUM - details.length);
 
   return <article className="bordereau-document border border-slate-300 bg-white text-black">
-    {/* Les deux logos encadrent l'en-tête, comme sur les modèles. */}
-    <header className="bordereau-entete">
+    {/* Bandeau d'en-tête : hauteur réservée, les images s'y placent librement. */}
+    <header
+      className="bordereau-entete"
+      style={{ height: `${BANDEAU_ENTETE.hauteur}mm`, marginBottom: `${BANDEAU_ENTETE.marge}mm` }}
+    >
       {entete.mode === 'image' && entete.image
         ? <img src={entete.image} alt="En-tête fourni" className="bordereau-entete__image" />
-        : <div className="bordereau-entete__grille">
-          <div className="bordereau-entete__logo">
-            {entete.logoGauche ? <img src={entete.logoGauche} alt="Logo de gauche" /> : null}
-          </div>
-          <div className="bordereau-entete__textes">
-            <ApercuEntete entete={{ ...entete, logoGauche: '', logoDroit: '' }} compact />
-          </div>
-          <div className="bordereau-entete__logo">
-            {entete.logoDroit ? <img src={entete.logoDroit} alt="Logo de droite" /> : null}
-          </div>
-        </div>}
+        : <>
+          <div className="bordereau-entete__textes"><LignesEntete entete={entete} /></div>
+          {entete.images.filter(image => image.source).map(image => <img
+            key={image.id}
+            src={image.source}
+            alt={image.alt}
+            className="bordereau-entete__image-libre"
+            /* Coordonnées converties depuis le haut de la feuille vers le bandeau. */
+            style={{
+              left: `${image.x}mm`,
+              top: `${image.y - 1.5}mm`,
+              width: `${image.largeur}mm`,
+            }}
+          />)}
+        </>}
     </header>
 
     <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>

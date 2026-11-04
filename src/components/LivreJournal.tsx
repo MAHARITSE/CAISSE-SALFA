@@ -95,7 +95,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     {bordereau && <>
       <ModaleBordereau
         ligne={bordereau}
-        entete={bordereau.sens === 'RECETTE' ? entetes.recette : entetes.depense}
+        entete={entetes}
         onModifierEntete={onEnregistrerEntete ? () => ouvrirEntetes(bordereau.sens === 'RECETTE' ? 'recette' : 'depense') : undefined}
         onFermer={() => { setBordereau(null); setBordereauApresEnregistrement(false); }}
         imprimerDirectement={bordereauApresEnregistrement}
@@ -103,9 +103,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     </>}
     {entetesOuverts && onEnregistrerEntete && <EnteteBordereauModal
       entetes={entetes}
-      document={documentEntete}
-      onChangerDocument={setDocumentEntete}
-      onEnregistrer={(document, entete) => { onEnregistrerEntete(document, entete); setEntetesOuverts(false); }}
+      onEnregistrer={entete => { onEnregistrerEntete(documentEntete, entete); setEntetesOuverts(false); }}
       onFermer={() => setEntetesOuverts(false)}
     />}
   </>;

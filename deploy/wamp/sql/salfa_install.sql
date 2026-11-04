@@ -91,6 +91,8 @@ CREATE TABLE IF NOT EXISTS salfa_entetes (
   mode ENUM('image','textes') NOT NULL DEFAULT 'textes',
   image MEDIUMTEXT NULL,
   lignes MEDIUMTEXT NULL,
+  -- Images placées librement sur la feuille : [{id, source, x, y, largeur, alt}].
+  images MEDIUMTEXT NULL,
   logo_gauche MEDIUMTEXT NULL,
   logo_droit MEDIUMTEXT NULL,
   modifie_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)

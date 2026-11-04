@@ -189,8 +189,6 @@ function salfa_enregistrer_entete(string $document, array $entete): void
 {
     $mode = ($entete['mode'] ?? 'textes') === 'image' ? 'image' : 'textes';
     $image = salfa_image_entete($entete['image'] ?? null, MAX_IMAGE_ENTETE);
-    $logoGauche = salfa_image_entete($entete['logoGauche'] ?? null, MAX_LOGO_ENTETE);
-    $logoDroit = salfa_image_entete($entete['logoDroit'] ?? null, MAX_LOGO_ENTETE);
 
     $lignes = [];
     $brutes = is_array($entete['lignes'] ?? null) ? $entete['lignes'] : [];
@@ -202,17 +200,39 @@ function salfa_enregistrer_entete(string $document, array $entete): void
         if (mb_strlen($texte) > 200) {
             $texte = mb_substr($texte, 0, 200);
         }
-        $taille = (int) ($ligne['taille'] ?? 9);
+        // Demi-points conservés : les tailles du modèle (9,5 · 10,5) ne dérivent pas.
+        $taille = round(max(6.0, min(40.0, (float) ($ligne['taille'] ?? 9))) * 2) / 2;
+        $alignement = (string) ($ligne['alignement'] ?? 'centre');
         $lignes[] = [
             'texte' => $texte,
             'gras' => ($ligne['gras'] ?? false) === true,
-            'taille' => $taille >= 6 && $taille <= 40 ? $taille : 9,
+            'italique' => ($ligne['italique'] ?? false) === true,
+            'souligne' => ($ligne['souligne'] ?? false) === true,
+            'taille' => $taille,
+            'police' => salfa_police_entete($ligne['police'] ?? null),
+            'alignement' => in_array($alignement, ['gauche', 'centre', 'droite'], true) ? $alignement : 'centre',
         ];
     }
-    if (count($lignes) < MAX_LIGNES_ENTETE) {
-        while (count($lignes) < MAX_LIGNES_ENTETE) {
-            $lignes[] = ['texte' => '', 'gras' => false, 'taille' => 9];
+
+    $images = [];
+    $brutesImages = is_array($entete['images'] ?? null) ? $entete['images'] : [];
+    foreach (array_slice($brutesImages, 0, MAX_IMAGES_ENTETE) as $index => $imageBrute) {
+        if (!is_array($imageBrute)) {
+            continue;
         }
+        $source = salfa_image_entete($imageBrute['source'] ?? null, MAX_LOGO_ENTETE);
+        if ($source === '') {
+            continue;
+        }
+        $id = (string) ($imageBrute['id'] ?? '');
+        $images[] = [
+            'id' => $id !== '' ? mb_substr($id, 0, 60) : 'image-' . ($index + 1),
+            'source' => $source,
+            'x' => round(max(-20.0, min(210.0, (float) ($imageBrute['x'] ?? 7.6))), 1),
+            'y' => round(max(-20.0, min(297.0, (float) ($imageBrute['y'] ?? 13))), 1),
+            'largeur' => round(max(3.0, min(120.0, (float) ($imageBrute['largeur'] ?? 16))), 1),
+            'alt' => mb_substr((string) ($imageBrute['alt'] ?? 'Image de l’en-tête'), 0, 120),
+        ];
     }
 
     $rempli = array_values(array_filter($lignes, static fn (array $l): bool => trim($l['texte']) !== ''));
@@ -223,39 +243,61 @@ function salfa_enregistrer_entete(string $document, array $entete): void
         throw new SalFaErreur('Renseignez au moins une ligne de texte avant d’enregistrer.', 400, 'entete_vide');
     }
 
+    // Un seul en-tête : la ligne « depense » porte celle des deux imprimés.
     salfa_executer(
-        'INSERT INTO ' . salfa_table('entetes') . ' (document, mode, image, lignes, logo_gauche, logo_droit) VALUES (?, ?, ?, ?, ?, ?)'
-            . ' ON DUPLICATE KEY UPDATE mode = VALUES(mode), image = VALUES(image), lignes = VALUES(lignes),'
-            . ' logo_gauche = VALUES(logo_gauche), logo_droit = VALUES(logo_droit)',
+        'INSERT INTO ' . salfa_table('entetes') . ' (document, mode, image, lignes, images) VALUES (?, ?, ?, ?, ?)'
+            . ' ON DUPLICATE KEY UPDATE mode = VALUES(mode), image = VALUES(image), lignes = VALUES(lignes), images = VALUES(images)',
         [
-            $document,
+            'depense',
             $mode,
             $image === '' ? null : $image,
             json_encode($lignes, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            $logoGauche === '' ? null : $logoGauche,
-            $logoDroit === '' ? null : $logoDroit,
+            json_encode($images, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]
     );
     salfa_incrementer_revision();
 }
 
-/** Les en-têtes enregistrés, prêts à être renvoyés au navigateur. */
+/** Les polices proposées par l'éditeur, par ordre de préférence. */
+function salfa_police_entete($valeur): string
+{
+    $connues = ['Arial', 'Times New Roman', 'Courier New', 'Georgia', 'Verdana', 'Trebuchet MS'];
+    return is_string($valeur) && in_array($valeur, $connues, true) ? $valeur : 'Arial';
+}
+
+/** Un seul en-tête : la ligne « depense » fait foi, les logos sont repris si besoin. */
 function salfa_charger_entetes(): array
 {
     $lignes = salfa_pdo()->query('SELECT * FROM ' . salfa_table('entetes'))->fetchAll();
-    $entetes = [];
+    $resultat = null;
     foreach ($lignes as $l) {
         $texte = json_decode((string) ($l['lignes'] ?? ''), true);
-        $entetes[(string) $l['document']] = [
+        $images = json_decode((string) ($l['images'] ?? ''), true);
+        $entete = [
             'mode' => ((string) $l['mode']) === 'image' ? 'image' : 'textes',
             'image' => (string) ($l['image'] ?? ''),
             'lignes' => is_array($texte) ? $texte : [],
-            'logoGauche' => (string) ($l['logo_gauche'] ?? ''),
-            'logoDroit' => (string) ($l['logo_droit'] ?? ''),
+            'images' => is_array($images) ? $images : [],
         ];
+        if ($entete['images'] === []) {
+            foreach ([['logo-gauche', 7.6, 13, 15], ['logo-droit', 181, 13, 18]] as [$id, $x, $y, $largeur]) {
+                $colonne = $id === 'logo-gauche' ? 'logo_gauche' : 'logo_droit';
+                $source = (string) ($l[$colonne] ?? '');
+                if ($source !== '') {
+                    $entete['images'][] = [
+                        'id' => $id, 'source' => $source, 'x' => $x, 'y' => $y,
+                        'largeur' => $largeur, 'alt' => 'Logo',
+                    ];
+                }
+            }
+        }
+        if ($resultat === null || (string) $l['document'] === 'depense') {
+            $resultat = $entete;
+        }
     }
-    return $entetes;
+    return $resultat ?? [];
 }
+
 
 /** N'accepte qu'une data URL PNG/JPEG sous la limite annoncée. */
 function salfa_image_entete($valeur, int $limite): string
@@ -555,12 +597,12 @@ function salfa_restaurer_sauvegarde(array $corps): void
             salfa_enregistrer_categories('DEPENSE', $categoriesSauvegarde['depense']);
         }
         if (is_array($entetesSauvegarde)) {
-            foreach (['depense', 'recette'] as $document) {
-                if (is_array($entetesSauvegarde[$document] ?? null)) {
-                    // La validation lève avant toute écriture partielle : la transaction protège le reste.
-                    salfa_enregistrer_entete($document, $entetesSauvegarde[$document]);
-                }
-            }
+            // Un seul en-tête : un livre antérieur en portait deux, la dépense fait foi.
+            $commun = is_array($entetesSauvegarde['depense'] ?? null)
+                ? $entetesSauvegarde['depense']
+                : (is_array($entetesSauvegarde['recette'] ?? null) ? $entetesSauvegarde['recette'] : $entetesSauvegarde);
+            // La validation lève avant toute écriture partielle : la transaction protège le reste.
+            salfa_enregistrer_entete('depense', $commun);
         }
         foreach ($ecritures as $valide) {
             salfa_inserer_ecriture($valide, null);

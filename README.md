@@ -86,14 +86,18 @@ garder les versions verrouillées par `package-lock.json`.
   (`ARC-AAAA-0001`). Le numéro reprend l’année et le rang de la pièce
   (`DP-2026-0007` → `AED-2026-0007`) : les deux se répondent toujours, y compris
   après réimpression.
-- **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
-  recette ont chacun leur propre en-tête, modifiable depuis le bouton
-  « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et
-  logos » (huit lignes de texte, deux logos facultatifs, aperçu immédiat) ou
-  « Image complète » (PNG/JPEG d’1 Mo maximum). « Restaurer l’en-tête fourni »
-  revient au modèle livré, pour le seul document affiché. L’en-tête suit le
-  livre : il est enregistré localement ou dans MySQL (`salfa_entetes`) et
-  transporté par les sauvegardes JSON.
+- **En-tête personnalisable** : la demande d’engagement de dépense et
+  l’autorisation de recette portent le **même papier à en-tête**, réglé une
+  seule fois depuis le bouton « En-tête ». Chaque ligne se met en forme comme
+  dans un traitement de texte — police, taille au demi-point, gras, italique,
+  souligné, alignement — et l’on ajoute, réordonne ou supprime des lignes.
+  Les images se **glissent librement sur la feuille A4** : on les dépose, on les
+  déplace à la souris ou au doigt, puis on les règle au millimètre (position et
+  largeur). L’aperçu montre la feuille entière. « Restaurer l’en-tête fourni »
+  revient au modèle livré, logos compris. Un livre créé avant cette version
+  reprend ses deux anciens logos comme images placées. L’en-tête suit le livre :
+  il est enregistré localement ou dans MySQL (`salfa_entetes`) et transporté par
+  les sauvegardes JSON.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
@@ -215,7 +219,7 @@ src/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
     LivreJournal.tsx              journal, détails et dépliage des postes
     Bordereau.tsx                 document imprimable et sa boîte de dialogue
-    EnteteBordereauModal.tsx      en-tête modifiable des deux bordereaux
+    EnteteBordereauModal.tsx      éditeur de l’en-tête commun (polices, images libres)
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
     Exercices.tsx                 exercice en cours, clôtures et archives
