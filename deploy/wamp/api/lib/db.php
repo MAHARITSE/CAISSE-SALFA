@@ -201,6 +201,7 @@ function salfa_charger_livre(): array
         'compteurs' => $compteursFormates,
         'exercicesClotures' => $cloturesFormates,
         'entetes' => salfa_charger_entetes(),
+        'categories' => salfa_charger_categories(),
     ];
 }
 

@@ -2,8 +2,8 @@
   "format": "CAISSE-SALFA",
   "version": 1,
   "revision": 0,
-  "updatedAt": "2026-11-04T13:02:22.669Z",
-  "exportedAt": "2026-11-04T13:02:22.669Z",
+  "updatedAt": "2026-11-04T13:37:12.266Z",
+  "exportedAt": "2026-11-04T13:37:12.266Z",
   "ecritures": [
     {
       "id": "essai-2026-RC-2026-0001",
@@ -1882,5 +1882,32 @@
       "logoGauche": "",
       "logoDroit": ""
     }
+  },
+  "categories": {
+    "recette": [
+      "Recettes journalières",
+      "Consultations",
+      "Pharmacie",
+      "Laboratoire",
+      "Hospitalisation",
+      "Maternité",
+      "Imagerie",
+      "Subventions & dons",
+      "Remboursements",
+      "Autres recettes"
+    ],
+    "depense": [
+      "Achats médicaments",
+      "Consommables médicaux",
+      "Fournitures de bureau",
+      "Carburant & transport",
+      "Maintenance & équipements",
+      "Salaires & primes",
+      "Frais de mission",
+      "Honoraires",
+      "Eau & électricité",
+      "Téléphone & internet",
+      "Divers"
+    ]
   }
 }

@@ -4,6 +4,7 @@ import { MAX_IMPORT_OCTETS } from './constants';
 import { donneesSecours } from './storage';
 import { exiger, validerSauvegarde } from './validation';
 import { entetesParDefaut } from './entete';
+import { categoriesParDefaut } from './constants';
 import { telecharger } from './export';
 
 export function nomSauvegarde(prefixe = 'sauvegarde_caisse_salfa'): string {
@@ -29,7 +30,7 @@ export function preparerArchiveExercice(archive: ExerciceCloture): string {
       soldeInitial: archive.soldeOuverture, exercice: archive.annee,
       reportPrecedent: null,
     },
-    masques: [], compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut(),
+    masques: [], compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut(), categories: categoriesParDefaut(),
   };
   return JSON.stringify(validerSauvegarde(livre), null, 2);
 }

@@ -119,6 +119,66 @@ function salfa_inserer_ecriture(array $valide, ?int $anneeArchive): void
 }
 
 /**
+ * Remplace les catégories d'un sens et renvoie leur nombre.
+ *
+ * Les libellés sont nettoyés et dédoublonnés sans tenir compte de la casse ;
+ * une liste vide est refusée, sinon la saisie n'aurait plus aucune catégorie.
+ */
+function salfa_enregistrer_categories(string $sens, array $categories): int
+{
+    $propre = [];
+    $vues = [];
+    foreach ($categories as $brute) {
+        if (!is_string($brute)) {
+            continue;
+        }
+        $nom = trim($brute);
+        if ($nom === '') {
+            continue;
+        }
+        if (mb_strlen($nom) > MAX_LONGUEUR_CATEGORIE) {
+            $nom = mb_substr($nom, 0, MAX_LONGUEUR_CATEGORIE);
+        }
+        $cle = mb_strtolower($nom);
+        if (isset($vues[$cle])) {
+            continue;
+        }
+        $vues[$cle] = true;
+        $propre[] = $nom;
+        if (count($propre) > MAX_CATEGORIES) {
+            throw new SalFaErreur('Trop de catégories : ' . MAX_CATEGORIES . ' au maximum.', 400, 'categories_trop_nombreuses');
+        }
+    }
+    if ($propre === []) {
+        throw new SalFaErreur('La liste des catégories ne peut pas être vide.', 400, 'categories_vides');
+    }
+
+    salfa_executer('DELETE FROM ' . salfa_table('categories') . ' WHERE sens = ?', [$sens]);
+    foreach ($propre as $ordre => $nom) {
+        salfa_executer(
+            'INSERT INTO ' . salfa_table('categories') . ' (sens, nom, ordre) VALUES (?, ?, ?)',
+            [$sens, $nom, $ordre]
+        );
+    }
+    salfa_incrementer_revision();
+    return count($propre);
+}
+
+/** Les catégories enregistrées, prêtes à être renvoyées au navigateur. */
+function salfa_charger_categories(): array
+{
+    $lignes = salfa_pdo()->query('SELECT sens, nom FROM ' . salfa_table('categories') . ' ORDER BY sens, ordre, nom')->fetchAll();
+    $resultat = [];
+    foreach ($lignes as $l) {
+        $resultat[strtolower((string) $l['sens'])][] = (string) $l['nom'];
+    }
+    return [
+        'recette' => $resultat['recette'] ?? [],
+        'depense' => $resultat['depense'] ?? [],
+    ];
+}
+
+/**
  * Enregistre l'en-tête d'un bordereau.
  *
  * Le serveur ne fait pas confiance au navigateur : le mode est ramené à une
@@ -459,6 +519,10 @@ function salfa_restaurer_sauvegarde(array $corps): void
     }
     $masquesValides = salfa_valider_masques($masques);
     // Les en-têtes imprimables suivent la sauvegarde ; un livre antérieur n'en a pas.
+    $categoriesSauvegarde = $sauvegarde['categories'] ?? null;
+    if ($categoriesSauvegarde !== null && (!is_array($categoriesSauvegarde) || !is_array($categoriesSauvegarde['recette'] ?? null) || !is_array($categoriesSauvegarde['depense'] ?? null))) {
+        throw new SalFaErreur('Catégories de sauvegarde invalides.', 400, 'sauvegarde_invalide');
+    }
     $entetesSauvegarde = $sauvegarde['entetes'] ?? null;
     if ($entetesSauvegarde !== null && !is_array($entetesSauvegarde)) {
         throw new SalFaErreur('En-têtes de bordereau invalides.', 400, 'sauvegarde_invalide');
@@ -484,6 +548,11 @@ function salfa_restaurer_sauvegarde(array $corps): void
             foreach ($m['lignes'] as $ligne) {
                 salfa_executer('INSERT INTO ' . salfa_table('masque_lignes') . ' (masque_id, description, montant_defaut, ordre) VALUES (?, ?, ?, ?)', [$m['id'], $ligne['description'], $ligne['montantDefaut'], $ligne['ordre']]);
             }
+        }
+        if (is_array($categoriesSauvegarde)) {
+            salfa_executer('DELETE FROM ' . salfa_table('categories'));
+            salfa_enregistrer_categories('RECETTE', $categoriesSauvegarde['recette']);
+            salfa_enregistrer_categories('DEPENSE', $categoriesSauvegarde['depense']);
         }
         if (is_array($entetesSauvegarde)) {
             foreach (['depense', 'recette'] as $document) {

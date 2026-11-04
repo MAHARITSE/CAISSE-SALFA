@@ -62,6 +62,10 @@ garder les versions verrouillées par `package-lock.json`.
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
   majuscules.
+- **Catégories gérées par sens** : les recettes et les dépenses ont chacune
+  leur liste de catégories, modifiable depuis le bouton « Gérer » du formulaire
+  de saisie (ajout, renommage, ordre, suppression, restauration des listes
+  livrées). Retirer une catégorie ne modifie jamais une écriture existante.
 - **Document par pièce** : chaque dépense reçoit une **demande d’engagement**
   (`AED-AAAA-0001`) et chaque recette une **autorisation de recette**
   (`ARC-AAAA-0001`). Le numéro reprend l’année et le rang de la pièce
@@ -202,6 +206,8 @@ src/
     Exercices.tsx                 exercice en cours, clôtures et archives
     DonneesSauvegardes.tsx        export/import JSON et secours brut
     GestionMasquesModal.tsx       modèles de bordereaux
+    GestionCategoriesModal.tsx    catégories de recettes et de dépenses
+    ChampMontant.tsx              saisie monétaire à séparateurs de milliers
     Modale.tsx / Confirmation.tsx dialogues natifs accessibles
     ErrorBoundary.tsx             garde-fou d’affichage
   utils/

@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, ListPlus } from 'lucide-react';
-import type { Ecriture, MasqueSaisie, Sens } from '../types';
-import { categoriesPour, MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
+import type { Categories, Ecriture, MasqueSaisie, Sens } from '../types';
+import { MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
 import { aujourdHui, formatAr, masqueMajuscules, parserMontant } from '../utils/format';
 import { ChampMontant } from './ChampMontant';
 import { identifiant } from '../utils/ledger';
@@ -17,6 +17,9 @@ interface SaisieEcritureProps {
   suggestionsLibelle: string[];
   suggestionsTiers: string[];
   masques: MasqueSaisie[];
+  /** Catégories gérées dans le livre, distinctes par sens. */
+  categories: Categories;
+  onOuvrirGestionCategories: () => void;
   erreurExterne?: string | null;
   onOuvrirGestionMasques: () => void;
   onEnregistrer: (ecriture: Ecriture) => boolean | Promise<boolean>;
@@ -30,13 +33,14 @@ function posteRempli(ligne: LigneBrouillon): boolean {
   return ligne.description.trim() !== '' && (parserMontant(ligne.montant) ?? 0) > 0;
 }
 
-export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
+export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, categories: categoriesDuLivre, onOuvrirGestionCategories, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
   const sens = edition?.sens ?? sensInitial;
   const estRecette = sens === 'RECETTE';
   const formId = useId();
   const [date, setDate] = useState(edition?.date ?? aujourdHui());
   const [libelle, setLibelle] = useState(edition?.libelle ?? '');
-  const [categorie, setCategorie] = useState(edition?.categorie ?? categoriesPour(sens)[0]);
+  const categoriesPourSens = sens === 'RECETTE' ? categoriesDuLivre.recette : categoriesDuLivre.depense;
+  const [categorie, setCategorie] = useState(edition?.categorie ?? categoriesPourSens[0] ?? '');
   const [tiers, setTiers] = useState(edition?.tiers ?? '');
   const [reference, setReference] = useState(edition?.reference ?? '');
   const [observation, setObservation] = useState(edition?.observation ?? '');
@@ -51,7 +55,8 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
   const soumission = useRef(false);
-  const categories = [...new Set([...categoriesPour(sens), ...(edition ? [edition.categorie] : [])])];
+  // Une écriture éditée garde sa catégorie d'origine, même retirée de la liste.
+  const categories = [...new Set([...categoriesPourSens, ...(edition ? [edition.categorie] : [])])];
   const numero = edition?.numero ?? (
     /^\d{4}-\d{2}-\d{2}$/.test(date)
       ? Number(date.slice(0, 4)) === exercice
@@ -141,7 +146,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
           </div>
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. Recettes journalières — caisse principale' : 'Ex. Achat de carburant — ambulance'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-[11px] font-medium text-brand-700 hover:underline" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

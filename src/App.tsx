@@ -2,15 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, HeartPulse, Layers, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
 import type { Ecriture, FiltresJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
-import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
+import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerCategories, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
 import { anneeCourante, dateFr, decalerMois, formatAr, libelleMois, moisCourant } from './utils/format';
-import { CATEGORIES_DEPENSE, CATEGORIES_RECETTE } from './utils/constants';
+
 import { exporterLivreCsv } from './utils/export';
 import { exporterArchiveExercice, exporterSauvegarde, exporterSecours } from './utils/backup';
 import { Synthese } from './components/Synthese';
 import { LivreJournal, type LivreJournalHandle } from './components/LivreJournal';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
+import { GestionCategoriesModal } from './components/GestionCategoriesModal';
 import { Analyse } from './components/Analyse';
 import { DonneesSauvegardes } from './components/DonneesSauvegardes';
 import { Confirmation } from './components/Confirmation';
@@ -50,6 +51,7 @@ export function App() {
   const [toutAfficher, setToutAfficher] = useState(false);
   const [saisie, setSaisie] = useState<{ sens: Sens; edition: Ecriture | null } | null>(null);
   const [masquesOuverts, setMasquesOuverts] = useState(false);
+  const [categoriesOuvertes, setCategoriesOuvertes] = useState(false);
   const [aSupprimer, setASupprimer] = useState<Ecriture | null>(null);
   const [derniereSupprimee, setDerniereSupprimee] = useState<Ecriture | null>(null);
   const [notification, setNotification] = useState('');
@@ -77,7 +79,7 @@ export function App() {
   const filtreActif = filtres.sens !== 'TOUS' || Boolean(filtres.categorie || filtres.recherche.trim());
   const suggestionsLibelle = useMemo(() => [...new Set(livre.ecritures.map(e => e.libelle))].slice(-60), [livre.ecritures]);
   const suggestionsTiers = useMemo(() => [...new Set(livre.ecritures.map(e => e.tiers).filter((t): t is string => Boolean(t)))].slice(-60), [livre.ecritures]);
-  const categories = [...new Set([...CATEGORIES_RECETTE, ...CATEGORIES_DEPENSE, ...livre.ecritures.map(e => e.categorie)])];
+  const categories = [...new Set([...livre.categories.recette, ...livre.categories.depense, ...livre.ecritures.map(e => e.categorie)])];
   const modifierFiltre = (champ: keyof typeof filtres, valeur: string) => setFiltres(f => ({ ...f, [champ]: valeur }));
   const reinitialiser = () => setFiltres({ sens: 'TOUS', categorie: '', recherche: '' });
 
@@ -133,6 +135,14 @@ export function App() {
   function ouvrirBordereauApresEnregistrement(ecriture: Ecriture) {
     const cible = journal.find(e => e.id === ecriture.id) ?? (ecriture.lignesDetail?.length ? { ...ecriture, solde: ecriture.montant } : null);
     if (cible) journalRef.current?.ouvrirBordereau(cible);
+  }
+
+  async function enregistrerCategoriesSaisie(sens: 'RECETTE' | 'DEPENSE', liste: string[]) {
+    const reussi = MODE_API
+      ? await muterEnLigne(revision => mutations.categories(revision, sens, liste))
+      : muter(d => enregistrerCategories(d, sens, liste));
+    if (reussi) setNotification(`Catégories de ${sens === 'RECETTE' ? 'recettes' : 'dépenses'} enregistrées (${liste.length}).`);
+    return reussi;
   }
 
   async function enregistrerEnteteDocument(document: DocumentEntete, entete: EnteteDocument) {
@@ -241,7 +251,8 @@ export function App() {
       </main>
     </div>
 
-    {saisie && <SaisieEcriture key={saisie.edition?.id ?? `nouveau-${saisie.sens}`} ecritureEnEdition={saisie.edition} sensInitial={saisie.sens} exercice={exercice} numeroSuivant={(sens, date) => Number(date.slice(0, 4)) === exercice ? prochainNumero(livre, sens, date) : null} suggestionsLibelle={suggestionsLibelle} suggestionsTiers={suggestionsTiers} masques={livre.masques} erreurExterne={erreur} onOuvrirGestionMasques={() => setMasquesOuverts(true)} onEnregistrer={enregistrer} onFermer={() => setSaisie(null)} />}
+    {saisie && <SaisieEcriture key={saisie.edition?.id ?? `nouveau-${saisie.sens}`} ecritureEnEdition={saisie.edition} sensInitial={saisie.sens} exercice={exercice} numeroSuivant={(sens, date) => Number(date.slice(0, 4)) === exercice ? prochainNumero(livre, sens, date) : null} suggestionsLibelle={suggestionsLibelle} suggestionsTiers={suggestionsTiers} masques={livre.masques} categories={livre.categories} onOuvrirGestionCategories={() => setCategoriesOuvertes(true)} erreurExterne={erreur} onOuvrirGestionMasques={() => setMasquesOuverts(true)} onEnregistrer={enregistrer} onFermer={() => setSaisie(null)} />}
+    {categoriesOuvertes && <GestionCategoriesModal categories={livre.categories} erreurExterne={erreur} onEnregistrer={enregistrerCategoriesSaisie} onFermer={() => setCategoriesOuvertes(false)} />}
     {masquesOuverts && <GestionMasquesModal masques={livre.masques} erreurExterne={erreur} onSauvegarderMasques={m => MODE_API ? muterEnLigne(revision => mutations.masques(revision, m)) : Promise.resolve(muter(d => enregistrerMasques(d, m)))} onFermer={() => setMasquesOuverts(false)} />}
     {clotureOuverte && <Confirmation titre={`Clôturer l’exercice ${exercice} ?`} libelleConfirmer={`Clôturer ${exercice} et ouvrir ${exercice + 1}`} onAnnuler={() => setClotureOuverte(false)} onConfirmer={confirmerCloture}>
       <p className="mb-4">La clôture fige définitivement les {livre.ecritures.length} écriture(s) de {exercice} dans une archive. Le livre repart à zéro pour {exercice + 1} avec le solde reporté, et les écritures de l’année ne peuvent plus être modifiées.</p>

@@ -59,7 +59,7 @@ Dans WAMP : clic sur l'icône → **PHP → Version** → choisir 8.1 ou plus.
    `C:\wamp64\www\caisse-salfa`).
 2. Double-cliquer sur **`outils\installer.bat`**.
    Le script détecte WAMP, copie le site, demande les accès MySQL, crée la base,
-   les 13 tables, les modèles de saisie et le compte administrateur.
+   les 14 tables, les modèles de saisie, les catégories et le compte administrateur.
 3. Ouvrir **<http://localhost/caisse-salfa/>**.
 
 Le script n'affiche jamais le mot de passe MySQL en clair et le stocke hors du

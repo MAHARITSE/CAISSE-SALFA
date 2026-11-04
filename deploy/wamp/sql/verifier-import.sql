@@ -3,13 +3,13 @@
 -- ============================================================================
 -- À exécuter dans phpMyAdmin APRÈS salfa_install.sql :
 --   onglet SQL -> coller ce fichier -> Exécuter
--- Vous devez voir 13 tables, et la colonne « etat » à OK.
+-- Vous devez voir 14 tables, et la colonne « etat » à OK.
 -- ============================================================================
 
 SELECT 'tables salfa_ présentes' AS controle,
        COUNT(*) AS trouve,
-       13 AS attendu,
-       IF(COUNT(*) = 13, 'OK', 'INCOMPLET — relancez salfa_install.sql') AS etat
+       14 AS attendu,
+       IF(COUNT(*) = 14, 'OK', 'INCOMPLET — relancez salfa_install.sql') AS etat
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = 'caisse_salfa'
   AND TABLE_NAME LIKE 'salfa%';

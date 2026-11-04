@@ -1,4 +1,4 @@
-import type { Ecriture, MasqueSaisie, Sauvegarde } from '../types';
+import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
 import type { DocumentEntete, EnteteDocument } from './entete';
 
 /**
@@ -144,6 +144,8 @@ export const mutations = {
     appeler<{ livre: Sauvegarde }>('masques', { methode: 'POST', corps: { revision, masques } }),
   entete: (revision: number, document: DocumentEntete, entete: EnteteDocument) =>
     appeler<{ livre: Sauvegarde }>('entete', { methode: 'POST', corps: { revision, document, entete } }),
+  categories: (revision: number, sens: Sens, categories: string[]) =>
+    appeler<{ livre: Sauvegarde }>('categories', { methode: 'POST', corps: { revision, sens, categories } }),
   soldeInitial: (revision: number, soldeInitial: number) =>
     appeler<{ livre: Sauvegarde }>('solde-initial', { methode: 'POST', corps: { revision, soldeInitial } }),
   cloture: (revision: number, archive: unknown) =>

@@ -33,6 +33,7 @@ salfa_point('index', function (): void {
         'ecritures-restaurer' => 'ecritures-restaurer',
         'masques' => 'masques',
         'entete' => 'entete',
+        'categories' => 'categories',
         'solde-initial' => 'solde-initial',
         'cloture' => 'cloture',
         'restauration' => 'restauration',

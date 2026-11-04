@@ -71,7 +71,7 @@ if (!is_file($configFichier)) {
         );
         controler('connexion MySQL', true, 'base « ' . $config['base'] . ' » sur ' . $config['hote']);
         $tables = $pdo->query('SHOW TABLES LIKE ' . $pdo->quote('salfa_%'))->fetchAll(PDO::FETCH_COLUMN);
-        controler('tables', count($tables) >= 12, count($tables) . ' table(s) : ' . implode(', ', $tables));
+        controler('tables', count($tables) >= 14, count($tables) . ' table(s) : ' . implode(', ', $tables));
         $admin = (int) $pdo->query("SELECT COUNT(*) FROM salfa_utilisateurs WHERE role = 'admin' AND actif = 1")->fetchColumn();
         controler('compte administrateur', $admin > 0, $admin > 0 ? $admin . ' actif(s)' : 'aucun — lancez outils\\creer-admin.bat');
         $livre = $pdo->query('SELECT revision FROM salfa_livre WHERE id = 1')->fetchColumn();
