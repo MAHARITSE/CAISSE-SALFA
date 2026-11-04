@@ -32,21 +32,23 @@ describe('parcours de caisse', () => {
     const depense = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     await user.type(within(depense).getByLabelText(/Libellé de l’écriture/), 'Carburant ambulance');
     await user.click(within(depense).getByRole('button', { name: 'Détail par postes' }));
+    // Un seul poste complété suffit : aucun autre champ n'est requis dans le détail.
     await user.type(within(depense).getByLabelText('Poste', { exact: true }), 'Gasoil');
-    await user.type(within(depense).getByLabelText('Référence / quittance'), 'Q-1');
     await user.type(within(depense).getByLabelText('Montant (Ar)', { exact: true }), '5000');
     await user.click(within(depense).getByRole('button', { name: 'Ajouter' }));
+    expect(within(depense).queryByLabelText('Référence / quittance')).not.toBeInTheDocument();
     await user.click(within(depense).getByRole('button', { name: 'Enregistrer' }));
-    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, lignesDetail: [{ libelle: 'Gasoil', reference: 'Q-1', montant: 5000 }] });
+    expect(lire().ecritures[1]).toMatchObject({ montant: 5000, lignesDetail: [{ libelle: 'Gasoil', montant: 5000 }] });
 
-    await user.click(screen.getByRole('button', { name: /1 postes/ }));
-    expect(screen.getByText('Q-1')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: `Bordereau DP-${annee}-0001` }));
+    // Le bordereau s'ouvre automatiquement après enregistrement.
     const bordereau = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
+    expect(within(bordereau).getByRole('status')).toHaveTextContent('Écriture enregistrée');
+    expect(within(bordereau).getByText(`DP-${annee}-0001`)).toBeInTheDocument();
     expect(within(bordereau).getByText('Total des dépenses')).toBeInTheDocument();
     await user.click(within(bordereau).getByRole('button', { name: 'Imprimer ce bordereau' }));
     expect(window.print).toHaveBeenCalledTimes(1);
     await user.click(within(bordereau).getByRole('button', { name: 'Fermer' }));
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: `Modifier RC-${annee}-0001` }));
     const edition = screen.getByRole('dialog', { name: `Modifier RC-${annee}-0001` });
@@ -134,6 +136,40 @@ describe('parcours de caisse', () => {
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
     expect(lire().entetes.recette.lignes[1].texte).toBe('FIANGONANA LOTERANA MALAGASY');
     expect(within(modale).queryByLabelText('Église / tutelle')).not.toBeInTheDocument();
+  });
+
+  it('enregistre avec un seul poste renseigné et ignore les lignes vides', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
+    const form = screen.getByRole('dialog', { name: 'Nouvelle recette' });
+    await user.type(within(form).getByLabelText(/Libellé de l’écriture/), 'Recettes du matin');
+    await user.click(within(form).getByRole('button', { name: 'Détail par postes' }));
+    await user.type(within(form).getByLabelText('Poste', { exact: true }), 'CONSULTATION');
+    await user.type(within(form).getByLabelText('Montant (Ar)', { exact: true }), '4000');
+    await user.click(within(form).getByRole('button', { name: 'Ajouter' }));
+    // Le formulaire d'ajout est laissé vide : il ne doit ni bloquer ni créer de poste.
+    expect(within(form).getByLabelText('Poste', { exact: true })).toHaveValue('');
+    expect(within(form).getByLabelText('Montant (Ar)', { exact: true })).toHaveValue('');
+    await user.click(within(form).getByRole('button', { name: 'Enregistrer' }));
+    expect(lire().ecritures[0]).toMatchObject({ montant: 4000, lignesDetail: [{ libelle: 'CONSULTATION', montant: 4000 }] });
+    expect(lire().ecritures[0].lignesDetail).toHaveLength(1);
+    // Le bordereau de la pièce s'ouvre immédiatement, sans recherche dans le journal.
+    expect(screen.getByRole('dialog', { name: 'Bordereau imprimable' })).toBeInTheDocument();
+  });
+
+  it('refuse un détail sans aucun poste complété', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
+    const form = screen.getByRole('dialog', { name: 'Nouvelle recette' });
+    await user.type(within(form).getByLabelText(/Libellé de l’écriture/), 'Sans poste');
+    await user.click(within(form).getByRole('button', { name: 'Détail par postes' }));
+    await user.click(within(form).getByRole('button', { name: 'Enregistrer' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent('Renseignez au moins un poste');
+    // Rien n'a été enregistré : le livre n'existe même pas encore.
+    expect(localStorage.getItem(CLE_LIVRE)).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
   });
 
   it('conserve la saisie et affiche une erreur explicite quand le stockage est plein', async () => {

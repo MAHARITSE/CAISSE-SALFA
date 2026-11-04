@@ -16,7 +16,6 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   await dialog.getByLabel('Observation', { exact: true }).fill('Contrôle navigateur');
   await dialog.getByRole('button', { name: 'Détail par postes' }).click();
   await dialog.getByLabel('Poste', { exact: true }).fill('CONSULTATION');
-  await dialog.getByLabel('Référence / quittance').fill('Q-1');
   await dialog.getByLabel('Montant (Ar)', { exact: true }).fill('4000');
   await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
   await dialog.getByLabel('Poste', { exact: true }).fill('PHARMACIE');
@@ -27,12 +26,17 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   expect(await page.evaluate(() => Boolean(document.activeElement?.closest('dialog')))).toBe(true);
   await dialog.getByRole('button', { name: 'Enregistrer', exact: true }).click();
   await expect(dialog).toHaveCount(0);
+  // Le bordereau de la pièce enregistrée s'ouvre automatiquement : on le ferme.
+  const autoBordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
+  await expect(autoBordereau).toBeVisible();
+  await autoBordereau.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await expect(autoBordereau).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Recettes journalières', exact: false }).first()).toBeVisible();
   await page.reload();
   await expect(page.locator('#journal').getByText('Recettes journalières', { exact: true }).first()).toBeVisible();
   const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('salfa_tresorerie_livre_v2')!));
   expect(stocke.ecritures[0]).toMatchObject({ montant: 10000, reference: 'Bordereau F-1', observation: 'Contrôle navigateur' });
-  expect(stocke.ecritures[0].lignesDetail[0].reference).toBe('Q-1');
+  expect(stocke.ecritures[0].lignesDetail[0]).toMatchObject({ libelle: 'CONSULTATION', montant: 4000 });
 
   const telechargement = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Exporter CSV' }).click();
@@ -42,9 +46,9 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   const fin = lignes.findIndex(l => l[2] === 'TOTAUX DE LA PÉRIODE');
   const total = lignes.slice(debut, fin).reduce((s, l) => s + (Number(l[8]) || 0), 0);
   expect(total).toBe(10000);
-  expect(csv).toContain('Q-1');
+  expect(csv).toContain('CONSULTATION');
 
-  await page.getByRole('button', { name: /^Bordereau RC-/ }).click();
+  await page.getByRole('button', { name: /^Bordereau RC-/ }).first().click();
   const bordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
   await expect(bordereau.getByText('Total des recettes', { exact: true })).toBeVisible();
   await page.emulateMedia({ media: 'print' });

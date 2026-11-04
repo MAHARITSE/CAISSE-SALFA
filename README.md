@@ -52,8 +52,11 @@ garder les versions verrouillées par `package-lock.json`.
   référence de pièce et observation distinctes, catégorie, tiers/service. Le
   total d’une écriture détaillée doit être exactement égal à la somme de ses
   postes.
-- **Bordereaux détaillés** : postes, références/quittances, modèles réutilisables
-  avec montants par défaut facultatifs et ordre des postes conservé.
+- **Bordereaux détaillés** : postes et montants, modèles réutilisables avec
+  montants par défaut facultatifs et ordre des postes conservé. Un seul poste
+  complété suffit ; les lignes laissées vides sont ignorées à l’enregistrement.
+- **Impression immédiate** : le bordereau imprimable s’ouvre automatiquement
+  après l’enregistrement d’une pièce détaillée, prêt à être imprimé.
 - **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
   recette ont chacun leur propre en-tête, modifiable depuis le bouton
   « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et
@@ -181,7 +184,8 @@ src/
   hooks/useLivre.ts               état, persistance, migration, multi-onglets
   components/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
-    LivreJournal.tsx              journal, détails, bordereau imprimable
+    LivreJournal.tsx              journal, détails et dépliage des postes
+    Bordereau.tsx                 document imprimable et sa boîte de dialogue
     EnteteBordereauModal.tsx      en-tête modifiable des deux bordereaux
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio

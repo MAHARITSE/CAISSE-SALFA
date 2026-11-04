@@ -22,7 +22,12 @@ interface SaisieEcritureProps {
   onFermer: () => void;
 }
 
-interface LigneBrouillon { id: string; description: string; reference: string; montant: string }
+interface LigneBrouillon { id: string; description: string; montant: string }
+
+/** Un poste n'est retenu que s'il porte un libellé et un montant positif. */
+function posteRempli(ligne: LigneBrouillon): boolean {
+  return ligne.description.trim() !== '' && (parserMontant(ligne.montant) ?? 0) > 0;
+}
 
 export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
   const sens = edition?.sens ?? sensInitial;
@@ -36,9 +41,8 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [observation, setObservation] = useState(edition?.observation ?? '');
   const [montantSimple, setMontantSimple] = useState(edition?.lignesDetail?.length ? '' : edition ? String(edition.montant) : '');
   const [detaille, setDetaille] = useState(Boolean(edition?.lignesDetail?.length));
-  const [lignes, setLignes] = useState<LigneBrouillon[]>(edition?.lignesDetail?.map(d => ({ id: d.id, description: d.libelle, reference: d.reference ?? '', montant: String(d.montant) })) ?? []);
+  const [lignes, setLignes] = useState<LigneBrouillon[]>(edition?.lignesDetail?.map(d => ({ id: d.id, description: d.libelle, montant: String(d.montant) })) ?? []);
   const [nouveauPoste, setNouveauPoste] = useState('');
-  const [nouvelleReference, setNouvelleReference] = useState('');
   const [nouveauMontant, setNouveauMontant] = useState('');
   const [erreur, setErreur] = useState('');
   const [modifie, setModifie] = useState(false);
@@ -53,7 +57,8 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
         ? numeroSuivant(sens, date) ?? 'Attribué à l’enregistrement'
         : `Hors exercice ${exercice}`
       : 'Attribué à l’enregistrement');
-  const total = detaille ? lignes.reduce((s, l) => s + (parserMontant(l.montant) ?? 0), 0) : parserMontant(montantSimple) ?? 0;
+  const lignesRetenues = lignes.filter(posteRempli);
+  const total = detaille ? lignesRetenues.reduce((s, l) => s + (parserMontant(l.montant) ?? 0), 0) : parserMontant(montantSimple) ?? 0;
   const changer = () => setModifie(true);
 
   function demanderFermeture() {
@@ -66,12 +71,12 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     if (!nouveauPoste.trim()) { setErreur('Renseignez le libellé du poste à ajouter.'); return; }
     if (montant === null || montant <= 0) { setErreur('Le montant du poste doit être un entier supérieur à zéro, sans décimale.'); return; }
     if (lignes.length >= MAX_DETAILS) { setErreur(`Un bordereau peut contenir ${MAX_DETAILS} postes au maximum.`); return; }
-    setLignes(prev => [...prev, { id: identifiant('d'), description: nouveauPoste.trim(), reference: nouvelleReference.trim(), montant: String(montant) }]);
-    setNouveauPoste(''); setNouvelleReference(''); setNouveauMontant(''); setErreur(''); changer();
+    setLignes(prev => [...prev, { id: identifiant('d'), description: nouveauPoste.trim(), montant: String(montant) }]);
+    setNouveauPoste(''); setNouveauMontant(''); setErreur(''); changer();
   }
 
   function appliquerMasque(m: MasqueSaisie) {
-    setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: l.description, reference: '', montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
+    setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: l.description, montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
     setDetaille(true); setErreur(''); changer();
   }
 
@@ -87,13 +92,13 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     if (soumission.current) return;
     setErreur('');
     try {
-      if (detaille) {
-        if (!lignes.length) throw new Error('Ajoutez au moins un poste ou choisissez « Montant unique ».');
-        if (lignes.some(l => !l.description.trim() || parserMontant(l.montant) === null || parserMontant(l.montant)! <= 0)) {
-          throw new Error('Chaque poste doit avoir un libellé et un montant entier positif. Complétez ou supprimez les postes inutilisés.');
-        }
+      // Un seul poste complété suffit : les lignes vides ou incomplètes ne sont pas retenues.
+      if (detaille && !lignesRetenues.length) {
+        throw new Error('Renseignez au moins un poste (libellé et montant) ou choisissez « Montant unique ».');
       }
-      const montant = detaille ? lignes.reduce((s, l) => s + parserMontant(l.montant)!, 0) : parserMontant(montantSimple);
+      const montant = detaille
+        ? lignesRetenues.reduce((s, l) => s + parserMontant(l.montant)!, 0)
+        : parserMontant(montantSimple);
       if (montant === null || montant <= 0) throw new Error('Saisissez un montant entier supérieur à zéro. Les décimales et les montants vides ne sont pas acceptés.');
       const brouillon: Ecriture = {
         id: edition?.id ?? identifiant(), numero, date, sens,
@@ -101,7 +106,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
         tiers: tiers.trim() || undefined,
         reference: reference.trim() || undefined, observation: observation.trim() || undefined,
         montant,
-        lignesDetail: detaille ? lignes.map(l => ({ id: l.id, libelle: l.description.trim(), reference: l.reference.trim() || undefined, montant: parserMontant(l.montant)! })) : undefined,
+        lignesDetail: detaille ? lignesRetenues.map(l => ({ id: l.id, libelle: l.description.trim(), montant: parserMontant(l.montant)! })) : undefined,
         createdAt: edition?.createdAt ?? new Date().toISOString(),
       };
       const valide = validerEcriture(brouillon);
@@ -149,19 +154,18 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
             </div>
             {!detaille ? <div><label className="label" htmlFor={`${formId}-montant`}>Montant total (Ar) *</label><input id={`${formId}-montant`} className="field text-right text-lg font-semibold tabular-nums" inputMode="numeric" value={montantSimple} onChange={e => setMontantSimple(e.target.value)} placeholder="0" required={!detaille} /><p className="mt-1.5 text-[11px] text-slate-500">Montant entier en ariary. Maximum : {formatAr(MONTANT_MAX)}.</p></div> : <>
               <div className="flex flex-wrap items-end gap-2"><div className="min-w-40 flex-1"><label className="label" htmlFor={`${formId}-modele`}>Modèle de bordereau</label><select id={`${formId}-modele`} className="field" value="" onChange={e => choisirMasque(e.target.value)}><option value="">Choisir un modèle…</option>{masques.filter(m => m.sens === sens).map(m => <option key={m.id} value={m.id}>{m.nom} ({m.lignes.length} postes)</option>)}</select></div><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={15} />Gérer les modèles</button></div>
-              <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_1fr_130px_auto]">
+              <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_150px_auto]">
                 <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(e.target.value)} onKeyDown={toucheAjout} placeholder="Consultation…" /></div>
-                <div><label className="label" htmlFor={`${formId}-ref-poste`}>Référence / quittance</label><input id={`${formId}-ref-poste`} className="field" maxLength={200} value={nouvelleReference} onChange={e => setNouvelleReference(e.target.value)} onKeyDown={toucheAjout} placeholder="Facultatif" /></div>
                 <div><label className="label" htmlFor={`${formId}-mnt-poste`}>Montant (Ar)</label><input id={`${formId}-mnt-poste`} className="field text-right tabular-nums" inputMode="numeric" value={nouveauMontant} onChange={e => setNouveauMontant(e.target.value)} onKeyDown={toucheAjout} placeholder="0" /></div>
                 <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[520px] text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-left">Référence</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
-                  {!lignes.length && <tr><td colSpan={4} className="p-6 text-center text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={24} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
-                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><input className="field min-w-28" aria-label={`Référence du poste ${i + 1}`} maxLength={200} value={l.reference} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, reference: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><input className="field w-32 text-right tabular-nums" aria-label={`Montant du poste ${i + 1}`} inputMode="numeric" value={l.montant} placeholder="0" onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={15} /></button></td></tr>)}
+                <table className="w-full min-w-[420px] text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
+                  {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={24} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
+                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><input className="field w-32 text-right tabular-nums" aria-label={`Montant du poste ${i + 1}`} inputMode="numeric" value={l.montant} placeholder="0" onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: e.target.value } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={15} /></button></td></tr>)}
                 </tbody></table>
               </div>
-              <p className="text-[11px] text-slate-500">Le total est calculé automatiquement. Chaque poste doit être complété ; les références sont conservées dans le bordereau et l’export.</p>
+              <p className="text-[11px] text-slate-500">Le total est calculé automatiquement sur les postes complétés. Un seul poste suffit pour enregistrer ; les lignes laissées vides sont ignorées.</p>
             </>}
           </section>
           {Number(date.slice(0, 4)) !== exercice && <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"><AlertCircle size={17} className="shrink-0" /><p>Cette date n’appartient pas à l’exercice {exercice} ouvert. Les écritures doivent toutes être rattachées à l’année en cours de clôture.</p></div>}
