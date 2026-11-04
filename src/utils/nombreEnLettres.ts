@@ -1,5 +1,5 @@
 /**
- * Montant écrit en toutes lettres, pour la mention « Arrêtez à la somme de… »
+ * Montant écrit en toutes lettres, pour la mention « Arrêté à la somme de… »
  * des bordereaux officiels. Orthographe traditionnelle : les traits d'union
  * relient les dizaines aux unités, les centaines restent séparées par une espace.
  */
@@ -75,8 +75,8 @@ export function nombreEnLettres(valeur: number): string {
 /** Phrase du bordereau : « Arrêtée à la somme de … ariary ». */
 /**
  * Mention imprimée sous le total, telle qu'elle figure sur les modèles :
- * « Arrêtez à la somme de … Ariary ».
+ * « Arrêté à la somme de … Ariary ».
  */
 export function montantEnLettres(montant: number): string {
-  return `Arrêtez à la somme de ${nombreEnLettres(montant)} Ariary`;
+  return `Arrêté à la somme de ${nombreEnLettres(montant)} Ariary`;
 }

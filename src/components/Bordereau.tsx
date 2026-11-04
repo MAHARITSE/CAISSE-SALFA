@@ -17,10 +17,11 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
  * bloc sous les lignes remplies.
  *
  * Le bloc occupe la place restante, de sorte que le tableau garde toujours la
- * même hauteur (celle du modèle) quelle que soit la taille de la pièce :
- * 8 lignes de 11,6 mm et un bloc vide de 26 mm, soit 118,8 mm en tout.
+ * même hauteur quelle que soit la taille de la pièce. Cotes relevées sur
+ * l'imprimé A4 fourni : 11,5 mm par ligne remplie et 133,6 mm pour l'ensemble
+ * des lignes remplies et du bloc vide.
  */
-const TABLEAU = { hauteurLigne: 11.6, hopitalTotal: 118.8, blocVideMinimum: 12 };
+const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 132.9, blocVideMinimum: 12 };
 
 /**
  * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,
@@ -98,7 +99,9 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
         </>}
     </header>
 
-    <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
+    {/* Sur les imprimés fournis, l'autorisation de recette porte un titre et la
+        demande d'engagement n'en a pas : l'objet la désigne déjà. */}
+    {recette && <h3 className="bordereau-titre">{TITRE_DOCUMENT.recette}</h3>}
 
     <p className="bordereau-piece"><strong>Pièce n°</strong></p>
 
@@ -135,7 +138,7 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
         <tr
           className="bordereau-ligne-vide"
           aria-hidden="true"
-          style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.hopitalTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
+          style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.lignesTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
         >
           <td />
           <td />

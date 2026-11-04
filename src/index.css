@@ -121,8 +121,8 @@
   position: relative;
   width: 210mm;
   min-height: 297mm;
-  /* Cotes du modèle : 4,6 mm en haut, 8,1 mm à gauche, 4,6 mm en bas. */
-  padding: 4.6mm 4.6mm 4.6mm 8.1mm;
+  /* Cotes du modèle : en-tête à 10 mm du haut, tableau de 6,9 à 203,5 mm. */
+  padding: 9.5mm 6.5mm 4.6mm 6.6mm;
   box-sizing: border-box;
   background: #fff;
   color: #000;
@@ -147,41 +147,51 @@
 
 /* Titre du document : compact, le tableau doit tenir dans la page. */
 .bordereau-titre {
-  margin: 6mm 0 1mm;
+  margin: 5.6mm 0 0;
   text-align: center;
-  font-size: 13.5pt;
+  /* Les utilitaires Tailwind de la page ne doivent pas écraser ce titre. */
+  font-size: 12pt !important;
+  line-height: 1.2 !important;
   font-weight: 700;
   letter-spacing: .02em;
   text-transform: uppercase;
 }
 
-.bordereau-piece { margin: 0 0 1mm; text-align: right; }
+.bordereau-piece { margin: 15.5mm 0 3.8mm; padding-right: 40.5mm; text-align: right; }
+/* L'autorisation de recette porte un titre : « Pièce n° » reste à la même
+   hauteur que sur la demande d'engagement, qui n'en a pas. */
+.bordereau-titre + .bordereau-piece { margin-top: 4.2mm; }
 
 /* « DATE : » et « Objet : » soulignés, valeurs dans une colonne alignée. */
 .bordereau-ligne {
   display: grid;
   grid-template-columns: 19mm 1fr;
   align-items: baseline;
-  margin: 0 0 1mm;
+  /* Sur l'imprimé, « Objet » passe 8,4 mm sous « DATE ». */
+  margin: 0 0 4.2mm;
 }
 .bordereau-etiquette { text-decoration: underline; font-weight: 700; }
 
 /* Tableau du modèle : filets pleins, en-tête centré, largeur fixe. */
 .bordereau-table {
-  /* 205,4 − 8,1 mm : la largeur du tableau relevée sur le modèle. */
-  width: 197.3mm;
+  /* 203,5 − 6,9 mm : largeur relevée sur l'imprimé A4. */
+  width: 196.6mm;
+  /* Les deux lignes DATE et Objet s'arrêtent à 75,7 mm, le tableau part à 81,5. */
+  margin-top: 6.8mm;
   border-collapse: collapse;
   table-layout: fixed;
 }
-.bordereau-table col.col-numero { width: 5.67%; }
-.bordereau-table col.col-libelle { width: 44.03%; }
-.bordereau-table col.col-compte { width: 11.13%; }
-.bordereau-table col.col-montant { width: 18.17%; }
-.bordereau-table col.col-observation { width: 21%; }
+.bordereau-table col.col-numero { width: 5.85%; }
+.bordereau-table col.col-libelle { width: 43.34%; }
+.bordereau-table col.col-compte { width: 11.7%; }
+.bordereau-table col.col-montant { width: 18.51%; }
+.bordereau-table col.col-observation { width: 20.6%; }
 .bordereau-table th,
 .bordereau-table td { border: 1px solid #000; padding: 0 1.5mm; box-sizing: border-box; }
-.bordereau-table th { text-align: center; font-weight: 700; padding: 1.5mm 1mm; white-space: nowrap; font-size: 9pt; }
-.bordereau-table tbody tr { height: 11.6mm; }
+.bordereau-table thead tr { height: 5.5mm; }
+.bordereau-table tfoot tr { height: 7.8mm; }
+.bordereau-table th { text-align: center; font-weight: 700; padding: 0.8mm 1mm; white-space: nowrap; font-size: 9pt; }
+.bordereau-table tbody tr { height: 11.2mm; }
 /*
  * Sur le modèle, les lignes laissées vides ne sont pas découpées : elles
  * forment un seul grand bloc, sans aucun filet horizontal entre elles.
@@ -197,12 +207,12 @@
 /* Lignes vides : le filet doit rester visible même sans contenu. */
 
 /* Mention en toutes lettres, sans italique, comme sur les modèles. */
-.bordereau-lettres { margin: 4mm 0 3mm; }
+.bordereau-lettres { margin: 9mm 0 2.9mm; }
 
 /* Cases de signature : pleine largeur, autant de colonnes que de signataires. */
 .bordereau-signatures {
   display: grid;
-  width: 197.3mm;
+  width: 196.6mm;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid #000;

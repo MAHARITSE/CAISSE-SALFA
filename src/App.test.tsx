@@ -115,7 +115,8 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: `Imprimer le bordereau DP-${annee}-0001` })[0]);
     const engagement = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
-    expect(within(engagement).getByText('DEMANDE D’ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
+    // La demande d'engagement n'a pas de titre : l'objet la désigne déjà.
+    expect(within(engagement).queryByText(/ENGAGEMENT DE DÉPENSE/)).not.toBeInTheDocument();
     // Le document porte son propre numéro, aligné sur la pièce.
     expect(engagement).toHaveTextContent(`AED-${annee}-0001`);
   });

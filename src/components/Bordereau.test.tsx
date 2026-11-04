@@ -33,16 +33,17 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(screen.getByText('2 657 400,00')).toBeInTheDocument();
     // Chaque poste porte aussi son montant à deux décimales.
     expect(screen.getByText('238 000,00')).toBeInTheDocument();
-    expect(screen.getByText('Arrêtez à la somme de deux millions six cent cinquante-sept mille quatre cents Ariary')).toBeInTheDocument();
+    expect(screen.getByText('Arrêté à la somme de deux millions six cent cinquante-sept mille quatre cents Ariary')).toBeInTheDocument();
     for (const titre of ['Caissier(e)', 'Gestionnaire', 'Médecin Chef']) expect(screen.getByText(titre)).toBeInTheDocument();
     expect(screen.queryByText('Demandeur')).not.toBeInTheDocument();
   });
 
   it('ajoute « Demandeur » sur la dépense et son titre propre', () => {
     const { container } = render(<BordereauDocument ligne={ligne('DEPENSE')} entete={enteteParDefaut('depense')} />);
-    expect(screen.getByRole('heading', { name: 'DEMANDE D’ENGAGEMENT DE DÉPENSE' })).toBeInTheDocument();
+    // L'imprimé de dépense n'a pas de titre : l'objet désigne la pièce.
+    expect(screen.queryByRole('heading', { name: /ENGAGEMENT/ })).not.toBeInTheDocument();
     expect(screen.getByText('TOTAL DES DEPENSES')).toBeInTheDocument();
-    expect(screen.getByText(/Arrêtez à la somme de quatre millions quarante-deux mille Ariary/)).toBeInTheDocument();
+    expect(screen.getByText(/Arrêté à la somme de quatre millions quarante-deux mille Ariary/)).toBeInTheDocument();
     for (const titre of ['Demandeur', 'Caissier(e)', 'Gestionnaire', 'Médecin Chef']) expect(screen.getByText(titre)).toBeInTheDocument();
     // Quatre signataires : quatre colonnes.
     expect(container.querySelectorAll('.bordereau-signatures > div')).toHaveLength(4);

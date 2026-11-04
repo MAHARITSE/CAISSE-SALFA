@@ -32,7 +32,7 @@ describe('montant en toutes lettres', () => {
 
   it('produit la phrase du bordereau', () => {
     // Libellé relevé mot pour mot sur les deux modèles fournis.
-    expect(montantEnLettres(4_042_000)).toBe('Arrêtez à la somme de quatre millions quarante-deux mille Ariary');
+    expect(montantEnLettres(4_042_000)).toBe('Arrêté à la somme de quatre millions quarante-deux mille Ariary');
   });
 
   it('refuse ce qui n’est pas un entier positif', () => {
