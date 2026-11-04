@@ -143,6 +143,9 @@ INSERT INTO salfa_masques (id, nom, sens, description, ordre) VALUES
   ('masque-depenses-courantes', 'Charges courantes & fonctionnement', 'DEPENSE', 'Dépenses périodiques d’exploitation.', 1)
   ON DUPLICATE KEY UPDATE nom = VALUES(nom);
 
+-- Réexécutable : les postes des deux modèles livrés sont remplacés, pas dupliqués.
+DELETE FROM salfa_masque_lignes WHERE masque_id IN ('masque-recettes-hopital', 'masque-depenses-courantes');
+
 INSERT INTO salfa_masque_lignes (masque_id, description, montant_defaut, ordre) VALUES
   ('masque-recettes-hopital', 'CONSULTATION', NULL, 0),
   ('masque-recettes-hopital', 'ECHOGRAPHIE', NULL, 1),

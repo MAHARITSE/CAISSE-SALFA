@@ -11,8 +11,13 @@ sans Composer, et la base est MySQL/MariaDB fournie par WAMP.
 ```
 deploy/wamp/
 ├── frontend/            application React compilée (index.html + assets/)
-├── api/                 API PHP : un seul point d'entrée (index.php)
-│   ├── index.php        routeur JSON
+├── api/                 API PHP : un fichier par point, PAS d'index.php
+│   ├── points/          points d'entrée publics (un fichier = une opération)
+│   │   ├── sante.php  session.php  connexion.php  deconnexion.php
+│   │   ├── livre.php  ecritures.php  ecritures-supprimer.php
+│   │   ├── ecritures-restaurer.php  masques.php  solde-initial.php
+│   │   └── cloture.php  restauration.php  sauvegarde.php  mot-de-passe.php
+│   ├── socle.php        inclusions communes (aucune route)
 │   ├── config.php       valeurs par défaut, constantes, fuseau horaire
 │   ├── salfa-config.modele.php  modèle de configuration à copier
 │   ├── connexion-bootstrap.php  création du premier administrateur (CLI)
@@ -25,9 +30,9 @@ deploy/wamp/
 │   ├── preparer-base.php        création des tables
 │   ├── creer-admin.bat          compte administrateur / mot de passe oublié
 │   ├── sauvegarder.bat          dump mysqldump daté
+│   ├── verifier.bat             contrôle des fichiers et de l'API
 │   ├── importer-sauvegarde.bat  restauration d’un dump
 │   └── demarrer-url.bat         ouverture de l’application
-├── install.php          diagnostic navigateur (à supprimer après installation)
 ├── .htaccess            routage Apache, cache et protections
 └── INSTALLATION.md      ce fichier
 ```
@@ -73,8 +78,9 @@ puis vérifier que l’icône devient verte (Apache + MySQL démarrés).
 
 ## 4. Installation manuelle
 
-1. Copier `frontend/`, `api/`, `.htaccess` et `install.php` dans
-   `C:\wamp64\www\caisse-salfa`.
+1. Copier `frontend/`, `api/`, `.htaccess` et `INSTALLATION.md` dans
+   `C:\wamp64\www\caisse-salfa` (rien d'autre : il n'y a **aucun `index.php`**,
+   la page d'accueil est `index.html`).
 2. Copier `api/salfa-config.modele.php` en `api/salfa-config.php`, puis renseigner
    `hote`, `port`, `base`, `utilisateur`, `mot_de_passe` et remplacer `sel_session`.
 3. Créer la base et importer `sql/salfa_install.sql` :
@@ -83,8 +89,9 @@ puis vérifier que l’icône devient verte (Apache + MySQL démarrés).
      puis importer le fichier.
 4. Créer l’administrateur :
    `php api/connexion-bootstrap.php admin "MotDePasseSolide" "Nom complet"`.
-5. Ouvrir `http://localhost/caisse-salfa/install.php` pour vérifier l’environnement,
-   puis supprimer ce fichier.
+5. Vérifier la réponse de l’API :
+   `http://localhost/caisse-salfa/api/points/sante.php` doit renvoyer
+   `{"ok":true,"base":"connectee",…}.`
 
 ### Si l’application n’est pas dans `/caisse-salfa/`
 
@@ -92,11 +99,12 @@ Le routage de `.htaccess` et la base de l’API sont relatifs : l’application 
 dans n’importe quel sous-dossier (`http://localhost/salfa/`). Pour un déploiement à la
 racine du serveur web, adapter les deux lignes `RewriteBase`.
 
-### Si `mod_rewrite` est désactivé
+### Aucune réécriture d’URL n’est nécessaire
 
-Toutes les routes acceptent la forme `index.php?r=…` :
-`http://localhost/caisse-salfa/api/index.php?r=sante`. L’application utilise
-automatiquement cette forme si l’URL propre renvoie une erreur 404 Apache.
+L’application appelle directement les fichiers : `api/points/livre.php`,
+`api/points/cloture.php`… `mod_rewrite` n’est utilisé que pour renvoyer
+`index.html` sur une URL inconnue (facultatif). Si un fichier d’API manque,
+l’application affiche « Le fichier d’API … est introuvable sur le serveur ».
 
 ---
 
@@ -151,8 +159,7 @@ copier `deploy\wamp\sauvegardes\` sur un disque externe ou un partage réseau.
 
 ```
 http://localhost/caisse-salfa/                     → écran de connexion
-http://localhost/caisse-salfa/api/sante            → {"ok":true,"base":"connectee",...}
-http://localhost/caisse-salfa/install.php          → diagnostics (à supprimer ensuite)
+http://localhost/caisse-salfa/api/points/sante.php  → {"ok":true,"base":"connectee",...}
 php api/tests/test-api.php                         → 24 tests de validation
 ```
 
@@ -167,9 +174,9 @@ sauvegarde JSON, la restaurer, puis vérifier la page « Exercices & clôtures �
 | Symptôme | Cause probable | Solution |
 | --- | --- | --- |
 | « L’API n’est pas encore configurée » | `api/salfa-config.php` absent | lancer `outils\installer.bat` |
-| « Connexion à MySQL impossible » | WAMP arrêté, base absente, mot de passe faux | démarrer WAMP, vérifier `salfa-config.php`, `install.php` |
+| « Connexion à MySQL impossible » | WAMP arrêté, base absente, mot de passe faux | démarrer WAMP, vérifier `salfa-config.php`, lancer `outils\verifier.bat` |
 | Écran blanc | erreur PHP | consulter `C:\wamp64\logs\php_error.log` |
-| 404 sur `/api/livre` | `mod_rewrite` désactivé | activer le module ou utiliser `index.php?r=` |
+| « Le fichier d’API … est introuvable » | dossier `api/` incomplet | recopier tout le dossier `api/` (surtout `api/points/`) |
 | « Conflit de révision » | deux postes ont saisi en même temps | recharger le livre : la saisie est conservée |
 | « Session expirée » | 30 min d’inactivité | se reconnecter |
 | Mot de passe oublié | — | `outils\creer-admin.bat` sur le serveur |
@@ -178,7 +185,7 @@ sauvegarde JSON, la restaurer, puis vérifier la page « Exercices & clôtures �
 
 ## 10. Après la mise en service
 
-1. Supprimer `install.php`, `api/connexion-bootstrap.php` et `api/tests/` du serveur.
+1. Supprimer `api/connexion-bootstrap.php` et `api/tests/` du serveur.
 2. Vérifier que `api/salfa-config.php` n’est accessible qu’en local (le `.htaccess` le
    bloque déjà) et n’est **jamais** versionné (`.gitignore`).
 3. Régler le fuseau du serveur sur `Indian/Antananarivo` (`config.php`).
