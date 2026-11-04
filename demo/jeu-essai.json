@@ -1,0 +1,1886 @@
+{
+  "format": "CAISSE-SALFA",
+  "version": 1,
+  "revision": 0,
+  "updatedAt": "2026-11-04T13:02:22.669Z",
+  "exportedAt": "2026-11-04T13:02:22.669Z",
+  "ecritures": [
+    {
+      "id": "essai-2026-RC-2026-0001",
+      "numero": "RC-2026-0001",
+      "date": "2026-09-02",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 1",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1615000,
+      "lignesDetail": [
+        {
+          "id": "p-20269RC-2026-0001CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-2",
+          "montant": 320000
+        },
+        {
+          "id": "p-20269RC-2026-0001LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-2",
+          "montant": 185000
+        },
+        {
+          "id": "p-20269RC-2026-0001MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-2",
+          "montant": 410000
+        },
+        {
+          "id": "p-20269RC-2026-0001ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-2",
+          "montant": 120000
+        },
+        {
+          "id": "p-20269RC-2026-0001SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-2",
+          "montant": 95000
+        },
+        {
+          "id": "p-20269RC-2026-0001MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-2",
+          "montant": 210000
+        },
+        {
+          "id": "p-20269RC-2026-0001HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-2",
+          "montant": 275000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-02T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0001",
+      "numero": "DP-2026-0001",
+      "date": "2026-09-03",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments pharmacie",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 795000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0001ANTIBIOTIQUES-1",
+          "libelle": "ANTIBIOTIQUES",
+          "reference": "FAC-1001",
+          "montant": 420000
+        },
+        {
+          "id": "p-20269DP-2026-0001ANTIPALUDIQUES-1",
+          "libelle": "ANTIPALUDIQUES",
+          "reference": "FAC-1001",
+          "montant": 265000
+        },
+        {
+          "id": "p-20269DP-2026-0001PERFUSIONS-1",
+          "libelle": "PERFUSIONS",
+          "reference": "FAC-1002",
+          "montant": 110000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Livraison du lundi, bon de réception n° 44.",
+      "createdAt": "2026-09-03T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0002",
+      "numero": "DP-2026-0002",
+      "date": "2026-09-04",
+      "sens": "DEPENSE",
+      "libelle": "Carburant groupe électrogène et ambulance",
+      "categorie": "Carburant & transport",
+      "tiers": "Station Total Antananarivo",
+      "montant": 160000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0002GASOIL réservoir-1",
+          "libelle": "GASOIL réservoir",
+          "reference": "STA-221",
+          "montant": 160000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-04T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0003",
+      "numero": "DP-2026-0003",
+      "date": "2026-09-05",
+      "sens": "DEPENSE",
+      "libelle": "Prestation de nettoyage",
+      "categorie": "Divers",
+      "tiers": "Société HAZO",
+      "montant": 85000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0003Ménage salles et couloirs-1",
+          "libelle": "Ménage salles et couloirs",
+          "reference": "PM-09",
+          "montant": 85000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-05T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0002",
+      "numero": "RC-2026-0002",
+      "date": "2026-09-09",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 2",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1485800,
+      "lignesDetail": [
+        {
+          "id": "p-20269RC-2026-0002CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-9",
+          "montant": 294400
+        },
+        {
+          "id": "p-20269RC-2026-0002LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-9",
+          "montant": 170200
+        },
+        {
+          "id": "p-20269RC-2026-0002MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-9",
+          "montant": 377200
+        },
+        {
+          "id": "p-20269RC-2026-0002ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-9",
+          "montant": 110400
+        },
+        {
+          "id": "p-20269RC-2026-0002SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-9",
+          "montant": 87400
+        },
+        {
+          "id": "p-20269RC-2026-0002MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-9",
+          "montant": 193200
+        },
+        {
+          "id": "p-20269RC-2026-0002HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-9",
+          "montant": 253000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-09T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0004",
+      "numero": "DP-2026-0004",
+      "date": "2026-09-10",
+      "sens": "DEPENSE",
+      "libelle": "Consultations médicales : honoraires",
+      "categorie": "Honoraires",
+      "tiers": "Dr RAKOTO",
+      "montant": 275000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0004Médecin généraliste-1",
+          "libelle": "Médecin généraliste",
+          "reference": "HON-10",
+          "montant": 180000
+        },
+        {
+          "id": "p-20269DP-2026-0004Sage-femme-1",
+          "libelle": "Sage-femme",
+          "reference": "HON-11",
+          "montant": 95000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-10T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0005",
+      "numero": "DP-2026-0005",
+      "date": "2026-09-11",
+      "sens": "DEPENSE",
+      "libelle": "Régularisation : consultation annulée",
+      "categorie": "Divers",
+      "tiers": "Patient M. R.",
+      "montant": 20000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0005Consultation du 8 remboursée au patient-1",
+          "libelle": "Consultation du 8 remboursée au patient",
+          "reference": "RGL-08",
+          "montant": 20000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Pièce de démonstration : annulation d’une consultation.",
+      "createdAt": "2026-09-11T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0006",
+      "numero": "DP-2026-0006",
+      "date": "2026-09-13",
+      "sens": "DEPENSE",
+      "libelle": "Consommables médicaux",
+      "categorie": "Consommables médicaux",
+      "tiers": "Medical Export",
+      "montant": 164000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0006GANTS latex (boîtes)-1",
+          "libelle": "GANTS latex (boîtes)",
+          "reference": "FAC-1104",
+          "montant": 78000
+        },
+        {
+          "id": "p-20269DP-2026-0006SERINGUES 5 ml-1",
+          "libelle": "SERINGUES 5 ml",
+          "reference": "FAC-1104",
+          "montant": 52000
+        },
+        {
+          "id": "p-20269DP-2026-0006COMPRESSES stériles-1",
+          "libelle": "COMPRESSES stériles",
+          "reference": "FAC-1105",
+          "montant": 34000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-13T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0007",
+      "numero": "DP-2026-0007",
+      "date": "2026-09-14",
+      "sens": "DEPENSE",
+      "libelle": "Facture d’électricité JIRAMA",
+      "categorie": "Eau & électricité",
+      "tiers": "JIRAMA",
+      "montant": 340000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0007Électricité du mois précédent-1",
+          "libelle": "Électricité du mois précédent",
+          "reference": "JIR-8891",
+          "montant": 340000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-14T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0003",
+      "numero": "RC-2026-0003",
+      "date": "2026-09-16",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 3",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1711900,
+      "lignesDetail": [
+        {
+          "id": "p-20269RC-2026-0003CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-16",
+          "montant": 339200
+        },
+        {
+          "id": "p-20269RC-2026-0003LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-16",
+          "montant": 196100
+        },
+        {
+          "id": "p-20269RC-2026-0003MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-16",
+          "montant": 434600
+        },
+        {
+          "id": "p-20269RC-2026-0003ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-16",
+          "montant": 127200
+        },
+        {
+          "id": "p-20269RC-2026-0003SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-16",
+          "montant": 100700
+        },
+        {
+          "id": "p-20269RC-2026-0003MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-16",
+          "montant": 222600
+        },
+        {
+          "id": "p-20269RC-2026-0003HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-16",
+          "montant": 291500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-16T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0008",
+      "numero": "DP-2026-0008",
+      "date": "2026-09-17",
+      "sens": "DEPENSE",
+      "libelle": "Maintenance du concentrateur d’oxygène",
+      "categorie": "Maintenance & équipements",
+      "tiers": "Biomed Services",
+      "montant": 195000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0008Remplacement filtre et révision-1",
+          "libelle": "Remplacement filtre et révision",
+          "reference": "TECH-77",
+          "montant": 195000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-17T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0009",
+      "numero": "DP-2026-0009",
+      "date": "2026-09-18",
+      "sens": "DEPENSE",
+      "libelle": "Fournitures de bureau",
+      "categorie": "Fournitures de bureau",
+      "tiers": "Papeterie Tana",
+      "montant": 75000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0009RAMES papier A4-1",
+          "libelle": "RAMES papier A4",
+          "reference": "PAP-31",
+          "montant": 45000
+        },
+        {
+          "id": "p-20269DP-2026-0009REGISTRES et carnets-1",
+          "libelle": "REGISTRES et carnets",
+          "reference": "PAP-31",
+          "montant": 30000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-18T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0010",
+      "numero": "DP-2026-0010",
+      "date": "2026-09-19",
+      "sens": "DEPENSE",
+      "libelle": "Mission : supervision du dispensaire",
+      "categorie": "Frais de mission",
+      "tiers": "Antsirabe",
+      "montant": 120000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0010Transport et per diem-1",
+          "libelle": "Transport et per diem",
+          "reference": "OM-12",
+          "montant": 120000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-19T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0004",
+      "numero": "RC-2026-0004",
+      "date": "2026-09-23",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 4",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1566550,
+      "lignesDetail": [
+        {
+          "id": "p-20269RC-2026-0004CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-23",
+          "montant": 310400
+        },
+        {
+          "id": "p-20269RC-2026-0004LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-23",
+          "montant": 179450
+        },
+        {
+          "id": "p-20269RC-2026-0004MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-23",
+          "montant": 397700
+        },
+        {
+          "id": "p-20269RC-2026-0004ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-23",
+          "montant": 116400
+        },
+        {
+          "id": "p-20269RC-2026-0004SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-23",
+          "montant": 92150
+        },
+        {
+          "id": "p-20269RC-2026-0004MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-23",
+          "montant": 203700
+        },
+        {
+          "id": "p-20269RC-2026-0004HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-23",
+          "montant": 266750
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-23T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0011",
+      "numero": "DP-2026-0011",
+      "date": "2026-09-24",
+      "sens": "DEPENSE",
+      "libelle": "Abonnement internet et téléphone",
+      "categorie": "Téléphone & internet",
+      "tiers": "Telma",
+      "montant": 89000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0011Fibre du mois-1",
+          "libelle": "Fibre du mois",
+          "reference": "TEL-552",
+          "montant": 89000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-24T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0012",
+      "numero": "DP-2026-0012",
+      "date": "2026-09-26",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments (complément)",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 140000,
+      "lignesDetail": [
+        {
+          "id": "p-20269DP-2026-0012SÉRUM glucosé-1",
+          "libelle": "SÉRUM glucosé",
+          "reference": "FAC-1130",
+          "montant": 140000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-26T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0005",
+      "numero": "RC-2026-0005",
+      "date": "2026-09-30",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 5",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1647300,
+      "lignesDetail": [
+        {
+          "id": "p-20269RC-2026-0005CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-30",
+          "montant": 326400
+        },
+        {
+          "id": "p-20269RC-2026-0005LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-30",
+          "montant": 188700
+        },
+        {
+          "id": "p-20269RC-2026-0005MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-30",
+          "montant": 418200
+        },
+        {
+          "id": "p-20269RC-2026-0005ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-30",
+          "montant": 122400
+        },
+        {
+          "id": "p-20269RC-2026-0005SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-30",
+          "montant": 96900
+        },
+        {
+          "id": "p-20269RC-2026-0005MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-30",
+          "montant": 214200
+        },
+        {
+          "id": "p-20269RC-2026-0005HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-30",
+          "montant": 280500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-09-30T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0006",
+      "numero": "RC-2026-0006",
+      "date": "2026-10-02",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 1",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1615000,
+      "lignesDetail": [
+        {
+          "id": "p-202610RC-2026-0006CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-2",
+          "montant": 320000
+        },
+        {
+          "id": "p-202610RC-2026-0006LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-2",
+          "montant": 185000
+        },
+        {
+          "id": "p-202610RC-2026-0006MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-2",
+          "montant": 410000
+        },
+        {
+          "id": "p-202610RC-2026-0006ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-2",
+          "montant": 120000
+        },
+        {
+          "id": "p-202610RC-2026-0006SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-2",
+          "montant": 95000
+        },
+        {
+          "id": "p-202610RC-2026-0006MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-2",
+          "montant": 210000
+        },
+        {
+          "id": "p-202610RC-2026-0006HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-2",
+          "montant": 275000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-02T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0013",
+      "numero": "DP-2026-0013",
+      "date": "2026-10-03",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments pharmacie",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 795000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0013ANTIBIOTIQUES-1",
+          "libelle": "ANTIBIOTIQUES",
+          "reference": "FAC-1001",
+          "montant": 420000
+        },
+        {
+          "id": "p-202610DP-2026-0013ANTIPALUDIQUES-1",
+          "libelle": "ANTIPALUDIQUES",
+          "reference": "FAC-1001",
+          "montant": 265000
+        },
+        {
+          "id": "p-202610DP-2026-0013PERFUSIONS-1",
+          "libelle": "PERFUSIONS",
+          "reference": "FAC-1002",
+          "montant": 110000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Livraison du lundi, bon de réception n° 44.",
+      "createdAt": "2026-10-03T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0014",
+      "numero": "DP-2026-0014",
+      "date": "2026-10-04",
+      "sens": "DEPENSE",
+      "libelle": "Carburant groupe électrogène et ambulance",
+      "categorie": "Carburant & transport",
+      "tiers": "Station Total Antananarivo",
+      "montant": 160000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0014GASOIL réservoir-1",
+          "libelle": "GASOIL réservoir",
+          "reference": "STA-221",
+          "montant": 160000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-04T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0015",
+      "numero": "DP-2026-0015",
+      "date": "2026-10-05",
+      "sens": "DEPENSE",
+      "libelle": "Prestation de nettoyage",
+      "categorie": "Divers",
+      "tiers": "Société HAZO",
+      "montant": 85000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0015Ménage salles et couloirs-1",
+          "libelle": "Ménage salles et couloirs",
+          "reference": "PM-09",
+          "montant": 85000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-05T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0007",
+      "numero": "RC-2026-0007",
+      "date": "2026-10-09",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 2",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1485800,
+      "lignesDetail": [
+        {
+          "id": "p-202610RC-2026-0007CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-9",
+          "montant": 294400
+        },
+        {
+          "id": "p-202610RC-2026-0007LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-9",
+          "montant": 170200
+        },
+        {
+          "id": "p-202610RC-2026-0007MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-9",
+          "montant": 377200
+        },
+        {
+          "id": "p-202610RC-2026-0007ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-9",
+          "montant": 110400
+        },
+        {
+          "id": "p-202610RC-2026-0007SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-9",
+          "montant": 87400
+        },
+        {
+          "id": "p-202610RC-2026-0007MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-9",
+          "montant": 193200
+        },
+        {
+          "id": "p-202610RC-2026-0007HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-9",
+          "montant": 253000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-09T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0016",
+      "numero": "DP-2026-0016",
+      "date": "2026-10-10",
+      "sens": "DEPENSE",
+      "libelle": "Consultations médicales : honoraires",
+      "categorie": "Honoraires",
+      "tiers": "Dr RAKOTO",
+      "montant": 275000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0016Médecin généraliste-1",
+          "libelle": "Médecin généraliste",
+          "reference": "HON-10",
+          "montant": 180000
+        },
+        {
+          "id": "p-202610DP-2026-0016Sage-femme-1",
+          "libelle": "Sage-femme",
+          "reference": "HON-11",
+          "montant": 95000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-10T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0017",
+      "numero": "DP-2026-0017",
+      "date": "2026-10-11",
+      "sens": "DEPENSE",
+      "libelle": "Régularisation : consultation annulée",
+      "categorie": "Divers",
+      "tiers": "Patient M. R.",
+      "montant": 20000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0017Consultation du 8 remboursée au patient-1",
+          "libelle": "Consultation du 8 remboursée au patient",
+          "reference": "RGL-08",
+          "montant": 20000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Pièce de démonstration : annulation d’une consultation.",
+      "createdAt": "2026-10-11T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0018",
+      "numero": "DP-2026-0018",
+      "date": "2026-10-13",
+      "sens": "DEPENSE",
+      "libelle": "Consommables médicaux",
+      "categorie": "Consommables médicaux",
+      "tiers": "Medical Export",
+      "montant": 164000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0018GANTS latex (boîtes)-1",
+          "libelle": "GANTS latex (boîtes)",
+          "reference": "FAC-1104",
+          "montant": 78000
+        },
+        {
+          "id": "p-202610DP-2026-0018SERINGUES 5 ml-1",
+          "libelle": "SERINGUES 5 ml",
+          "reference": "FAC-1104",
+          "montant": 52000
+        },
+        {
+          "id": "p-202610DP-2026-0018COMPRESSES stériles-1",
+          "libelle": "COMPRESSES stériles",
+          "reference": "FAC-1105",
+          "montant": 34000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-13T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0019",
+      "numero": "DP-2026-0019",
+      "date": "2026-10-14",
+      "sens": "DEPENSE",
+      "libelle": "Facture d’électricité JIRAMA",
+      "categorie": "Eau & électricité",
+      "tiers": "JIRAMA",
+      "montant": 340000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0019Électricité du mois précédent-1",
+          "libelle": "Électricité du mois précédent",
+          "reference": "JIR-8891",
+          "montant": 340000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-14T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0008",
+      "numero": "RC-2026-0008",
+      "date": "2026-10-16",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 3",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1711900,
+      "lignesDetail": [
+        {
+          "id": "p-202610RC-2026-0008CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-16",
+          "montant": 339200
+        },
+        {
+          "id": "p-202610RC-2026-0008LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-16",
+          "montant": 196100
+        },
+        {
+          "id": "p-202610RC-2026-0008MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-16",
+          "montant": 434600
+        },
+        {
+          "id": "p-202610RC-2026-0008ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-16",
+          "montant": 127200
+        },
+        {
+          "id": "p-202610RC-2026-0008SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-16",
+          "montant": 100700
+        },
+        {
+          "id": "p-202610RC-2026-0008MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-16",
+          "montant": 222600
+        },
+        {
+          "id": "p-202610RC-2026-0008HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-16",
+          "montant": 291500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-16T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0020",
+      "numero": "DP-2026-0020",
+      "date": "2026-10-17",
+      "sens": "DEPENSE",
+      "libelle": "Maintenance du concentrateur d’oxygène",
+      "categorie": "Maintenance & équipements",
+      "tiers": "Biomed Services",
+      "montant": 195000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0020Remplacement filtre et révision-1",
+          "libelle": "Remplacement filtre et révision",
+          "reference": "TECH-77",
+          "montant": 195000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-17T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0021",
+      "numero": "DP-2026-0021",
+      "date": "2026-10-18",
+      "sens": "DEPENSE",
+      "libelle": "Fournitures de bureau",
+      "categorie": "Fournitures de bureau",
+      "tiers": "Papeterie Tana",
+      "montant": 75000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0021RAMES papier A4-1",
+          "libelle": "RAMES papier A4",
+          "reference": "PAP-31",
+          "montant": 45000
+        },
+        {
+          "id": "p-202610DP-2026-0021REGISTRES et carnets-1",
+          "libelle": "REGISTRES et carnets",
+          "reference": "PAP-31",
+          "montant": 30000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-18T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0022",
+      "numero": "DP-2026-0022",
+      "date": "2026-10-19",
+      "sens": "DEPENSE",
+      "libelle": "Mission : supervision du dispensaire",
+      "categorie": "Frais de mission",
+      "tiers": "Antsirabe",
+      "montant": 120000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0022Transport et per diem-1",
+          "libelle": "Transport et per diem",
+          "reference": "OM-12",
+          "montant": 120000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-19T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0009",
+      "numero": "RC-2026-0009",
+      "date": "2026-10-23",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 4",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1566550,
+      "lignesDetail": [
+        {
+          "id": "p-202610RC-2026-0009CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-23",
+          "montant": 310400
+        },
+        {
+          "id": "p-202610RC-2026-0009LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-23",
+          "montant": 179450
+        },
+        {
+          "id": "p-202610RC-2026-0009MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-23",
+          "montant": 397700
+        },
+        {
+          "id": "p-202610RC-2026-0009ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-23",
+          "montant": 116400
+        },
+        {
+          "id": "p-202610RC-2026-0009SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-23",
+          "montant": 92150
+        },
+        {
+          "id": "p-202610RC-2026-0009MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-23",
+          "montant": 203700
+        },
+        {
+          "id": "p-202610RC-2026-0009HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-23",
+          "montant": 266750
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-23T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0023",
+      "numero": "DP-2026-0023",
+      "date": "2026-10-24",
+      "sens": "DEPENSE",
+      "libelle": "Abonnement internet et téléphone",
+      "categorie": "Téléphone & internet",
+      "tiers": "Telma",
+      "montant": 89000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0023Fibre du mois-1",
+          "libelle": "Fibre du mois",
+          "reference": "TEL-552",
+          "montant": 89000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-24T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0024",
+      "numero": "DP-2026-0024",
+      "date": "2026-10-26",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments (complément)",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 140000,
+      "lignesDetail": [
+        {
+          "id": "p-202610DP-2026-0024SÉRUM glucosé-1",
+          "libelle": "SÉRUM glucosé",
+          "reference": "FAC-1130",
+          "montant": 140000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-26T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0010",
+      "numero": "RC-2026-0010",
+      "date": "2026-10-30",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 5",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1647300,
+      "lignesDetail": [
+        {
+          "id": "p-202610RC-2026-0010CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-30",
+          "montant": 326400
+        },
+        {
+          "id": "p-202610RC-2026-0010LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-30",
+          "montant": 188700
+        },
+        {
+          "id": "p-202610RC-2026-0010MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-30",
+          "montant": 418200
+        },
+        {
+          "id": "p-202610RC-2026-0010ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-30",
+          "montant": 122400
+        },
+        {
+          "id": "p-202610RC-2026-0010SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-30",
+          "montant": 96900
+        },
+        {
+          "id": "p-202610RC-2026-0010MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-30",
+          "montant": 214200
+        },
+        {
+          "id": "p-202610RC-2026-0010HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-30",
+          "montant": 280500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-10-30T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0011",
+      "numero": "RC-2026-0011",
+      "date": "2026-11-02",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 1",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1615000,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0011CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-2",
+          "montant": 320000
+        },
+        {
+          "id": "p-202611RC-2026-0011LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-2",
+          "montant": 185000
+        },
+        {
+          "id": "p-202611RC-2026-0011MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-2",
+          "montant": 410000
+        },
+        {
+          "id": "p-202611RC-2026-0011ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-2",
+          "montant": 120000
+        },
+        {
+          "id": "p-202611RC-2026-0011SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-2",
+          "montant": 95000
+        },
+        {
+          "id": "p-202611RC-2026-0011MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-2",
+          "montant": 210000
+        },
+        {
+          "id": "p-202611RC-2026-0011HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-2",
+          "montant": 275000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-02T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0025",
+      "numero": "DP-2026-0025",
+      "date": "2026-11-03",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments pharmacie",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 795000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0025ANTIBIOTIQUES-1",
+          "libelle": "ANTIBIOTIQUES",
+          "reference": "FAC-1001",
+          "montant": 420000
+        },
+        {
+          "id": "p-202611DP-2026-0025ANTIPALUDIQUES-1",
+          "libelle": "ANTIPALUDIQUES",
+          "reference": "FAC-1001",
+          "montant": 265000
+        },
+        {
+          "id": "p-202611DP-2026-0025PERFUSIONS-1",
+          "libelle": "PERFUSIONS",
+          "reference": "FAC-1002",
+          "montant": 110000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Livraison du lundi, bon de réception n° 44.",
+      "createdAt": "2026-11-03T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0026",
+      "numero": "DP-2026-0026",
+      "date": "2026-11-04",
+      "sens": "DEPENSE",
+      "libelle": "Carburant groupe électrogène et ambulance",
+      "categorie": "Carburant & transport",
+      "tiers": "Station Total Antananarivo",
+      "montant": 160000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0026GASOIL réservoir-1",
+          "libelle": "GASOIL réservoir",
+          "reference": "STA-221",
+          "montant": 160000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-04T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0027",
+      "numero": "DP-2026-0027",
+      "date": "2026-11-05",
+      "sens": "DEPENSE",
+      "libelle": "Prestation de nettoyage",
+      "categorie": "Divers",
+      "tiers": "Société HAZO",
+      "montant": 85000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0027Ménage salles et couloirs-1",
+          "libelle": "Ménage salles et couloirs",
+          "reference": "PM-09",
+          "montant": 85000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-05T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0012",
+      "numero": "RC-2026-0012",
+      "date": "2026-11-09",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 2",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1485800,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0012CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-9",
+          "montant": 294400
+        },
+        {
+          "id": "p-202611RC-2026-0012LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-9",
+          "montant": 170200
+        },
+        {
+          "id": "p-202611RC-2026-0012MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-9",
+          "montant": 377200
+        },
+        {
+          "id": "p-202611RC-2026-0012ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-9",
+          "montant": 110400
+        },
+        {
+          "id": "p-202611RC-2026-0012SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-9",
+          "montant": 87400
+        },
+        {
+          "id": "p-202611RC-2026-0012MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-9",
+          "montant": 193200
+        },
+        {
+          "id": "p-202611RC-2026-0012HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-9",
+          "montant": 253000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-09T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0028",
+      "numero": "DP-2026-0028",
+      "date": "2026-11-10",
+      "sens": "DEPENSE",
+      "libelle": "Consultations médicales : honoraires",
+      "categorie": "Honoraires",
+      "tiers": "Dr RAKOTO",
+      "montant": 275000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0028Médecin généraliste-1",
+          "libelle": "Médecin généraliste",
+          "reference": "HON-10",
+          "montant": 180000
+        },
+        {
+          "id": "p-202611DP-2026-0028Sage-femme-1",
+          "libelle": "Sage-femme",
+          "reference": "HON-11",
+          "montant": 95000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-10T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0029",
+      "numero": "DP-2026-0029",
+      "date": "2026-11-11",
+      "sens": "DEPENSE",
+      "libelle": "Régularisation : consultation annulée",
+      "categorie": "Divers",
+      "tiers": "Patient M. R.",
+      "montant": 20000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0029Consultation du 8 remboursée au patient-1",
+          "libelle": "Consultation du 8 remboursée au patient",
+          "reference": "RGL-08",
+          "montant": 20000
+        }
+      ],
+      "mode": "Espèces",
+      "observation": "Pièce de démonstration : annulation d’une consultation.",
+      "createdAt": "2026-11-11T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0030",
+      "numero": "DP-2026-0030",
+      "date": "2026-11-13",
+      "sens": "DEPENSE",
+      "libelle": "Consommables médicaux",
+      "categorie": "Consommables médicaux",
+      "tiers": "Medical Export",
+      "montant": 164000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0030GANTS latex (boîtes)-1",
+          "libelle": "GANTS latex (boîtes)",
+          "reference": "FAC-1104",
+          "montant": 78000
+        },
+        {
+          "id": "p-202611DP-2026-0030SERINGUES 5 ml-1",
+          "libelle": "SERINGUES 5 ml",
+          "reference": "FAC-1104",
+          "montant": 52000
+        },
+        {
+          "id": "p-202611DP-2026-0030COMPRESSES stériles-1",
+          "libelle": "COMPRESSES stériles",
+          "reference": "FAC-1105",
+          "montant": 34000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-13T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0031",
+      "numero": "DP-2026-0031",
+      "date": "2026-11-14",
+      "sens": "DEPENSE",
+      "libelle": "Facture d’électricité JIRAMA",
+      "categorie": "Eau & électricité",
+      "tiers": "JIRAMA",
+      "montant": 340000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0031Électricité du mois précédent-1",
+          "libelle": "Électricité du mois précédent",
+          "reference": "JIR-8891",
+          "montant": 340000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-14T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0013",
+      "numero": "RC-2026-0013",
+      "date": "2026-11-16",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 3",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1711900,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0013CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-16",
+          "montant": 339200
+        },
+        {
+          "id": "p-202611RC-2026-0013LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-16",
+          "montant": 196100
+        },
+        {
+          "id": "p-202611RC-2026-0013MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-16",
+          "montant": 434600
+        },
+        {
+          "id": "p-202611RC-2026-0013ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-16",
+          "montant": 127200
+        },
+        {
+          "id": "p-202611RC-2026-0013SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-16",
+          "montant": 100700
+        },
+        {
+          "id": "p-202611RC-2026-0013MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-16",
+          "montant": 222600
+        },
+        {
+          "id": "p-202611RC-2026-0013HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-16",
+          "montant": 291500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-16T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0032",
+      "numero": "DP-2026-0032",
+      "date": "2026-11-17",
+      "sens": "DEPENSE",
+      "libelle": "Maintenance du concentrateur d’oxygène",
+      "categorie": "Maintenance & équipements",
+      "tiers": "Biomed Services",
+      "montant": 195000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0032Remplacement filtre et révision-1",
+          "libelle": "Remplacement filtre et révision",
+          "reference": "TECH-77",
+          "montant": 195000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-17T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0033",
+      "numero": "DP-2026-0033",
+      "date": "2026-11-18",
+      "sens": "DEPENSE",
+      "libelle": "Fournitures de bureau",
+      "categorie": "Fournitures de bureau",
+      "tiers": "Papeterie Tana",
+      "montant": 75000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0033RAMES papier A4-1",
+          "libelle": "RAMES papier A4",
+          "reference": "PAP-31",
+          "montant": 45000
+        },
+        {
+          "id": "p-202611DP-2026-0033REGISTRES et carnets-1",
+          "libelle": "REGISTRES et carnets",
+          "reference": "PAP-31",
+          "montant": 30000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-18T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0034",
+      "numero": "DP-2026-0034",
+      "date": "2026-11-19",
+      "sens": "DEPENSE",
+      "libelle": "Mission : supervision du dispensaire",
+      "categorie": "Frais de mission",
+      "tiers": "Antsirabe",
+      "montant": 120000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0034Transport et per diem-1",
+          "libelle": "Transport et per diem",
+          "reference": "OM-12",
+          "montant": 120000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-19T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0014",
+      "numero": "RC-2026-0014",
+      "date": "2026-11-20",
+      "sens": "RECETTE",
+      "libelle": "Don d’une association partenaire",
+      "categorie": "Subventions & dons",
+      "tiers": "Association Soa",
+      "montant": 400000,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0014Appui matériel médical-1",
+          "libelle": "Appui matériel médical",
+          "reference": "DON-11",
+          "montant": 400000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-20T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0015",
+      "numero": "RC-2026-0015",
+      "date": "2026-11-23",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 4",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1566550,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0015CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-23",
+          "montant": 310400
+        },
+        {
+          "id": "p-202611RC-2026-0015LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-23",
+          "montant": 179450
+        },
+        {
+          "id": "p-202611RC-2026-0015MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-23",
+          "montant": 397700
+        },
+        {
+          "id": "p-202611RC-2026-0015ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-23",
+          "montant": 116400
+        },
+        {
+          "id": "p-202611RC-2026-0015SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-23",
+          "montant": 92150
+        },
+        {
+          "id": "p-202611RC-2026-0015MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-23",
+          "montant": 203700
+        },
+        {
+          "id": "p-202611RC-2026-0015HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-23",
+          "montant": 266750
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-23T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0035",
+      "numero": "DP-2026-0035",
+      "date": "2026-11-24",
+      "sens": "DEPENSE",
+      "libelle": "Abonnement internet et téléphone",
+      "categorie": "Téléphone & internet",
+      "tiers": "Telma",
+      "montant": 89000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0035Fibre du mois-1",
+          "libelle": "Fibre du mois",
+          "reference": "TEL-552",
+          "montant": 89000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-24T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-DP-2026-0036",
+      "numero": "DP-2026-0036",
+      "date": "2026-11-26",
+      "sens": "DEPENSE",
+      "libelle": "Achat médicaments (complément)",
+      "categorie": "Achats médicaments",
+      "tiers": "Pharmacie du Sud",
+      "montant": 140000,
+      "lignesDetail": [
+        {
+          "id": "p-202611DP-2026-0036SÉRUM glucosé-1",
+          "libelle": "SÉRUM glucosé",
+          "reference": "FAC-1130",
+          "montant": 140000
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-26T08:30:00.000Z"
+    },
+    {
+      "id": "essai-2026-RC-2026-0016",
+      "numero": "RC-2026-0016",
+      "date": "2026-11-30",
+      "sens": "RECETTE",
+      "libelle": "Recettes de la semaine 5",
+      "categorie": "Recettes journalières",
+      "tiers": "Caisse principale",
+      "montant": 1647300,
+      "lignesDetail": [
+        {
+          "id": "p-202611RC-2026-0016CONSULTATION-1",
+          "libelle": "CONSULTATION",
+          "reference": "Q-CONS-30",
+          "montant": 326400
+        },
+        {
+          "id": "p-202611RC-2026-0016LABORATOIRE-1",
+          "libelle": "LABORATOIRE",
+          "reference": "Q-LABO-30",
+          "montant": 188700
+        },
+        {
+          "id": "p-202611RC-2026-0016MEDICAMENT-1",
+          "libelle": "MEDICAMENT",
+          "reference": "Q-PHAR-30",
+          "montant": 418200
+        },
+        {
+          "id": "p-202611RC-2026-0016ECHOGRAPHIE-1",
+          "libelle": "ECHOGRAPHIE",
+          "reference": "Q-ECHO-30",
+          "montant": 122400
+        },
+        {
+          "id": "p-202611RC-2026-0016SOINS-1",
+          "libelle": "SOINS",
+          "reference": "Q-SOIN-30",
+          "montant": 96900
+        },
+        {
+          "id": "p-202611RC-2026-0016MATERNITE-1",
+          "libelle": "MATERNITE",
+          "reference": "Q-MATE-30",
+          "montant": 214200
+        },
+        {
+          "id": "p-202611RC-2026-0016HOSPITALISATION-1",
+          "libelle": "HOSPITALISATION",
+          "reference": "Q-HOSP-30",
+          "montant": 280500
+        }
+      ],
+      "mode": "Espèces",
+      "createdAt": "2026-11-30T08:30:00.000Z"
+    }
+  ],
+  "parametres": {
+    "soldeInitial": 1250000,
+    "exercice": 2026,
+    "reportPrecedent": {
+      "annee": 2025,
+      "solde": 1250000
+    }
+  },
+  "masques": [
+    {
+      "id": "masque-recettes-hopital",
+      "nom": "Bordereau recettes hôpital",
+      "sens": "RECETTE",
+      "description": "Les 12 postes du carnet de caisse hospitalier.",
+      "lignes": [
+        {
+          "description": "CONSULTATION"
+        },
+        {
+          "description": "ECHOGRAPHIE"
+        },
+        {
+          "description": "CHAMBRE"
+        },
+        {
+          "description": "LABORATOIRE"
+        },
+        {
+          "description": "MATERNITE"
+        },
+        {
+          "description": "MEDICAMENT"
+        },
+        {
+          "description": "SOINS"
+        },
+        {
+          "description": "HOSPITALISATION"
+        },
+        {
+          "description": "DENTISTERIE"
+        },
+        {
+          "description": "BLOC"
+        },
+        {
+          "description": "DIVERS"
+        },
+        {
+          "description": "VACCIN"
+        }
+      ]
+    },
+    {
+      "id": "masque-depenses-courantes",
+      "nom": "Charges courantes & fonctionnement",
+      "sens": "DEPENSE",
+      "description": "Dépenses périodiques d’exploitation.",
+      "lignes": [
+        {
+          "description": "ACHATS MEDICAMENTS"
+        },
+        {
+          "description": "FOURNITURES MEDICALES"
+        },
+        {
+          "description": "CARBURANT"
+        },
+        {
+          "description": "EAU & ELECTRICITE"
+        },
+        {
+          "description": "MAINTENANCE"
+        },
+        {
+          "description": "DIVERS"
+        }
+      ]
+    }
+  ],
+  "compteurs": {
+    "RC-2026": 16,
+    "DP-2026": 36
+  },
+  "exercicesClotures": [],
+  "entetes": {
+    "depense": {
+      "mode": "textes",
+      "image": "",
+      "lignes": [
+        {
+          "texte": "SALFA — DEPARTEMENT DE SANTE",
+          "taille": 16,
+          "gras": true
+        },
+        {
+          "texte": "FIANGONANA LOTERANA MALAGASY",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "SERVICE DE TRESORERIE",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "Caisse principale — Dispensaire Tanambao",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "Tél. 034 00 000 00 · BP 99",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "NIF : 5000767080 · STAT : 851 125 120 120 001 36",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "E-mail : caisse@salfa.mg",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "",
+          "taille": 9,
+          "gras": false
+        }
+      ],
+      "logoGauche": "",
+      "logoDroit": ""
+    },
+    "recette": {
+      "mode": "textes",
+      "image": "",
+      "lignes": [
+        {
+          "texte": "SALFA — DEPARTEMENT DE SANTE",
+          "taille": 16,
+          "gras": true
+        },
+        {
+          "texte": "FIANGONANA LOTERANA MALAGASY",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "SERVICE DE TRESORERIE",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "Caisse principale — Dispensaire Tanambao",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "Tél. 034 00 000 00 · BP 99",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "NIF : 5000767080 · STAT : 851 125 120 120 001 36",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "E-mail : caisse@salfa.mg",
+          "taille": 9,
+          "gras": false
+        },
+        {
+          "texte": "",
+          "taille": 9,
+          "gras": false
+        }
+      ],
+      "logoGauche": "",
+      "logoDroit": ""
+    }
+  }
+}
