@@ -1,6 +1,7 @@
 import type { DonneesCaisse, Ecriture, ExerciceCloture, FiltresJournal, LigneJournal, Sauvegarde, Sens } from '../types';
 import { ANNEE_MAX, ANNEE_MIN, masquesParDefaut, MONTANT_MAX } from './constants';
 import { dateValide, exiger, validerDonnees } from './validation';
+import { entetesParDefaut, normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
 
 export function identifiant(prefixe = 'e'): string {
   const aleatoire = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -10,7 +11,7 @@ export function identifiant(prefixe = 'e'): string {
 export function creerDonnees(annee = new Date().getFullYear()): DonneesCaisse {
   return {
     ecritures: [], parametres: { soldeInitial: 0, exercice: annee, reportPrecedent: null },
-    masques: masquesParDefaut(), compteurs: {}, exercicesClotures: [],
+    masques: masquesParDefaut(), compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut(),
   };
 }
 
@@ -61,6 +62,7 @@ export function cloturerExercice(donnees: DonneesCaisse, clotureLe = new Date().
       reportPrecedent: { annee: exercice, solde: soldeFin },
     },
     masques: donnees.masques,
+    entetes: donnees.entetes,
     compteurs: donnees.compteurs,
     exercicesClotures: [...donnees.exercicesClotures, archive].sort((a, b) => a.annee - b.annee),
   };
@@ -222,6 +224,15 @@ export function restaurerEcriture(donnees: DonneesCaisse, ecriture: Ecriture): D
 
 export function changerSoldeInitial(donnees: DonneesCaisse, soldeInitial: number): DonneesCaisse {
   return validerDonnees({ ...donnees, parametres: { soldeInitial } });
+}
+
+/** Enregistre l'en-tête d'un seul document, sans toucher à l'autre. */
+export function enregistrerEntete(donnees: DonneesCaisse, document: DocumentEntete, entete: EnteteDocument): DonneesCaisse {
+  const entetes = normaliserEntetes({ ...donnees.entetes, [document]: entete });
+  const propre = entetes[document];
+  exiger(propre.mode === 'image' ? propre.image !== '' : propre.lignes.some(l => l.texte.trim() !== ''),
+    'L’en-tête est vide : choisissez une image ou renseignez au moins une ligne de texte.');
+  return { ...donnees, entetes };
 }
 
 export function enregistrerMasques(donnees: DonneesCaisse, masques: DonneesCaisse['masques']): DonneesCaisse {

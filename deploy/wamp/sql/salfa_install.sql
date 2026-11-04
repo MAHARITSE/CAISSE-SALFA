@@ -1,9 +1,22 @@
+-- ============================================================================
 -- CAISSE SALFA — schéma MySQL / MariaDB pour WAMP
--- À exécuter sur une base vide (phpMyAdmin ou outils/installer.bat).
--- Préfixe : salfa_  (modifiable via api/salfa-config.php, mais le SQL doit suivre).
+-- ============================================================================
+-- IMPORT DANS phpMyAdmin :
+--   onglet « Importer »  ->  choisir ce fichier  ->  Exécuter
+--   (inutile de sélectionner une base : ce fichier la crée lui-même)
+--
+-- Pour un autre nom de base, modifiez les deux lignes CREATE DATABASE et USE
+-- ci-dessous, ainsi que api/salfa-config.php.
+-- ============================================================================
 
 SET NAMES utf8mb4;
 SET time_zone = '+03:00';
+
+CREATE DATABASE IF NOT EXISTS `caisse_salfa`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE `caisse_salfa`;
 
 CREATE TABLE IF NOT EXISTS salfa_livre (
   id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
@@ -69,6 +82,18 @@ CREATE TABLE IF NOT EXISTS salfa_masque_lignes (
   ordre SMALLINT UNSIGNED NOT NULL DEFAULT 0,
   KEY idx_masque (masque_id, ordre),
   CONSTRAINT fk_lignes_masque FOREIGN KEY (masque_id) REFERENCES salfa_masques(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- En-tête imprimable de chaque bordereau (engagement de dépense, autorisation de recette).
+-- Les images sont stockées en data URL PNG/JPEG, bornées côté application à 1 Mo.
+CREATE TABLE IF NOT EXISTS salfa_entetes (
+  document ENUM('depense','recette') NOT NULL PRIMARY KEY,
+  mode ENUM('image','textes') NOT NULL DEFAULT 'textes',
+  image MEDIUMTEXT NULL,
+  lignes MEDIUMTEXT NULL,
+  logo_gauche MEDIUMTEXT NULL,
+  logo_droit MEDIUMTEXT NULL,
+  modifie_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS salfa_compteurs (

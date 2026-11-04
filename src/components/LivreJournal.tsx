@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Settings2, Trash2 } from 'lucide-react';
 import type { Ecriture, LigneJournal } from '../types';
 import { dateFr, formatAr, nombre } from '../utils/format';
+import { entetesParDefaut, TITRE_DOCUMENT, type DocumentEntete, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
+import { ApercuEntete, EnteteBordereauModal } from './EnteteBordereauModal';
 import { Modale } from './Modale';
 
 interface LivreJournalProps {
@@ -17,13 +19,23 @@ interface LivreJournalProps {
   onEditer: (ecriture: Ecriture) => void;
   onSupprimer: (id: string) => void;
   onReinitialiser: () => void;
+  /** En-têtes personnalisés des deux bordereaux ; vide = en-têtes livrés. */
+  entetes?: EntetesDocuments;
+  onEnregistrerEntete?: (document: DocumentEntete, entete: EnteteDocument) => void;
 }
 const PAR_PAGE = 50;
 
-function BordereauDocument({ ligne }: { ligne: LigneJournal }) {
+function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; entete: EnteteDocument }) {
   const recette = ligne.sens === 'RECETTE';
+  const document: DocumentEntete = recette ? 'recette' : 'depense';
   return <article className="bordereau-document bg-white text-slate-900">
-    <header className="flex items-start justify-between gap-4 border-b-2 border-slate-800 pb-4"><div><p className="text-xl font-extrabold tracking-tight">SALFA</p><p className="text-xs">Service de trésorerie — Caisse de l’hôpital</p></div><div className="text-right"><h3 className="text-base font-bold uppercase">Bordereau de {recette ? 'recettes' : 'dépenses'}</h3><p className="mt-1 font-mono text-sm">{ligne.numero}</p></div></header>
+    <header className="bordereau-entete border-b-2 border-slate-800 pb-3">
+      <ApercuEntete entete={entete} compact />
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
+        <h3 className="text-base font-bold uppercase">{TITRE_DOCUMENT[document]}</h3>
+        <p className="font-mono text-sm">{ligne.numero}</p>
+      </div>
+    </header>
     <div className="my-5 grid grid-cols-2 gap-4 text-xs sm:grid-cols-3"><div><span className="label">Date de l’opération</span><p className="font-semibold">{dateFr(ligne.date)}</p></div><div><span className="label">Service / tiers</span><p className="font-semibold break-words">{ligne.tiers || 'Caisse principale'}</p></div><div><span className="label">Mode de paiement</span><p className="font-semibold">Espèces</p></div></div>
     <p className="mb-3 text-sm font-semibold">{ligne.libelle}</p>
     {(ligne.reference || ligne.observation) && <div className="mb-4 space-y-1 text-xs"><p>{ligne.reference && <><strong>Référence : </strong>{ligne.reference}</>}</p><p className="whitespace-pre-wrap">{ligne.observation && <><strong>Observation : </strong>{ligne.observation}</>}</p></div>}
@@ -33,9 +45,15 @@ function BordereauDocument({ ligne }: { ligne: LigneJournal }) {
   </article>;
 }
 
-export function LivreJournal({ lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser }: LivreJournalProps) {
+export function LivreJournal({ lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete }: LivreJournalProps) {
   const [detailsOuverts, setDetailsOuverts] = useState<Record<string, boolean>>({});
   const [bordereau, setBordereau] = useState<LigneJournal | null>(null);
+  const [entetesOuverts, setEntetesOuverts] = useState(false);
+  const [documentEntete, setDocumentEntete] = useState<DocumentEntete>('depense');
+  const ouvrirEntetes = (document?: DocumentEntete) => {
+    if (document) setDocumentEntete(document);
+    setEntetesOuverts(true);
+  };
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [lignes]);
   const pages = Math.max(1, Math.ceil(lignes.length / PAR_PAGE));
@@ -46,7 +64,7 @@ export function LivreJournal({ lignes, soldeOuverture, periode, recettes, depens
 
   return <>
     <section id="journal" className="card overflow-hidden" aria-label="Livre journal">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><span className="badge badge-neutral">MGA · ariary</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><div className="flex items-center gap-2"><span className="badge badge-neutral">MGA · ariary</span>{onEnregistrerEntete && <button className="btn-secondary" onClick={() => ouvrirEntetes()} title="Modifier l’en-tête des bordereaux"><Settings2 size={15} />En-tête</button>}</div></div>
       {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-[11px] text-amber-900">Vue filtrée : les totaux portent sur la sélection. Les soldes restent calculés sur le livre complet, dans l’ordre chronologique.</p>}
       <div className="relative overflow-x-auto">
         <table className="journal-table w-full min-w-[960px] text-xs"><thead><tr className="border-b border-slate-200 bg-slate-50/80 text-left text-[10px] uppercase tracking-wider text-slate-500"><th className="px-4 py-3 font-semibold">Date</th><th className="px-3 py-3 font-semibold">N° pièce</th><th className="px-3 py-3 font-semibold">Libellé & postes</th><th className="px-3 py-3 font-semibold">Catégorie</th><th className="px-3 py-3 text-right font-semibold">Recette</th><th className="px-3 py-3 text-right font-semibold">Dépense</th><th className="px-3 py-3 text-right font-semibold">Solde cumulé</th><th className="no-print px-3 py-3"><span className="sr-only">Actions</span></th></tr></thead>
@@ -79,8 +97,15 @@ export function LivreJournal({ lignes, soldeOuverture, periode, recettes, depens
       {pages > 1 && <p className="print-only px-4 py-2 text-xs">L’impression inclut toutes les pages de la sélection.</p>}
     </section>
     {bordereau && <>
-      <Modale titre="Bordereau imprimable" sousTitre={`${bordereau.numero} · ${dateFr(bordereau.date)}`} largeur="large" icone={<Printer size={21} />} onFermer={() => setBordereau(null)} pied={<div className="flex justify-end gap-2"><button className="btn-secondary" onClick={() => setBordereau(null)}>Fermer</button><button className="btn-primary" onClick={() => window.print()}><Printer size={16} />Imprimer ce bordereau</button></div>}><BordereauDocument ligne={bordereau} /></Modale>
-      {createPortal(<div className="print-only print-bordereau"><BordereauDocument ligne={bordereau} /></div>, document.body)}
+      <Modale titre="Bordereau imprimable" sousTitre={`${bordereau.numero} · ${dateFr(bordereau.date)}`} largeur="large" icone={<Printer size={21} />} onFermer={() => setBordereau(null)} pied={<div className="flex flex-wrap justify-end gap-2">{onEnregistrerEntete && <button className="btn-secondary" onClick={() => ouvrirEntetes(bordereau.sens === 'RECETTE' ? 'recette' : 'depense')}><Settings2 size={16} />Modifier l’en-tête</button>}<button className="btn-secondary" onClick={() => setBordereau(null)}>Fermer</button><button className="btn-primary" onClick={() => window.print()}><Printer size={16} />Imprimer ce bordereau</button></div>}><BordereauDocument ligne={bordereau} entete={bordereau.sens === 'RECETTE' ? entetes.recette : entetes.depense} /></Modale>
+      {createPortal(<div className="print-only print-bordereau"><BordereauDocument ligne={bordereau} entete={bordereau.sens === 'RECETTE' ? entetes.recette : entetes.depense} /></div>, document.body)}
     </>}
+    {entetesOuverts && onEnregistrerEntete && <EnteteBordereauModal
+      entetes={entetes}
+      document={documentEntete}
+      onChangerDocument={setDocumentEntete}
+      onEnregistrer={(document, entete) => { onEnregistrerEntete(document, entete); setEntetesOuverts(false); }}
+      onFermer={() => setEntetesOuverts(false)}
+    />}
   </>;
 }

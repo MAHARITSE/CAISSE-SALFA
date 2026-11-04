@@ -17,6 +17,10 @@ const SALFA_MONTANT_MAX = 999999999999;
 const SALFA_MAX_DETAILS = 200;
 const SALFA_MAX_ECRITURES = 10000;
 const SALFA_MAX_CLOTURES = 400;
+// En-têtes imprimables : mêmes bornes que l'application (1 Mo d'image, 300 Ko de logo).
+const MAX_IMAGE_ENTETE = 1024 * 1024;
+const MAX_LOGO_ENTETE = 300 * 1024;
+const MAX_LIGNES_ENTETE = 8;
 const SALFA_DEFAUT_LIMITE = 60;      // tentatives par fenêtre
 const SALFA_DEFAUT_FENETRE = 60;     // secondes
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, HeartPulse, Layers, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
 import type { Ecriture, FiltresJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
-import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
+import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
 import { anneeCourante, dateFr, decalerMois, formatAr, libelleMois, moisCourant } from './utils/format';
 import { CATEGORIES_DEPENSE, CATEGORIES_RECETTE } from './utils/constants';
 import { exporterLivreCsv } from './utils/export';
@@ -17,6 +17,7 @@ import { Confirmation } from './components/Confirmation';
 import { Exercices } from './components/Exercices';
 import { Connexion } from './components/Connexion';
 import { MODE_API, deconnexion as deconnexionApi, mutations, session as sessionApi, type EtatSession, type Utilisateur } from './utils/api';
+import type { DocumentEntete, EnteteDocument } from './utils/entete';
 
 type Onglet = 'journal' | 'analyse' | 'exercices' | 'donnees';
 
@@ -119,6 +120,14 @@ export function App() {
       return true;
     } catch { return false; }
   }
+  async function enregistrerEnteteDocument(document: DocumentEntete, entete: EnteteDocument) {
+    const reussi = MODE_API
+      ? await muterEnLigne(revision => mutations.entete(revision, document, entete))
+      : muter(d => enregistrerEntete(d, document, entete));
+    if (reussi) {
+      setNotification(`En-tête « ${document === 'depense' ? 'engagement de dépense' : 'autorisation de recette'} » enregistré. Les prochains bordereaux l’utiliseront.`);
+    }
+  }
   async function changerSolde(montant: number) {
     if (MODE_API) return muterEnLigne(revision => mutations.soldeInitial(revision, montant));
     return muter(d => changerSoldeInitial(d, montant));
@@ -208,7 +217,7 @@ export function App() {
           <section className="no-print card space-y-3 p-4" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-36 bg-transparent px-1 py-2 text-xs font-semibold text-slate-700 outline-none" aria-label="Mois affiché" value={mois} min="1900-01" max="9999-12" onChange={e => { if (e.target.value) { setMois(e.target.value); setToutAfficher(false); } }} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={14} />Annuler la suppression</button>}</div><div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'RECETTE', edition: null })}><Plus size={16} />Nouvelle recette</button><button className="btn-danger" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'DEPENSE', edition: null })}><Plus size={16} />Nouvelle dépense</button></div></div>
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3"><div className="segmented" aria-label="Filtrer par type">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(s => <button key={s} aria-pressed={filtres.sens === s} onClick={() => modifierFiltre('sens', s)}>{s === 'TOUS' ? 'Tous' : s === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><select className="field !w-auto max-w-48 !py-2 !text-xs" aria-label="Filtrer par catégorie" value={filtres.categorie} onChange={e => modifierFiltre('categorie', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option key={c}>{c}</option>)}</select><div className="relative min-w-44 flex-1"><Search size={15} className="pointer-events-none absolute left-3 top-2.5 text-slate-400" /><input type="search" className="field !py-2 !pl-9 !text-xs" aria-label="Rechercher dans le journal" placeholder="Rechercher une pièce, un libellé, un tiers…" value={filtres.recherche} onChange={e => modifierFiltre('recherche', e.target.value)} /></div>{filtreActif && <button className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}<span className="hidden items-center gap-1 text-[10px] text-slate-400 xl:flex"><SlidersHorizontal size={13} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span></div>
           </section>
-          {!erreur ? <LivreJournal lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} /> : <section className="card p-12 text-center text-sm text-slate-500"><Database size={32} className="mx-auto mb-3 text-slate-300" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
+          {!erreur ? <LivreJournal lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} /> : <section className="card p-12 text-center text-sm text-slate-500"><Database size={32} className="mx-auto mb-3 text-slate-300" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><input type="month" className="field !w-44" aria-label="Mois de l’analyse" value={mois} onChange={e => { if (e.target.value) { setMois(e.target.value); setToutAfficher(false); } }} /><button className="btn-secondary" aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={livre.parametres.soldeInitial} exercice={exercice} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} />)}

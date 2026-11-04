@@ -4,9 +4,10 @@ import { CLE_LIVRE, chargerLivre, sauvegarderLivre } from '../utils/storage';
 import { migrerExercicesLegacy } from '../utils/ledger';
 import { validerDonnees } from '../utils/validation';
 import { MODE_API, chargerLivreApi, mutations } from '../utils/api';
+import { entetesParDefaut } from '../utils/entete';
 
 const LIVRE_VIDE: ChargementLivre = {
-  livre: { format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: new Date().toISOString(), ecritures: [], parametres: { soldeInitial: 0, exercice: undefined, reportPrecedent: null }, masques: [], compteurs: {}, exercicesClotures: [] },
+  livre: { format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: new Date().toISOString(), ecritures: [], parametres: { soldeInitial: 0, exercice: undefined, reportPrecedent: null }, masques: [], compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut() },
   erreur: null, avertissement: null, migration: false, normalisation: false,
 };
 

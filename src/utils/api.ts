@@ -1,4 +1,5 @@
 import type { Ecriture, MasqueSaisie, Sauvegarde } from '../types';
+import type { DocumentEntete, EnteteDocument } from './entete';
 
 /**
  * Client de l'API PHP/MySQL utilisée sur WAMP.
@@ -141,6 +142,8 @@ export const mutations = {
     appeler<{ livre: Sauvegarde }>('ecritures-restaurer', { methode: 'POST', corps: { revision, ecriture } }),
   masques: (revision: number, masques: MasqueSaisie[]) =>
     appeler<{ livre: Sauvegarde }>('masques', { methode: 'POST', corps: { revision, masques } }),
+  entete: (revision: number, document: DocumentEntete, entete: EnteteDocument) =>
+    appeler<{ livre: Sauvegarde }>('entete', { methode: 'POST', corps: { revision, document, entete } }),
   soldeInitial: (revision: number, soldeInitial: number) =>
     appeler<{ livre: Sauvegarde }>('solde-initial', { methode: 'POST', corps: { revision, soldeInitial } }),
   cloture: (revision: number, archive: unknown) =>
