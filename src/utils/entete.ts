@@ -1,3 +1,8 @@
+// `?inline` : le logo est incorporé en data URL. Le livre enregistré garde ainsi
+// une adresse stable, même après une mise à jour qui renomme les fichiers.
+import logoGauche from '../assets/logo-salfa-gauche.png?inline';
+import logoDroit from '../assets/logo-salfa-droit.png?inline';
+
 /**
  * Modèle d'en-tête des documents SALFA.
  *
@@ -57,7 +62,7 @@ export const LIBELLES_LIGNES: string[] = [
  */
 export const TITRE_DOCUMENT: Record<DocumentEntete, string> = {
   depense: 'DEMANDE D’ENGAGEMENT DE DÉPENSE',
-  recette: 'AUTORISATION DE RECETTE',
+  recette: 'AUTORISATION DE RECETTES',
 };
 
 /** Préfixe de numérotation : AED pour un engagement, ARC pour une autorisation. */
@@ -78,27 +83,46 @@ export function numeroDocument(numeroPiece: string): string | null {
   return `${PREFIXE_DOCUMENT[prefixe === 'RC' ? 'recette' : 'depense']}-${annee}-${rang}`;
 }
 
+/**
+ * En-tête des imprimés officiels de l'hôpital, relevé sur les deux modèles
+ * fournis. La casse est celle des modèles : les lignes 1, 4 et 6 en capitales,
+ * les autres en petites capitales.
+ */
+const ENTETE_LIVRE = [
+  'FIANGONANA LOTERANA MALAGASY',
+  '(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)',
+  'SYNODAM-PARITANY FIHERENANA TOLIARA',
+  'SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)',
+  'DEPARTEMENT DE SANTE - HEALTH DEPARTMENT',
+  'HOPITALY LOTERANA TOLIARY TANAMBAO - BP : 99',
+  'E-mail: salfa.tulear@gmail.com',
+];
+
+/** Logos des imprimés, embarqués dans le paquet (aucun accès réseau). */
+const LOGO_GAUCHE = logoGauche;
+const LOGO_DROIT = logoDroit;
+
+/**
+ * Tailles du modèle : la première ligne en capitales grasses, les lignes 4 et 6
+ * en capitales grasses un peu plus petites, les autres en petites capitales.
+ */
+const TAILLES_LIVREES = [11, 9, 9, 9.5, 9, 9.5, 8.5];
+
 function lignesParDefaut(prefixe: string[]): LigneEntete[] {
-  return prefixe.map((texte, index) => ({ texte, gras: index === 0, taille: index === 0 ? 16 : 9 }));
+  return prefixe.map((texte, index) => ({
+    texte,
+    gras: index === 0 || index === 3 || index === 5,
+    taille: TAILLES_LIVREES[index] ?? 10,
+  }));
 }
 
 export function enteteParDefaut(_document: DocumentEntete): EnteteDocument {
-  // Reprend l'en-tête des documents officiels de l'hôpital, tel qu'imprimé.
-  const commun = [
-    'FIANGONANA LOTERANA MALAGASY',
-    'ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH',
-    'SYNODAM-PARITANY FIHAVANANA LOTERANA',
-    'SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)',
-    'DÉPARTEMENT DE SANTÉ · HEALTH DEPARTMENT',
-    'HOPITALY LOTERANA TOJARY TANAMBAO · BP 99',
-    'E-mail : salfa.tukas@gmail.com',
-  ];
   return {
     mode: 'textes',
     image: '',
-    lignes: lignesParDefaut(commun),
-    logoGauche: '',
-    logoDroit: '',
+    lignes: lignesParDefaut(ENTETE_LIVRE),
+    logoGauche: LOGO_GAUCHE,
+    logoDroit: LOGO_DROIT,
   };
 }
 
@@ -119,7 +143,10 @@ export function normaliserEntete(valeur: unknown, document: DocumentEntete): Ent
     ? brut.lignes.slice(0, MAX_LIGNES_ENTETE).map((ligne, index) => {
       const item = ligne !== null && typeof ligne === 'object' ? ligne as Record<string, unknown> : {};
       const texte = typeof item.texte === 'string' ? item.texte.slice(0, 200) : (defaut.lignes[index]?.texte ?? '');
-      const taille = typeof item.taille === 'number' && item.taille >= 6 && item.taille <= 40 ? Math.round(item.taille) : 9;
+      // Demi-points conservés : les tailles du modèle (9,5 · 10,5) ne doivent pas dériver.
+      const taille = typeof item.taille === 'number' && item.taille >= 6 && item.taille <= 40
+        ? Math.round(item.taille * 2) / 2
+        : 9;
       return { texte, taille, gras: item.gras === true };
     })
     : defaut.lignes;

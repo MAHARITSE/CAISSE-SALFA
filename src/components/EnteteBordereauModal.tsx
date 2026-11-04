@@ -196,7 +196,14 @@ export function ApercuEntete({ entete, compact = false }: { entete: EnteteDocume
         </div>
         <div className="entete-bordereau__textes">
           {lignes.length
-            ? lignes.map((ligne, index) => <p key={index} className={ligne.gras ? 'entete-bordereau__titre' : ''}>{ligne.texte}</p>)
+            ? lignes.map((ligne, index) => (
+              /* La taille de l'éditeur est en points : elle vaut aussi à l'impression. */
+              <p
+                key={index}
+                className={ligne.gras ? 'entete-bordereau__titre' : ''}
+                style={{ fontSize: `${ligne.taille}pt` }}
+              >{ligne.texte}</p>
+            ))
             : <p className="entete-bordereau__vide">Aucune ligne renseignée.</p>}
         </div>
       </>}

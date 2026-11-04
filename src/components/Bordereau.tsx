@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { Printer, Settings2 } from 'lucide-react';
 import type { LigneJournal } from '../types';
-import { dateFr, formatAr } from '../utils/format';
+import { dateFr } from '../utils/format';
 import { montantEnLettres } from '../utils/nombreEnLettres';
 import { numeroDocument, TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { ApercuEntete } from './EnteteBordereauModal';
@@ -16,10 +16,21 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
 /** Nombre de lignes du tableau, comme sur les imprimés à remplir à la main. */
 const LIGNES_MINIMUM = 8;
 
+/** Montant du modèle officiel : séparateur de milliers insécable et deux décimales. */
+function montantModele(montant: number): string {
+  const [entier, decimales] = montant.toFixed(2).split('.');
+  return `${entier.replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f')},${decimales}`;
+}
+
 /**
- * Document officiel imprimable : en-tête de l'hôpital, date, objet, tableau à
- * cinq colonnes (n°, libellé, n° compte, montant, observation), total, somme
- * en toutes lettres et cases de signature.
+ * Document officiel imprimable : page A4 portrait, en-tête de l'hôpital, titre,
+ * date, objet, tableau à cinq colonnes, total, somme en toutes lettres et cases
+ * de signature.
+ *
+ * Les proportions sont celles relevées sur les deux imprimés fournis, mesurées
+ * en millimètres sur une page A4 : marges de 7,6 mm, colonnes du tableau
+ * 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de 11,6 mm, cases de signature
+ * pleine largeur (65,5 mm pour trois signataires, 49,4 mm pour quatre).
  */
 export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; entete: EnteteDocument }) {
   const recette = ligne.sens === 'RECETTE';
@@ -29,65 +40,85 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
     : [{ id: 'unique', libelle: ligne.libelle, montant: ligne.montant, observation: ligne.reference ?? '' }];
   const vides = Math.max(0, LIGNES_MINIMUM - details.length);
 
-  return <article className="bordereau-document w-full max-w-full bg-white text-slate-900">
-    <ApercuEntete entete={entete} compact />
+  return <article className="bordereau-document border border-slate-300 bg-white text-black">
+    {/* Les deux logos encadrent l'en-tête, comme sur les modèles. */}
+    <header className="bordereau-entete">
+      {entete.mode === 'image' && entete.image
+        ? <img src={entete.image} alt="En-tête fourni" className="bordereau-entete__image" />
+        : <div className="bordereau-entete__grille">
+          <div className="bordereau-entete__logo">
+            {entete.logoGauche ? <img src={entete.logoGauche} alt="Logo de gauche" /> : null}
+          </div>
+          <div className="bordereau-entete__textes">
+            <ApercuEntete entete={{ ...entete, logoGauche: '', logoDroit: '' }} compact />
+          </div>
+          <div className="bordereau-entete__logo">
+            {entete.logoDroit ? <img src={entete.logoDroit} alt="Logo de droite" /> : null}
+          </div>
+        </div>}
+    </header>
 
-    <h3 className="mb-6 mt-4 text-center text-sm font-bold uppercase tracking-wide underline">
-      {TITRE_DOCUMENT[recette ? 'recette' : 'depense']}
-    </h3>
+    <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
 
-    <div className="flex items-start justify-between gap-6 text-xs">
-      <p><strong>DATE :</strong> {dateFr(ligne.date)}</p>
-      <p className="text-right"><strong>Pièce n°</strong></p>
-    </div>
-    <p className="mb-3 mt-1 text-xs"><strong>Objet :</strong> {ligne.libelle}{ligne.tiers ? ` — ${ligne.tiers}` : ''}</p>
+    <p className="bordereau-piece"><strong>Pièce n°</strong></p>
 
-    <table className="w-full table-fixed border-collapse text-[11px]">
+    <p className="bordereau-ligne"><span className="bordereau-etiquette">DATE :</span>{' '}{dateFr(ligne.date)}</p>
+    <p className="bordereau-ligne">
+      <span className="bordereau-etiquette">Objet :</span>{' '}{ligne.libelle}{ligne.tiers ? ` — ${ligne.tiers}` : ''}
+    </p>
+
+    <table className="bordereau-table">
+      <colgroup>
+        <col className="col-numero" />
+        <col className="col-libelle" />
+        <col className="col-compte" />
+        <col className="col-montant" />
+        <col className="col-observation" />
+      </colgroup>
       <thead>
-        <tr className="text-center align-middle">
-          <th className="w-[7%] border border-slate-900 p-1 font-semibold">N°</th>
-          <th className="border border-slate-900 p-1 font-semibold">Libellé</th>
-          <th className="w-[15%] border border-slate-900 p-1 font-semibold">N° Compte</th>
-          <th className="w-[17%] border border-slate-900 p-1 font-semibold">Montant</th>
-          <th className="w-[17%] border border-slate-900 p-1 font-semibold">Observation</th>
+        <tr>
+          <th>N°</th>
+          <th>Libellé</th>
+          <th>N° Compte</th>
+          <th>Montant</th>
+          <th>Observation</th>
         </tr>
       </thead>
       <tbody>
         {details.map((d, i) => <tr key={d.id}>
-          <td className="border border-slate-900 p-1 text-center align-top">{i + 1}</td>
-          <td className="border border-slate-900 p-1 align-top font-medium">{d.libelle}</td>
-          <td className="border border-slate-900 p-1 align-top" />
-          <td className="border border-slate-900 p-1 text-right align-top tabular-nums">{formatAr(d.montant)}</td>
-          <td className="border border-slate-900 p-1 align-top">{d.observation}</td>
+          <td className="bordereau-cellule-numero">{i + 1}</td>
+          <td className="bordereau-cellule-libelle">{d.libelle}</td>
+          <td />
+          <td className="bordereau-cellule-montant">{montantModele(d.montant)}</td>
+          <td className="bordereau-cellule-observation">{d.observation}</td>
         </tr>)}
         {Array.from({ length: vides }, (_, i) => <tr key={`vide-${i}`} className="bordereau-ligne-vide">
-          <td className="border border-slate-900 p-1 text-center">&nbsp;</td>
-          <td className="border border-slate-900 p-1" />
-          <td className="border border-slate-900 p-1" />
-          <td className="border border-slate-900 p-1" />
-          <td className="border border-slate-900 p-1" />
+          <td>&nbsp;</td>
+          <td />
+          <td />
+          <td />
+          <td />
         </tr>)}
       </tbody>
       <tfoot>
         <tr>
-          <td colSpan={3} className="border border-slate-900 p-1 text-center font-bold uppercase">
-            Total {recette ? 'des recettes' : 'des dépenses'}
+          <td colSpan={3} className="bordereau-total-libelle">
+            TOTAL DES {recette ? 'RECETTES' : 'DEPENSES'}
           </td>
-          <td className="border border-slate-900 p-1 text-right font-bold tabular-nums">{formatAr(ligne.montant)}</td>
-          <td className="border border-slate-900 p-1" />
+          <td className="bordereau-cellule-montant bordereau-total-montant">{montantModele(ligne.montant)}</td>
+          <td />
         </tr>
       </tfoot>
     </table>
 
-    <p className="mt-4 text-[11px] italic">{montantEnLettres(ligne.montant)}</p>
+    <p className="bordereau-lettres">{montantEnLettres(ligne.montant)}</p>
 
     <div
-      className="bordereau-signatures mt-6 border border-slate-900 text-center text-[11px]"
+      className="bordereau-signatures"
       style={{ gridTemplateColumns: `repeat(${SIGNATURES[ligne.sens].length}, minmax(0, 1fr))` }}
     >
-      {SIGNATURES[ligne.sens].map(titre => <div key={titre} className="px-2 py-1">
-        <p className="font-semibold underline">{titre}</p>
-        <div className="h-16" />
+      {SIGNATURES[ligne.sens].map(titre => <div key={titre} className="bordereau-signature">
+        <p className="bordereau-signature__titre">{titre}</p>
       </div>)}
     </div>
   </article>;
@@ -113,7 +144,7 @@ export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imp
     <Modale
       titre="Bordereau imprimable"
       sousTitre={`${numeroDocument(ligne.numero) ?? ligne.numero} · Pièce ${ligne.numero} · ${dateFr(ligne.date)}`}
-      largeur="large"
+      largeur="document"
       icone={<Printer size={21} />}
       onFermer={onFermer}
       pied={<div className="flex flex-wrap justify-end gap-2">
@@ -122,11 +153,20 @@ export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imp
         <button className="btn-primary" onClick={() => window.print()}><Printer size={16} />Imprimer ce bordereau</button>
       </div>}
     >
-      {imprimerDirectement && <p role="status" className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+      {imprimerDirectement && <p role="status" className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 print:hidden">
         Écriture enregistrée. Vérifiez le bordereau puis cliquez sur « Imprimer ce bordereau ».
       </p>}
-      <BordereauDocument ligne={ligne} entete={entete} />
+      {/* À l'écran : une feuille A4 réellement au format, réduite si la fenêtre est étroite. */}
+      <div className="bordereau-apercu">
+        <BordereauDocument ligne={ligne} entete={entete} />
+      </div>
     </Modale>
-    {createPortal(<div className="print-only print-bordereau"><BordereauDocument ligne={ligne} entete={entete} /></div>, document.body)}
+
+    {createPortal(
+      <div className="print-only print-bordereau">
+        <BordereauDocument ligne={ligne} entete={entete} />
+      </div>,
+      document.body,
+    )}
   </>;
 }

@@ -232,7 +232,9 @@ const sauvegarde: Sauvegarde = validerSauvegarde({
 // Deux noms pointent le même contenu : le fichier à importer, et celui lu par demo/charger-demo.html.
 const suffixe = mois.map(x => `${x.annee}-${String(x.mois).padStart(2, '0')}`).join('_');
 const chemin = `demo/jeu_essai_caisse_salfa_${suffixe}.json`;
-const contenu = JSON.stringify(sauvegarde, null, 2);
+// L'en-tête n'est jamais figé dans le jeu d'essai : le livre reprend celui
+// livré par l'application (textes et logos), même après une mise à jour.
+const contenu = JSON.stringify(sauvegarde, (cle, valeur) => (cle === 'entetes' ? undefined : valeur), 2);
 writeFileSync(chemin, contenu, 'utf8');
 writeFileSync('demo/jeu-essai.json', contenu, 'utf8');
 

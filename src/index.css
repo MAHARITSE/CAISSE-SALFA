@@ -71,18 +71,121 @@
 .entete-bordereau__logos img { max-height: 70px; max-width: 74px; object-fit: contain; }
 .entete-bordereau__textes { flex: 1 1 auto; min-width: 0; text-align: center; line-height: 1.35; }
 .entete-bordereau__textes p { margin: 0; font-size: 11px; color: #334155; overflow-wrap: anywhere; }
-.entete-bordereau__titre { font-size: 15px !important; font-weight: 800; letter-spacing: .04em; color: #0f172a !important; }
+.entete-bordereau__titre { font-weight: 800; letter-spacing: .04em; color: #0f172a !important; }
+/* Dans la feuille A4, la taille de chaque ligne vient de son style en points. */
+.bordereau-entete .entete-bordereau__textes p { color: #000; }
+.bordereau-entete .entete-bordereau__titre { color: #000 !important; }
 .entete-bordereau__image { display: block; width: 100%; height: auto; object-fit: contain; }
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; width: 100%; }
 .entete-bordereau--compact { border: 0; border-radius: 0; padding: 0; gap: 10px; }
-/* Cases de signature : autant de colonnes que de signataires, filets partagés. */
+/* ------------------------------------------------------------------ *
+ * Document imprimé : une vraie feuille A4 portrait.
+ *
+ * Les cotes sont celles relevées sur les deux imprimés officiels fournis,
+ * mesurées en millimètres sur une page A4. À l'écran, la feuille est
+ * réduite d'un seul bloc (`zoom`) pour tenir dans la fenêtre : proportions
+ * et sauts de ligne restent donc rigoureusement identiques à l'impression.
+ * ------------------------------------------------------------------ */
+.bordereau-apercu {
+  --echelle: 0.88;
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 4px 0 8px;
+}
+.bordereau-document {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 6mm 7.6mm;
+  box-sizing: border-box;
+  background: #fff;
+  color: #000;
+  font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
+  font-size: 10pt;
+  line-height: 1.15;
+  zoom: var(--echelle);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 12px 28px rgba(15, 23, 42, .12);
+}
+@media (min-width: 900px) { .bordereau-apercu { --echelle: 1; } }
+
+/* En-tête : logo, textes centrés, logo. */
+.bordereau-entete { margin-bottom: 3mm; break-inside: avoid; }
+.bordereau-entete__image { display: block; width: 100%; height: auto; }
+.bordereau-entete__grille { display: grid; grid-template-columns: 22mm 1fr 22mm; align-items: center; }
+.bordereau-entete__logo { display: flex; justify-content: center; }
+.bordereau-entete__logo img { max-width: 21mm; max-height: 22mm; width: auto; height: auto; object-fit: contain; }
+.bordereau-entete__textes { text-align: center; }
+.bordereau-entete__textes p { margin: 0; line-height: 1.28; font-variant: small-caps; }
+/* Le modèle écrit l'en-tête en petites capitales, pas en capitales pleines. */
+.bordereau-entete__textes p { text-transform: lowercase; }
+
+/* Titre du document. */
+.bordereau-titre {
+  margin: 12mm 0 11mm;
+  text-align: center;
+  font-size: 13.5pt;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.bordereau-piece { margin: 0 0 4mm; text-align: right; }
+
+/* « DATE : » et « Objet : » soulignés, valeurs dans une colonne alignée. */
+.bordereau-ligne {
+  display: grid;
+  grid-template-columns: 19mm 1fr;
+  align-items: baseline;
+  margin: 0 0 2mm;
+}
+.bordereau-etiquette { text-decoration: underline; font-weight: 700; }
+
+/* Tableau du modèle : filets pleins, en-tête centré, lignes de 11,6 mm. */
+.bordereau-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.bordereau-table col.col-numero { width: 5.67%; }
+.bordereau-table col.col-libelle { width: 44.03%; }
+.bordereau-table col.col-compte { width: 11.13%; }
+.bordereau-table col.col-montant { width: 18.17%; }
+.bordereau-table col.col-observation { width: 21%; }
+.bordereau-table th,
+.bordereau-table td { border: 1px solid #000; padding: 0 1.5mm; box-sizing: border-box; }
+.bordereau-table th { text-align: center; font-weight: 700; padding: 1.5mm 1mm; white-space: nowrap; font-size: 9pt; }
+.bordereau-table tbody tr { height: 11.6mm; }
+/* Les lignes laissées vides du modèle sont plus hautes que celles remplies. */
+.bordereau-table tbody tr.bordereau-ligne-vide { height: 21mm; }
+.bordereau-table td { vertical-align: top; }
+.bordereau-cellule-numero { text-align: center; }
+.bordereau-cellule-montant { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 2.5mm; }
+.bordereau-total-libelle { font-weight: 700; }
+.bordereau-total-montant { font-weight: 700; }
+/* Lignes vides : le filet doit rester visible même sans contenu. */
+.bordereau-ligne-vide td { height: 21mm; }
+
+/* Mention en toutes lettres, sans italique, comme sur les modèles. */
+.bordereau-lettres { margin: 5mm 0 4mm; }
+
+/* Cases de signature : pleine largeur, autant de colonnes que de signataires. */
 .bordereau-signatures {
   display: grid;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  border: 1px solid #000;
+  height: 32.3mm;
+  break-inside: avoid;
 }
-.bordereau-signatures > div { box-sizing: border-box; min-width: 0; }
+.bordereau-signature {
+  box-sizing: border-box;
+  min-width: 0;
+  border-left: 1px solid #000;
+  padding: 1.5mm 2mm;
+}
+.bordereau-signature:first-child { border-left: 0; }
+.bordereau-signature__titre { margin: 0; text-align: center; font-weight: 700; text-decoration: underline; }
 .bordereau-document { max-width: 100%; }
 .bordereau-signatures > div + div { border-left: 1px solid #0f172a; }
 .bordereau-ligne-vide { height: 26px; }
@@ -111,18 +214,12 @@
   .screen-page-hidden { display: table-row !important; }
   body:has(.print-bordereau) .app-shell { display: none !important; }
   .print-bordereau { page: bordereau; padding: 0; }
-  .bordereau-document { font-size: 11px; }
-  .bordereau-document table { font-size: 10px; }
-  .bordereau-entete { break-inside: avoid; }
-  .bordereau-document { page-break-inside: avoid; }
-  .bordereau-signatures { break-inside: avoid; }
-  .entete-bordereau { border: 0; border-radius: 0; padding: 0; }
-  .entete-bordereau__textes p { font-size: 11px; }
-  .entete-bordereau__titre { font-size: 16px !important; }
+  /* Le document porte ses propres cotes (mm) : aucune règle d'impression ne
+     doit les écraser, sinon la feuille déborde sur une seconde page. */
+  .bordereau-document { page-break-inside: avoid; break-inside: avoid; zoom: 1 !important; box-shadow: none; }
   @page { size: A4 landscape; margin: 12mm; }
-  /* Bordereau : A4 portrait, marges franches comme sur les imprimés officiels. */
-  @page bordereau { size: A4 portrait; margin: 12mm; }
-  .print-bordereau { page: bordereau; width: 186mm; }
-  .print-bordereau .bordereau-document { width: 100%; }
+  /* Bordereau : une page A4 portrait, marges portées par le document lui-même. */
+  @page bordereau { size: A4 portrait; margin: 0; }
+  .print-bordereau { page: bordereau; margin: 0; padding: 0; }
   body:has(.print-bordereau) { page: bordereau; }
 }

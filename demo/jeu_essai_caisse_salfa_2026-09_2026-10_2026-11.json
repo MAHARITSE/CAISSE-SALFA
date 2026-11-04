@@ -2,8 +2,8 @@
   "format": "CAISSE-SALFA",
   "version": 1,
   "revision": 0,
-  "updatedAt": "2026-11-04T13:43:36.616Z",
-  "exportedAt": "2026-11-04T13:43:36.616Z",
+  "updatedAt": "2026-11-04T13:57:03.615Z",
+  "exportedAt": "2026-11-04T13:57:03.615Z",
   "ecritures": [
     {
       "id": "essai-2026-RC-2026-0001",
@@ -1785,94 +1785,6 @@
     "DP-2026": 36
   },
   "exercicesClotures": [],
-  "entetes": {
-    "depense": {
-      "mode": "textes",
-      "image": "",
-      "lignes": [
-        {
-          "texte": "FIANGONANA LOTERANA MALAGASY",
-          "taille": 16,
-          "gras": true
-        },
-        {
-          "texte": "ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "SYNODAM-PARITANY FIHAVANANA LOTERANA",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "DÉPARTEMENT DE SANTÉ · HEALTH DEPARTMENT",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "HOPITALY LOTERANA TOJARY TANAMBAO · BP 99",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "E-mail : salfa.tukas@gmail.com",
-          "taille": 9,
-          "gras": false
-        }
-      ],
-      "logoGauche": "",
-      "logoDroit": ""
-    },
-    "recette": {
-      "mode": "textes",
-      "image": "",
-      "lignes": [
-        {
-          "texte": "FIANGONANA LOTERANA MALAGASY",
-          "taille": 16,
-          "gras": true
-        },
-        {
-          "texte": "ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "SYNODAM-PARITANY FIHAVANANA LOTERANA",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "DÉPARTEMENT DE SANTÉ · HEALTH DEPARTMENT",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "HOPITALY LOTERANA TOJARY TANAMBAO · BP 99",
-          "taille": 9,
-          "gras": false
-        },
-        {
-          "texte": "E-mail : salfa.tukas@gmail.com",
-          "taille": 9,
-          "gras": false
-        }
-      ],
-      "logoGauche": "",
-      "logoDroit": ""
-    }
-  },
   "categories": {
     "recette": [
       "Recettes journalières",

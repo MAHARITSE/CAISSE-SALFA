@@ -47,7 +47,7 @@ describe('parcours de caisse', () => {
     expect(within(bordereau).getByText(/Pièce DP-/)).toBeInTheDocument();
     // Le numéro du document figure dans le sous-titre de la modale et sous le titre.
     expect(bordereau).toHaveTextContent(`AED-${annee}-0001`);
-    expect(within(bordereau).getByText('Total des dépenses')).toBeInTheDocument();
+    expect(within(bordereau).getByText('TOTAL DES DEPENSES')).toBeInTheDocument();
     await user.click(within(bordereau).getByRole('button', { name: 'Imprimer ce bordereau' }));
     expect(window.print).toHaveBeenCalledTimes(1);
     await user.click(within(bordereau).getByRole('button', { name: 'Fermer' }));
@@ -97,7 +97,7 @@ describe('parcours de caisse', () => {
     await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(autorisation).getByText('FIANGONANA LOTERANA MALAGASY')).toBeInTheDocument();
-    expect(within(autorisation).getByText('AUTORISATION DE RECETTE')).toBeInTheDocument();
+    expect(within(autorisation).getByText('AUTORISATION DE RECETTES')).toBeInTheDocument();
     expect(autorisation).toHaveTextContent(`ARC-${annee}-0001`);
     expect(within(autorisation).queryByText('CAISSE CENTRALE SALFA')).not.toBeInTheDocument();
     await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
@@ -138,9 +138,9 @@ describe('parcours de caisse', () => {
     modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
     await user.click(within(modale).getByRole('button', { name: 'Restaurer l’en-tête fourni' }));
-    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH');
+    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
-    expect(lire().entetes.recette.lignes[1].texte).toBe('ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH');
+    expect(lire().entetes.recette.lignes[1].texte).toBe('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
     expect(within(modale).queryByLabelText('Église / tutelle')).not.toBeInTheDocument();
   });
 

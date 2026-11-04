@@ -61,14 +61,19 @@ garder les versions verrouillées par `package-lock.json`.
   pièce, y compris celles saisies en montant unique.
 - **Documents conformes aux modèles officiels** : l’engagement de dépense
   (« DEMANDE D’ENGAGEMENT DE DÉPENSE ») et l’autorisation de recette
-  (« AUTORISATION DE RECETTE ») reprennent la présentation des imprimés SALFA :
-  en-tête de l’hôpital sur sept lignes, « DATE : » en gras, « Objet : »,
-  « Pièce n° », tableau à cinq colonnes (N°, Libellé, N° Compte, Montant,
-  Observation), ligne de total (« TOTAL DES DÉPENSES » ou
-  « TOTAL DES RECETTES »), mention « Arrêtée à la somme de … ariary » écrite en
-  toutes lettres, puis les cases de signature — Caissier(e), Gestionnaire et
-  Médecin Chef pour une recette, auxquelles s’ajoute le Demandeur pour une
-  dépense. Le document s’imprime seul, sur une page A4 portrait.
+  (« AUTORISATION DE RECETTES ») reproduisent les imprimés SALFA fournis.
+  L’en-tête de l’hôpital occupe sept lignes entre ses deux logos ; viennent
+  ensuite le titre, « Pièce n° », « DATE : » et « Objet : » soulignés, le
+  tableau à cinq colonnes (N°, Libellé, N° Compte, Montant, Observation), la
+  ligne « TOTAL DES RECETTES » ou « TOTAL DES DÉPENSES », la mention « Arrêtez
+  à la somme de … Ariary » écrite en toutes lettres, puis les cases de
+  signature — Caissier(e), Gestionnaire et Médecin Chef pour une recette,
+  auxquelles s’ajoute le Demandeur pour une dépense.
+  Les cotes sont celles des modèles, relevées en millimètres sur une page A4 :
+  marges de 7,6 mm, colonnes de 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de
+  11,6 mm. À l’écran, la feuille est réduite d’un seul bloc, si bien que
+  l’aperçu montre exactement ce qui sortira de l’imprimante : une page A4
+  portrait. Les montants portent deux décimales (2 657 400,00).
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
   majuscules.
@@ -230,6 +235,9 @@ src/
     constants.ts                  catégories, modes, limites, modèles
     entete.ts                     modèle, validation et valeurs par défaut des en-têtes
     nombreEnLettres.ts            montants écrits en toutes lettres (ariary)
+  assets/
+    logo-salfa-gauche.png         logos des imprimés, incorporés au paquet
+    logo-salfa-droit.png
   test/                           configuration et fixtures de tests
 tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 ```

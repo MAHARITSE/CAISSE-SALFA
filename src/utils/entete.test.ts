@@ -20,7 +20,7 @@ describe('en-tête des bordereaux', () => {
     expect(entetes.depense.lignes.filter(l => l.texte.trim())).toHaveLength(7);
     expect(entetes.depense).toEqual(entetes.recette);
     expect(TITRE_DOCUMENT.depense).toBe('DEMANDE D’ENGAGEMENT DE DÉPENSE');
-    expect(TITRE_DOCUMENT.recette).toBe('AUTORISATION DE RECETTE');
+    expect(TITRE_DOCUMENT.recette).toBe('AUTORISATION DE RECETTES');
   });
 
   it('donne à chaque pièce son document : AED pour une dépense, ARC pour une recette', () => {
@@ -59,7 +59,8 @@ describe('en-tête des bordereaux', () => {
     expect(entetesIdentiques(a, b)).toBe(true);
     b.recette = enteteFixe({ mode: 'image', image: PNG });
     expect(entetesIdentiques(a, b)).toBe(false);
-    expect(poidsImages(b)).toBe(PNG.length);
+    // Les logos livrés comptent aussi : on vérifie l'apport de l'image ajoutée.
+    expect(poidsImages(b) - poidsImages(a)).toBe(PNG.length);
   });
 
   it('enregistre un seul document sans toucher à l’autre', () => {

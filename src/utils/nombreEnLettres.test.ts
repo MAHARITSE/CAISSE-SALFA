@@ -31,7 +31,8 @@ describe('montant en toutes lettres', () => {
   });
 
   it('produit la phrase du bordereau', () => {
-    expect(montantEnLettres(4_042_000)).toBe('Arrêtée à la somme de quatre millions quarante-deux mille ariary');
+    // Libellé relevé mot pour mot sur les deux modèles fournis.
+    expect(montantEnLettres(4_042_000)).toBe('Arrêtez à la somme de quatre millions quarante-deux mille Ariary');
   });
 
   it('refuse ce qui n’est pas un entier positif', () => {
