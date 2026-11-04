@@ -76,7 +76,7 @@
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; }
 
 /* Feuille A4 de l'éditeur : on y dépose les images et on les glisse. */
-.entete-cadre { position: relative; margin: 0 auto; }
+.entete-cadre { position: relative; margin: 0 auto; border-radius: 4px; }
 .entete-feuille {
   position: absolute;
   top: 0;
@@ -133,6 +133,7 @@
   text-transform: lowercase;
   line-height: 1.28;
 }
+.entete-ligne.is-vide:hover { background: rgb(148 163 184 / .10); }
 .entete-ligne.is-active { background: rgb(13 148 136 / .10); box-shadow: 0 0 0 0.4mm rgb(13 148 136 / .35); }
 .entete-ligne__apercu,
 .entete-ligne__champ {
@@ -212,8 +213,9 @@
   position: relative;
   width: 210mm;
   min-height: 297mm;
-  /* Cotes du modèle : en-tête à 10 mm du haut, tableau de 6,9 à 203,5 mm. */
-  padding: 9.5mm 6.5mm 4.6mm 6.6mm;
+  /* Cotes du modèle : en-tête à 10 mm du haut, tableau de 6,6 à 203,4 mm.
+     Marges symétriques : le tableau est centré au dixième de millimètre. */
+  padding: 9.5mm 6.6mm 4.6mm 6.6mm;
   box-sizing: border-box;
   background: #fff;
   color: #000;
@@ -265,8 +267,10 @@
 
 /* Tableau du modèle : filets pleins, en-tête centré, largeur fixe. */
 .bordereau-table {
-  /* 203,5 − 6,9 mm : largeur relevée sur l'imprimé A4. */
-  width: 196.6mm;
+  /* Toute la largeur utile de la feuille : marges identiques à gauche et à droite. */
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   /* Les deux lignes DATE et Objet s'arrêtent à 75,7 mm, le tableau part à 81,5. */
   margin-top: 6.8mm;
   border-collapse: collapse;
@@ -303,7 +307,9 @@
 /* Cases de signature : pleine largeur, autant de colonnes que de signataires. */
 .bordereau-signatures {
   display: grid;
-  width: 196.6mm;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   max-width: 100%;
   box-sizing: border-box;
   border: 1px solid #000;

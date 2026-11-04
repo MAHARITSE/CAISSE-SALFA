@@ -33,10 +33,12 @@ export class ErreurApi extends Error {
 }
 
 export interface Utilisateur {
-  id: number;
+  /** Entier côté MySQL ; chaîne pour la session locale de démonstration. */
+  id: number | string;
   identifiant: string;
   nomComplet: string;
-  role: 'lecteur' | 'caissier' | 'admin';
+  /** « comptable » remplace l'ancien « lecteur » : même lecture, nom métier. */
+  role: 'comptable' | 'caissier' | 'admin';
 }
 
 export interface EtatSession {
@@ -153,3 +155,14 @@ export const mutations = {
   restauration: (sauvegarde: Sauvegarde) =>
     appeler<{ livre: Sauvegarde }>('restauration', { methode: 'POST', corps: { sauvegarde } }),
 };
+
+/**
+ * Points d'administration : comptes utilisateurs et leurs rôles.
+ * Réservés à l'administrateur, le serveur le vérifie lui-même.
+ */
+export async function appelerComptes<T>(
+  route: string,
+  options: { methode?: 'GET' | 'POST'; corps?: unknown } = {},
+): Promise<T> {
+  return appeler<T>(route, options);
+}

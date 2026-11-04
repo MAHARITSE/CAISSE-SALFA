@@ -40,6 +40,10 @@ salfa_point('index', function (): void {
         'sauvegarde' => 'sauvegarde',
         'verifier' => 'verifier',
         'installer' => 'installer',
+        'utilisateurs' => 'utilisateurs',
+        'utilisateurs-creer' => 'utilisateurs',
+        'utilisateurs-modifier' => 'utilisateurs',
+        'utilisateurs-supprimer' => 'utilisateurs',
     ];
     if ($action === '') {
         throw new SalFaErreur(

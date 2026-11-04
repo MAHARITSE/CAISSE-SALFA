@@ -257,6 +257,19 @@ export function normaliserEntete(valeur: unknown, document: DocumentEntete = 'de
 }
 
 /** Un seul en-tête : la valeur lue est celle des deux documents. */
+/**
+ * L'en-tête stocké est-il encore celui livré avec la caisse ? On compare les
+ * identifiants des images posées : dès qu'elles diffèrent, l'en-tête a été
+ * personnalisé et l'écran doit le savoir.
+ */
+export function enteteModifie(entete: EnteteDocument): boolean {
+  const defaut = enteteParDefaut();
+  if (entete.lignes.length !== defaut.lignes.length) return true;
+  if (entete.lignes.some((ligne, i) => ligne.texte !== defaut.lignes[i].texte)) return true;
+  if (entete.images.length !== defaut.images.length) return true;
+  return entete.images.some((image, i) => image.id !== defaut.images[i].id);
+}
+
 export function normaliserEntetes(valeur: unknown): EntetesDocuments {
   if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) return entetesParDefaut();
   const brut = valeur as Record<string, unknown>;

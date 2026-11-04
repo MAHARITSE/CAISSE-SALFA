@@ -188,6 +188,8 @@ interface ModaleBordereauProps {
  */
 export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imprimerDirectement = false }: ModaleBordereauProps) {
   return <>
+    {/* La modale se monte à la demande : `key` fige l'en-tête tel qu'il était
+        au moment de l'ouverture, il faut donc la remonter s'il change. */}
     <Modale
       titre="Bordereau imprimable"
       sousTitre={`${numeroDocument(ligne.numero) ?? ligne.numero} · Pièce ${ligne.numero} · ${dateFr(ligne.date)}`}

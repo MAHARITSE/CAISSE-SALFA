@@ -147,24 +147,22 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
   };
 
   /**
-   * La feuille garde ses cotes A4 : c'est la réduction qui change. Elle suit la
-   * place réellement disponible — la colonne qui la contient, jamais elle-même,
-   * pour ne pas boucler — et la hauteur de la fenêtre, pour tenir d'un coup d'œil.
+   * La feuille garde ses cotes A4 exactes : ce qu'on tape ici s'imprime pareil.
+   * Seule la réduction change, calculée sur la place réellement visible sous la
+   * barre de mise en forme — pas sur la fenêtre entière, qui inclut le pied.
    */
   const mesurerEchelle = () => {
     const colonne = cadre.current?.parentElement;
     const largeur = colonne?.clientWidth ?? 0;
     if (!largeur) return;
     const parLargeur = (largeur - 2) / (FEUILLE.largeur * PX_PAR_MM);
-    // Hauteur visible sous la barre de mise en forme : la feuille doit tenir
-    // d'un seul coup d'œil, sans faire défiler la modale.
     const zone = cadre.current?.closest('.overflow-y-auto') as HTMLElement | null;
     const dispo = zone
-      ? zone.getBoundingClientRect().bottom - (cadre.current?.getBoundingClientRect().top ?? 0) - 16
-      : window.innerHeight * 0.7;
+      ? zone.getBoundingClientRect().bottom - (cadre.current?.getBoundingClientRect().top ?? 0) - 8
+      : window.innerHeight * 0.5;
     const parHauteur = dispo / (FEUILLE.hauteur * PX_PAR_MM);
-    const cible = Math.max(0.34, Math.min(1, parLargeur, parHauteur));
-    // On n'arrondit que si l'écart se voit : pas de boucle de rendu.
+    // Le plancher garantit un texte lisible même sur un écran court.
+    const cible = Math.max(0.3, Math.min(0.95, parLargeur, parHauteur));
     setEchelle(actuelle => Math.abs(actuelle - cible) > 0.005 ? cible : actuelle);
   };
 
@@ -395,7 +393,8 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
               </div>
             </div>
 
-            {/* La feuille : c'est le formulaire. */}
+            {/* La feuille : c'est le formulaire. Cadre volontairement bas :
+                on garde la barre de mise en forme et les images sous les yeux. */}
             <div
               ref={cadre}
               className="entete-cadre"

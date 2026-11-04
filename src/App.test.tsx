@@ -13,6 +13,30 @@ import { aujourdHui } from './utils/format';
 const lire = (): Sauvegarde => JSON.parse(localStorage.getItem(CLE_LIVRE)!);
 const annee = aujourdHui().slice(0, 4);
 
+/**
+ * L'application s'ouvre sur la page de connexion : on entre avec le compte
+ * administrateur de démonstration, sauf pour les tests qui éprouvent les rôles.
+ */
+async function ouvrirSession(user: ReturnType<typeof userEvent.setup>, identifiant = 'admin', motDePasse = 'admin1234') {
+  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await user.type(screen.getByLabelText('Identifiant'), identifiant);
+  await user.type(screen.getByLabelText('Mot de passe'), motDePasse);
+  await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+  await screen.findByRole('heading', { name: 'Livre de caisse' });
+}
+
+/** Les réglages (modèles, catégories, en-tête) vivent dans la page Administration. */
+async function ouvrirAdministration(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Administration' }));
+  await screen.findByRole('heading', { name: 'Administration' });
+}
+
+/** Retour au livre journal, pour imprimer ou saisir après un réglage. */
+async function revenirAuJournal(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Livre journal' }));
+  await screen.findByRole('heading', { name: 'Livre de caisse' });
+}
+
 async function ajouterRecette(user: ReturnType<typeof userEvent.setup>, libelle = 'Recette test', montant = '15000') {
   await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
   const dialog = screen.getByRole('dialog', { name: 'Nouvelle recette' });
@@ -25,6 +49,7 @@ describe('parcours de caisse', () => {
   it('crée, détaille, modifie, supprime puis restaure des écritures sans perdre les références', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await ajouterRecette(user);
     // Le masque garde les majuscules actives : le libellé est enregistré en capitales.
     expect(lire().ecritures[0]).toMatchObject({ libelle: 'RECETTE TEST', montant: 15000, numero: `RC-${annee}-0001` });
@@ -73,6 +98,7 @@ describe('parcours de caisse', () => {
   it('personnalise l’en-tête commun et l’imprime sur les deux pièces', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     // Une pièce détaillée est nécessaire : le bordereau imprimable s'ouvre depuis le détail.
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const nouvelle = screen.getByRole('dialog', { name: 'Nouvelle recette' });
@@ -83,7 +109,8 @@ describe('parcours de caisse', () => {
     await user.type(within(nouvelle).getByLabelText('Montant (Ar)', { exact: true }), '12000');
     await user.click(within(nouvelle).getByRole('button', { name: 'Ajouter' }));
     await user.click(within(nouvelle).getByRole('button', { name: 'Enregistrer' }));
-    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    await ouvrirAdministration(user);
+    await user.click(screen.getByRole('button', { name: /En-tête des bordereaux/ }));
     const modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     // Un seul en-tête : la première ligne vaut pour les deux imprimés.
     await user.clear(within(modale).getByLabelText('Texte de la ligne 1'));
@@ -91,6 +118,7 @@ describe('parcours de caisse', () => {
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
 
     expect(lire().entetes.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
+    await revenirAuJournal(user);
 
     // L'autorisation de recette reprend cet en-tête…
     await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
@@ -119,12 +147,15 @@ describe('parcours de caisse', () => {
     expect(within(engagement).queryByText(/ENGAGEMENT DE DÉPENSE/)).not.toBeInTheDocument();
     // Le document porte son propre numéro, aligné sur la pièce.
     expect(engagement).toHaveTextContent(`AED-${annee}-0001`);
+    await user.click(within(engagement).getByRole('button', { name: 'Fermer' }));
   });
 
   it('restaure l’en-tête fourni, images comprises', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    await ouvrirSession(user);
+    await ouvrirAdministration(user);
+    await user.click(screen.getByRole('button', { name: /En-tête des bordereaux/ }));
     let modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     // La feuille est le formulaire : on clique la deuxième ligne pour l'écrire.
     await user.click(within(modale).getByLabelText(/^Ligne 2/));
@@ -137,7 +168,8 @@ describe('parcours de caisse', () => {
     expect(lire().entetes.lignes[1].texte).toBe('FLM — SYNODE');
     expect(lire().entetes.images).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: 'En-tête' }));
+    await ouvrirAdministration(user);
+    await user.click(screen.getByRole('button', { name: /En-tête des bordereaux/ }));
     modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     await user.click(within(modale).getByRole('button', { name: /Restaurer l’en-tête fourni/ }));
     await user.click(within(modale).getByLabelText(/^Ligne 2/));
@@ -151,6 +183,7 @@ describe('parcours de caisse', () => {
   it('enregistre avec un seul poste renseigné et ignore les lignes vides', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const form = screen.getByRole('dialog', { name: 'Nouvelle recette' });
     await user.type(within(form).getByLabelText(/Libellé de l’écriture/), 'Recettes du matin');
@@ -171,6 +204,7 @@ describe('parcours de caisse', () => {
   it('refuse un détail sans aucun poste complété', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const form = screen.getByRole('dialog', { name: 'Nouvelle recette' });
     await user.type(within(form).getByLabelText(/Libellé de l’écriture/), 'Sans poste');
@@ -185,6 +219,7 @@ describe('parcours de caisse', () => {
   it('gère les catégories séparément pour les recettes et les dépenses', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
     const form = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     // Le formulaire de dépense propose « Gérer » à côté de la catégorie.
@@ -216,6 +251,7 @@ describe('parcours de caisse', () => {
   it('conserve la saisie et affiche une erreur explicite quand le stockage est plein', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('plein', 'QuotaExceededError'); });
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const dialog = screen.getByRole('dialog', { name: 'Nouvelle recette' });
@@ -233,6 +269,7 @@ describe('parcours de caisse', () => {
   it('refuse une écriture basée sur une révision périmée par un autre onglet', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const dialog = screen.getByRole('dialog', { name: 'Nouvelle recette' });
     await user.type(within(dialog).getByLabelText(/Libellé de l’écriture/), 'Ma saisie');
@@ -247,7 +284,9 @@ describe('parcours de caisse', () => {
   it('crée un modèle avec montant par défaut et le réutilise dans une recette', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Modèles de saisie' }));
+    await ouvrirSession(user);
+    await ouvrirAdministration(user);
+    await user.click(screen.getByRole('button', { name: /Modèles de saisie/ }));
     const gestion = screen.getByRole('dialog', { name: 'Modèles de saisie' });
     await user.click(within(gestion).getByRole('button', { name: 'Nouveau modèle' }));
     const form = screen.getByRole('dialog', { name: 'Nouveau modèle de saisie' });
@@ -259,6 +298,7 @@ describe('parcours de caisse', () => {
     const modele = lire().masques.find(m => m.nom === 'Test modèle')!;
     expect(modele.lignes[0].montantDefaut).toBe(500);
     await user.click(screen.getByRole('dialog', { name: 'Modèles de saisie' }).querySelector('button.btn-secondary')!);
+    await revenirAuJournal(user);
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const saisie = screen.getByRole('dialog', { name: 'Nouvelle recette' });
     await user.type(within(saisie).getByLabelText(/Libellé de l’écriture/), 'Recette modèle');
@@ -273,6 +313,7 @@ describe('parcours de caisse', () => {
     sauvegarderLivre(livreTest({ ecritures: [ecritureTest()] }), 0);
     const user = userEvent.setup();
     render(<App />);
+    await ouvrirSession(user);
     await user.click(screen.getAllByRole('button', { name: 'Données & sauvegardes' })[0]);
     const input = screen.getByLabelText('Fichier de sauvegarde JSON');
     await user.upload(input, new File(['{'], 'invalide.json', { type: 'application/json' }));
@@ -293,7 +334,9 @@ describe('parcours de caisse', () => {
 
   it('ne présente pas un stockage corrompu comme un livre vide et migre une seule fois en mode strict', async () => {
     localStorage.setItem(CLE_LIVRE, '{corrompu');
+    const user = userEvent.setup();
     const { unmount } = render(<App />);
+    await ouvrirSession(user);
     expect(screen.getByRole('alert')).toHaveTextContent('illisibles');
     expect(screen.getByRole('button', { name: 'Nouvelle recette' })).toBeDisabled();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -302,10 +345,51 @@ describe('parcours de caisse', () => {
     localStorage.setItem(CLE_ECRITURES, JSON.stringify([{ id: 'ancien', type: 'RECETTE', date: aujourdHui(), montant: 1000, libelle: 'Ancienne recette', modePaiement: 'Chèque' }]));
     const spy = vi.spyOn(Storage.prototype, 'setItem');
     render(<React.StrictMode><App /></React.StrictMode>);
+    await ouvrirSession(user);
     expect(await screen.findByText('Ancienne recette')).toBeInTheDocument();
     expect(lire().ecritures[0].mode).toBe('Chèque');
     expect(spy.mock.calls.filter(c => c[0] === CLE_LIVRE)).toHaveLength(1);
     expect(localStorage.getItem(CLE_ECRITURES)).toBeTruthy();
+  });
+
+  it('ouvre la caisse sur la page de connexion et refuse un mauvais mot de passe', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    // Aucun écran de caisse avant la connexion.
+    expect(screen.getByRole('heading', { name: /Connexion à la caisse/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Identifiant'), 'admin');
+    await user.type(screen.getByLabelText('Mot de passe'), 'mauvais-mot-de-passe');
+    await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Connexion refusée');
+    expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
+
+    // Le bon mot de passe ouvre la caisse.
+    await user.clear(screen.getByLabelText('Mot de passe'));
+    await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
+    await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+    expect(await screen.findByRole('heading', { name: 'Livre de caisse' })).toBeInTheDocument();
+  });
+
+  it('restreint ce que chaque rôle peut ouvrir', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    // La caissière ne voit que le livre journal.
+    await ouvrirSession(user, 'caisse', 'caisse1234');
+    expect(screen.queryByRole('button', { name: 'Analyse de la caisse' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Administration' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Livre journal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nouvelle recette' })).toBeInTheDocument();
+    unmount();
+
+    // Le comptable consulte le journal et l'analyse, sans saisir ni administrer.
+    render(<App />);
+    await ouvrirSession(user, 'comptable', 'compta1234');
+    expect(screen.getByRole('button', { name: 'Analyse de la caisse' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Administration' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Consultation seule/)).toBeInTheDocument();
   });
 
   it('interdit de clôturer l’année en cours : la clôture n’est ouverte qu’au 1er janvier suivant', async () => {
@@ -313,6 +397,7 @@ describe('parcours de caisse', () => {
     const annee = new Date().getFullYear();
     sauvegarderLivre(livreTest(enregistrerEcriture(livreTest(), ecritureTest({ date: `${annee}-03-01` }))), 0);
     render(<App />);
+    await ouvrirSession(user);
     // Aucune bannière de retard : l'année est encore en cours.
     expect(screen.queryByText(`L’exercice ${annee} doit être clôturé.`)).not.toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: 'Exercices & clôtures' })[0]);
@@ -338,6 +423,7 @@ describe('parcours de caisse', () => {
     donnees = enregistrerEcriture(donnees, ecritureTest({ id: 'e-dep', numero: `DP-${annee - 1}-0001`, sens: 'DEPENSE', categorie: 'Divers', date: `${annee - 1}-12-28`, montant: 2000 }));
     sauvegarderLivre(livreTest(donnees), 0);
     render(<App />);
+    await ouvrirSession(user);
     expect(screen.getByText(`L’exercice ${annee - 1} doit être clôturé.`)).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: `Clôturer l’exercice ${annee - 1}` })[0]);
     const dialogue = screen.getByRole('dialog', { name: `Clôturer l’exercice ${annee - 1} ?` });

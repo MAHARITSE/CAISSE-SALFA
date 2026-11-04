@@ -1,8 +1,8 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Settings2, Tags, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Trash2 } from 'lucide-react';
 import type { Categories, Ecriture, LigneJournal, Sens } from '../types';
 import { dateFr, formatAr } from '../utils/format';
-import { entetesParDefaut, type DocumentEntete, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
+import { entetesParDefaut, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
 import { ModaleBordereau } from './Bordereau';
 import { EnteteBordereauModal } from './EnteteBordereauModal';
 import { GestionCategoriesModal } from './GestionCategoriesModal';
@@ -21,7 +21,8 @@ interface LivreJournalProps {
   onReinitialiser: () => void;
   /** En-têtes personnalisés des deux bordereaux ; vide = en-têtes livrés. */
   entetes?: EntetesDocuments;
-  onEnregistrerEntete?: (document: DocumentEntete, entete: EnteteDocument) => void;
+  /** L'en-tête est commun : un seul enregistrement vaut pour les deux documents. */
+  onEnregistrerEntete?: (entete: EnteteDocument) => void;
   /** Catégories de saisie, séparées pour les recettes et les dépenses. */
   categories?: Categories;
   onEnregistrerCategories?: (sens: Sens, liste: string[]) => Promise<boolean>;
@@ -43,18 +44,22 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
   ref,
 ) {
   const [detailsOuverts, setDetailsOuverts] = useState<Record<string, boolean>>({});
-  const [bordereau, setBordereau] = useState<LigneJournal | null>(null);
+  /**
+   * L'en-tête peut changer pendant que la pièce est ouverte : le bordereau
+   * reprend alors la valeur courante, jamais celle du montage.
+   */
+  const enteteCourant = entetes ?? entetesParDefaut();
+  /** La pièce dont on imprime le bordereau : l'en-tête vient toujours de l'appelant. */
+  const [numeroBordereau, setNumeroBordereau] = useState<string | null>(null);
+  const bordereau = numeroBordereau ? lignes.find(l => l.numero === numeroBordereau) ?? null : null;
+  const ouvrirBordereau = (ligne: LigneJournal) => setNumeroBordereau(ligne.numero);
   const [bordereauApresEnregistrement, setBordereauApresEnregistrement] = useState(false);
   useImperativeHandle(ref, () => ({
-    ouvrirBordereau: (ligne: LigneJournal) => { setBordereauApresEnregistrement(true); setBordereau(ligne); },
+    ouvrirBordereau: (ligne: LigneJournal) => { setBordereauApresEnregistrement(true); setNumeroBordereau(ligne.numero); },
   }), []);
   const [entetesOuverts, setEntetesOuverts] = useState(false);
   const [categoriesOuvertes, setCategoriesOuvertes] = useState(false);
-  const [documentEntete, setDocumentEntete] = useState<DocumentEntete>('depense');
-  const ouvrirEntetes = (document?: DocumentEntete) => {
-    if (document) setDocumentEntete(document);
-    setEntetesOuverts(true);
-  };
+  const ouvrirEntetes = () => setEntetesOuverts(true);
   const [page, setPage] = useState(1);
   useEffect(() => setPage(1), [lignes]);
   const pages = Math.max(1, Math.ceil(lignes.length / PAR_PAGE));
@@ -65,8 +70,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
 
   return <>
     <section id="journal" className="card overflow-hidden" aria-label="Livre journal">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><div className="flex items-center gap-2"><span className="badge badge-neutral">MGA · ariary</span>{onEnregistrerCategories && <button className="btn-secondary" onClick={() => setCategoriesOuvertes(true)} title="Gérer les catégories de recettes et de dépenses"><Tags size={15} />Catégories</button>}
-              {onEnregistrerEntete && <button className="btn-secondary" onClick={() => ouvrirEntetes()} title="Modifier l’en-tête des bordereaux"><Settings2 size={15} />En-tête</button>}</div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4"><div className="flex items-center gap-2.5"><BookOpen size={18} className="text-brand-700" /><div><h2 className="text-sm font-bold">Livre journal</h2><p className="mt-0.5 text-[11px] text-slate-500">{periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}</p></div></div><div className="flex items-center gap-2"><span className="badge badge-neutral">MGA · ariary</span></div></div>
       {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-[11px] text-amber-900">Vue filtrée : les totaux portent sur la sélection. Les soldes restent calculés sur le livre complet, dans l’ordre chronologique.</p>}
       <div className="relative overflow-x-auto">
         <table className="journal-table w-full min-w-[960px] text-xs"><thead><tr className="border-b border-slate-200 bg-slate-50/80 text-left text-[10px] uppercase tracking-wider text-slate-500"><th className="px-4 py-3 font-semibold">Date</th><th className="px-3 py-3 font-semibold">N° pièce</th><th className="px-3 py-3 font-semibold">Libellé & postes</th><th className="px-3 py-3 font-semibold">Catégorie</th><th className="px-3 py-3 text-right font-semibold">Recette</th><th className="px-3 py-3 text-right font-semibold">Dépense</th><th className="px-3 py-3 text-right font-semibold">Solde cumulé</th><th className="no-print px-3 py-3 text-center font-semibold">Action</th></tr></thead>
@@ -86,9 +90,9 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                   <td className="whitespace-nowrap px-3 py-3.5 text-right align-top font-semibold tabular-nums text-emerald-700">{ligne.sens === 'RECETTE' ? formatAr(ligne.montant) : <span className="text-slate-300">—</span>}</td>
                   <td className="whitespace-nowrap px-3 py-3.5 text-right align-top font-semibold tabular-nums text-rose-700">{ligne.sens === 'DEPENSE' ? formatAr(ligne.montant) : <span className="text-slate-300">—</span>}</td>
                   <td className={`whitespace-nowrap px-3 py-3.5 text-right align-top font-semibold tabular-nums ${ligne.solde < 0 ? 'text-rose-700' : 'text-slate-800'}`}>{formatAr(ligne.solde)}</td>
-                  <td className="no-print px-2 py-3 align-top"><div className="flex justify-center gap-0.5 print:hidden"><button className="icon-button" title="Imprimer le bordereau" aria-label={`Imprimer le bordereau ${ligne.numero}`} onClick={() => setBordereau(ligne)}><Printer size={15} /></button><button className="icon-button" title="Modifier" aria-label={`Modifier ${ligne.numero}`} onClick={() => onEditer(ligne)}><Pencil size={15} /></button><button className="icon-button hover:bg-rose-50 hover:text-rose-600" title="Supprimer" aria-label={`Supprimer ${ligne.numero}`} onClick={() => onSupprimer(ligne.id)}><Trash2 size={15} /></button></div></td>
+                  <td className="no-print px-2 py-3 align-top"><div className="flex justify-center gap-0.5 print:hidden"><button className="icon-button" title="Imprimer le bordereau" aria-label={`Imprimer le bordereau ${ligne.numero}`} onClick={() => ouvrirBordereau(ligne)}><Printer size={15} /></button><button className="icon-button" title="Modifier" aria-label={`Modifier ${ligne.numero}`} onClick={() => onEditer(ligne)}><Pencil size={15} /></button><button className="icon-button hover:bg-rose-50 hover:text-rose-600" title="Supprimer" aria-label={`Supprimer ${ligne.numero}`} onClick={() => onSupprimer(ligne.id)}><Trash2 size={15} /></button></div></td>
                 </tr>
-                {aDetails && ouvert && <tr id={detailId} className={`border-b border-slate-100 bg-brand-50/30 ${horsPage(index) ? 'screen-page-hidden' : ''}`}><td colSpan={8} className="px-5 py-4"><div className="rounded-lg border border-brand-100 bg-white p-3"><div className="mb-2 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold">Détail du bordereau · {ligne.numero}</p><button className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setBordereau(ligne)}>Ouvrir le bordereau imprimable</button></div><table className="w-full text-xs"><thead className="text-left text-[10px] uppercase text-slate-500"><tr><th className="p-2">Poste</th><th className="p-2">Référence / quittance</th><th className="p-2 text-right">Montant</th></tr></thead><tbody>{ligne.lignesDetail!.map(d => <tr key={d.id} className="border-t border-slate-100"><td className="p-2 font-medium">{d.libelle}</td><td className="p-2 font-mono text-slate-500">{d.reference || '—'}</td><td className="p-2 text-right tabular-nums">{formatAr(d.montant)}</td></tr>)}</tbody><tfoot><tr className="border-t border-slate-200 font-semibold"><td colSpan={2} className="p-2">Total {ligne.sens === 'RECETTE' ? 'des recettes' : 'des dépenses'}</td><td className="p-2 text-right tabular-nums">{formatAr(ligne.montant)}</td></tr></tfoot></table></div></td></tr>}
+                {aDetails && ouvert && <tr id={detailId} className={`border-b border-slate-100 bg-brand-50/30 ${horsPage(index) ? 'screen-page-hidden' : ''}`}><td colSpan={8} className="px-5 py-4"><div className="rounded-lg border border-brand-100 bg-white p-3"><div className="mb-2 flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold">Détail du bordereau · {ligne.numero}</p><button className="text-xs font-medium text-brand-700 hover:underline" onClick={() => ouvrirBordereau(ligne)}>Ouvrir le bordereau imprimable</button></div><table className="w-full text-xs"><thead className="text-left text-[10px] uppercase text-slate-500"><tr><th className="p-2">Poste</th><th className="p-2">Référence / quittance</th><th className="p-2 text-right">Montant</th></tr></thead><tbody>{ligne.lignesDetail!.map(d => <tr key={d.id} className="border-t border-slate-100"><td className="p-2 font-medium">{d.libelle}</td><td className="p-2 font-mono text-slate-500">{d.reference || '—'}</td><td className="p-2 text-right tabular-nums">{formatAr(d.montant)}</td></tr>)}</tbody><tfoot><tr className="border-t border-slate-200 font-semibold"><td colSpan={2} className="p-2">Total {ligne.sens === 'RECETTE' ? 'des recettes' : 'des dépenses'}</td><td className="p-2 text-right tabular-nums">{formatAr(ligne.montant)}</td></tr></tfoot></table></div></td></tr>}
               </React.Fragment>;
             })}
           </tbody>
@@ -101,9 +105,9 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     {bordereau && <>
       <ModaleBordereau
         ligne={bordereau}
-        entete={entetes}
-        onModifierEntete={onEnregistrerEntete ? () => ouvrirEntetes(bordereau.sens === 'RECETTE' ? 'recette' : 'depense') : undefined}
-        onFermer={() => { setBordereau(null); setBordereauApresEnregistrement(false); }}
+        entete={enteteCourant}
+        onModifierEntete={onEnregistrerEntete ? () => ouvrirEntetes() : undefined}
+        onFermer={() => { setNumeroBordereau(null); setBordereauApresEnregistrement(false); }}
         imprimerDirectement={bordereauApresEnregistrement}
       />
     </>}
@@ -114,7 +118,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     />}
     {entetesOuverts && onEnregistrerEntete && <EnteteBordereauModal
       entetes={entetes}
-      onEnregistrer={entete => { onEnregistrerEntete(documentEntete, entete); setEntetesOuverts(false); }}
+      onEnregistrer={entete => { onEnregistrerEntete(entete); setEntetesOuverts(false); }}
       onFermer={() => setEntetesOuverts(false)}
     />}
   </>;
