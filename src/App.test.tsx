@@ -126,8 +126,8 @@ describe('parcours de caisse', () => {
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'En-tête' }));
     let modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
-    // L'éditeur n'affiche que la ligne choisie : on sélectionne la deuxième.
-    await user.click(within(modale).getByText('Église / tutelle'));
+    // La feuille est le formulaire : on clique la deuxième ligne pour l'écrire.
+    await user.click(within(modale).getByLabelText(/^Ligne 2/));
     await user.clear(within(modale).getByLabelText('Texte de la ligne 2'));
     await user.type(within(modale).getByLabelText('Texte de la ligne 2'), 'FLM — SYNODE');
     // Une image retirée doit revenir avec la restauration.
@@ -140,7 +140,7 @@ describe('parcours de caisse', () => {
     await user.click(screen.getByRole('button', { name: 'En-tête' }));
     modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     await user.click(within(modale).getByRole('button', { name: /Restaurer l’en-tête fourni/ }));
-    await user.click(within(modale).getByText('Église / tutelle'));
+    await user.click(within(modale).getByLabelText(/^Ligne 2/));
     expect(within(modale).getByLabelText('Texte de la ligne 2')).toHaveValue('(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)');
     expect(modale.querySelectorAll('.entete-feuille__image')).toHaveLength(2);
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));

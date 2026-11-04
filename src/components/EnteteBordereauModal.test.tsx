@@ -93,6 +93,40 @@ describe('éditeur d’en-tête', () => {
     expect(onEnregistrer.mock.calls[0][0].images).toHaveLength(2);
   });
 
+  it('écrit sur la feuille elle-même, sans liste intermédiaire', async () => {
+    const user = userEvent.setup();
+    const { onEnregistrer, modale } = ouvrir();
+
+    // Plus de liste de lignes : la feuille porte directement les champs.
+    expect(modale.querySelectorAll('.entete-ligne')).toHaveLength(enteteParDefaut().lignes.length);
+
+    // On clique la troisième ligne de la feuille et on tape dedans.
+    await user.click(screen.getByLabelText(/^Ligne 3/));
+    const champ = screen.getByLabelText('Texte de la ligne 3');
+    await user.clear(champ);
+    await user.type(champ, 'SYNODE FIHERENANA{Enter}');
+    // Entrée ouvre la ligne suivante, déjà prête à recevoir le texte.
+    expect(screen.getByLabelText('Texte de la ligne 4')).toHaveFocus();
+    await user.type(screen.getByLabelText('Texte de la ligne 4'), 'NOUVELLE LIGNE');
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer l’en-tête' }));
+    const lignes = onEnregistrer.mock.calls[0][0].lignes;
+    expect(lignes[2].texte).toBe('SYNODE FIHERENANA');
+    expect(lignes[3].texte).toBe('NOUVELLE LIGNE');
+  });
+
+  it('met en forme la ligne ouverte depuis la barre de la feuille', async () => {
+    const user = userEvent.setup();
+    const { onEnregistrer } = ouvrir();
+
+    await user.click(screen.getByLabelText(/^Ligne 4/));
+    await user.selectOptions(screen.getByLabelText('Police'), 'Georgia');
+    await user.click(screen.getByRole('button', { name: 'Centrer' }));
+    await user.click(screen.getByRole('button', { name: 'Enregistrer l’en-tête' }));
+
+    expect(onEnregistrer.mock.calls[0][0].lignes[3]).toMatchObject({ police: 'Georgia', alignement: 'centre' });
+  });
+
   it('refuse un en-tête dont toutes les lignes sont vides', async () => {
     const user = userEvent.setup();
     const { onEnregistrer } = ouvrir();
