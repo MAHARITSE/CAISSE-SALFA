@@ -53,7 +53,7 @@ describe('calculs du livre', () => {
     let donnees = enregistrerEcriture(livreTest({ parametres: parametresTest({ soldeInitial: 1000 }) }), ecritureTest({ montant: 5000 }));
     donnees = enregistrerEcriture(donnees, ecritureTest({ id: 'e-dep', numero: 'DP-2026-0001', sens: 'DEPENSE', categorie: 'Divers', montant: 2000 }));
     expect(soldeCloture(donnees)).toBe(4000);
-    donnees = cloturerExercice(donnees, '2026-12-31T18:00:00.000Z');
+    donnees = cloturerExercice(donnees, '2027-01-01T09:00:00.000Z');
     expect(donnees.ecritures).toEqual([]);
     expect(donnees.parametres).toEqual({ soldeInitial: 4000, exercice: 2027, reportPrecedent: { annee: 2026, solde: 4000 } });
     expect(donnees.exercicesClotures).toHaveLength(1);
@@ -63,8 +63,12 @@ describe('calculs du livre', () => {
     // L'exercice suivant numérote dans sa propre année, sans réutiliser ceux de l'archive.
     expect(prochainNumero(donnees, 'RECETTE', '2027-01-05')).toBe('RC-2027-0001');
     expect(() => enregistrerEcriture(donnees, ecritureTest({ date: '2026-12-31' }))).toThrow('exercice 2027 ouvert');
+    // Une année en cours ne se clôture pas : la clôture doit être postérieure au 31 décembre.
+    expect(() => cloturerExercice(livreTest({ parametres: parametresTest({ exercice: 2026 }) }), '2026-12-31T23:59:59.000Z'))
+      .toThrow('1er janvier 2027');
+    expect(() => cloturerExercice(livreTest(), '2026-06-15T10:00:00.000Z')).toThrow('année révolue');
     // Une seconde clôture ouvre 2028 sans réécrire l'archive 2026.
-    const seconde = cloturerExercice(donnees, '2027-12-31T18:00:00.000Z');
+    const seconde = cloturerExercice(donnees, '2028-01-02T09:00:00.000Z');
     expect(seconde.exercicesClotures.map(c => c.annee)).toEqual([2026, 2027]);
     expect(seconde.exercicesClotures[0]).toEqual(archive);
     expect(seconde.parametres.exercice).toBe(2028);

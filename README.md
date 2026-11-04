@@ -76,6 +76,9 @@ garder les versions verrouillées par `package-lock.json`.
 - **Un exercice = une année civile.** Le livre en cours ne contient que les
   écritures de l’année ouverte ; les années précédentes sont des archives
   figées, consultables et exportables, mais non modifiables.
+- **Impossible de clôturer une année encore en cours.** La clôture n’est
+  autorisée qu’à partir du **1er janvier suivant** : pendant l’année, le bouton
+  reste désactivé et indique la date d’ouverture de la clôture.
 - **La clôture est explicite.** Elle télécharge d’abord une sauvegarde complète,
   archive les écritures, reporte le solde en solde d’ouverture de l’année
   suivante et remet la saisie à zéro. L’opération est irréversible.
@@ -84,6 +87,8 @@ garder les versions verrouillées par `package-lock.json`.
   refusée, jamais décalée.
 - Si la nouvelle année a commencé sans clôture, une bannière le signale : les
   saisies restent bloquées sur l’année ouverte jusqu’à la clôture.
+- Une clôture demandée avant l’échéance est refusée côté métier **et** côté
+  interface : aucune archive ne peut être créée par anticipation.
 - L’application ne gère qu’un seul mode de paiement : **les espèces**. Le champ
   n’est plus demandé à la saisie ; les écritures anciennes qui portent un autre
   mode restent lisibles telles quelles jusqu’à leur modification.

@@ -160,6 +160,27 @@ describe('parcours de caisse', () => {
     expect(localStorage.getItem(CLE_ECRITURES)).toBeTruthy();
   });
 
+  it('interdit de clôturer l’année en cours : la clôture n’est ouverte qu’au 1er janvier suivant', async () => {
+    const user = userEvent.setup();
+    const annee = new Date().getFullYear();
+    sauvegarderLivre(livreTest(enregistrerEcriture(livreTest(), ecritureTest({ date: `${annee}-03-01` }))), 0);
+    render(<App />);
+    // Aucune bannière de retard : l'année est encore en cours.
+    expect(screen.queryByText(`L’exercice ${annee} doit être clôturé.`)).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Exercices & clôtures' })[0]);
+    expect(screen.getByText(`À partir du 1er janvier ${annee + 1}`)).toBeInTheDocument();
+    // Le bouton est désactivé : aucun dialogue de clôture ne peut s'ouvrir.
+    const bouton = screen.getByRole('button', { name: `Clôturer l’exercice ${annee}` });
+    expect(bouton).toBeDisabled();
+    await user.click(bouton);
+    expect(screen.queryByRole('dialog', { name: `Clôturer l’exercice ${annee} ?` })).not.toBeInTheDocument();
+    expect(screen.getByText(`Clôture possible à partir du 1er janvier ${annee + 1}, une fois l’année révolue.`)).toBeInTheDocument();
+    const stocke = lire();
+    expect(stocke.parametres.exercice).toBe(annee);
+    expect(stocke.ecritures).toHaveLength(1);
+    expect(stocke.exercicesClotures).toHaveLength(0);
+  });
+
   it('clôture l’exercice, reporte le solde et bloque toute saisie sur l’année close', async () => {
     const user = userEvent.setup();
     const annee = new Date().getFullYear();

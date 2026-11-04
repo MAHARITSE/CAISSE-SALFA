@@ -37,6 +37,9 @@ export function soldeCloture(donnees: DonneesCaisse): number {
 export function cloturerExercice(donnees: DonneesCaisse, clotureLe = new Date().toISOString()): DonneesCaisse {
   const soldeInitial = donnees.parametres.soldeInitial;
   const exercice = donnees.parametres.exercice ?? new Date().getFullYear();
+  // Une année ne se clôture qu'une fois révolue : pas de clôture anticipée en cours d'année.
+  exiger(anneeDe(clotureLe) > exercice,
+    `L’exercice ${exercice} ne peut être clôturé qu’à partir du 1er janvier ${exercice + 1}, une fois l’année révolue.`);
   // Un même exercice ne peut être clôturé qu'une fois : on ne réécrit jamais une archive.
   exiger(!donnees.exercicesClotures.some(c => c.annee === exercice),
     `L’exercice ${exercice} est déjà clôturé : ses écritures ne comptent plus dans le livre.`);
@@ -108,6 +111,12 @@ export function migrerExercicesLegacy(livre: Sauvegarde, anneeCourante: number):
       ? `Vos données couvraient plusieurs années : les exercices ${nouvelles.map(a => a.annee).join(', ')} ont été clôturés automatiquement et archivés. L’exercice ${cible} est maintenant ouvert. Vérifiez l’onglet « Exercices & clôtures » puis téléchargez une sauvegarde.`
       : null,
   };
+}
+
+/** Une clôture n'est possible qu'à partir du 1er janvier suivant l'exercice. */
+export function clotureAutorisee(exercice: number, aujourdHui = new Date()): boolean {
+  const a = aujourdHui.getFullYear();
+  return a > exercice;
 }
 
 export function exigerAnnee(annee: number): void {

@@ -36,6 +36,9 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
 - Clôture annuelle : archive figée de l’exercice, solde reporté, exercice
   suivant vide, blocage des saisies hors exercice, onglet Exercices & clôtures,
   export d’une archive autonome et conversion des livres multi-années.
+- Clôture interdite tant que l’année n’est pas révolue : autorisée seulement à
+  partir du 1er janvier suivant, bouton désactivé et règle vérifiée avant toute
+  écriture de l’archive.
 - Analyse par catégorie et ratio dépenses/recettes.
 - Filtres par catégorie, recherche insensible aux accents.
 - Mode de paiement retiré de l’interface et des exports : la caisse ne traite que
@@ -50,9 +53,10 @@ saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’
 ## Vérifications effectuées
 
 - `npm run lint` : TypeScript strict, paramètres et locaux inutilisés refusés.
-- `npm test` : **40 tests** unitaires et d’intégration passés.
-- `npm run test:e2e` : **5 parcours Chromium** passés (desktop, mobile,
-  multi-onglets, clôture annuelle, conversion d’un livre multi-années), incluant saisie détaillée, persistance, CSV,
+- `npm test` : **41 tests** unitaires et d’intégration passés.
+- `npm run test:e2e` : **6 parcours Chromium** passés (desktop, mobile,
+  multi-onglets, clôture annuelle, conversion d’un livre multi-années, refus de
+  clôture d’une année en cours), incluant saisie détaillée, persistance, CSV,
   bordereau, impression, focus modal et absence de débordement mobile.
 - `npm run build` : build de production réussi.
 - `npm audit --omit=dev` : **0 vulnérabilité connue** sur les dépendances de

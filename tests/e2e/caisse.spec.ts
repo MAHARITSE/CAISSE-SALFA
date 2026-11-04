@@ -181,3 +181,21 @@ test('livre antérieur multi-années : converti sans perte et signalé', async (
   await page.getByRole('button', { name: 'Exercices & clôtures' }).click();
   await expect(page.getByRole('table').getByText(String(annee - 2), { exact: true })).toBeVisible();
 });
+
+test('clôture refusée tant que l’année est en cours', async ({ page }) => {
+  const annee = new Date().getFullYear();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Exercices & clôtures' }).click();
+  await expect(page.getByText(`À partir du 1er janvier ${annee + 1}`, { exact: true })).toBeVisible();
+  // Bouton volontairement désactivé : la clôture ne peut pas être demandée.
+  await expect(page.getByRole('button', { name: `Clôturer l’exercice ${annee}` })).toBeDisabled();
+  await expect(page.getByRole('dialog', { name: `Clôturer l’exercice ${annee} ?` })).toHaveCount(0);
+  await expect(page.getByText(`Clôture possible à partir du 1er janvier ${annee + 1}, une fois l’année révolue.`)).toBeVisible();
+  // Aucune clôture n'a été enregistrée (un livre neuf n'est même pas encore écrit).
+  const stocke = await page.evaluate(() => localStorage.getItem('salfa_tresorerie_livre_v2'));
+  if (stocke) {
+    const livre = JSON.parse(stocke);
+    expect(livre.parametres.exercice).toBe(annee);
+    expect(livre.exercicesClotures).toHaveLength(0);
+  }
+});
