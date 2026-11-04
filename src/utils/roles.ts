@@ -86,3 +86,16 @@ export function resumeDroits(role: Role | string): string {
   };
   return onglets.map(o => noms[o]).join(' · ');
 }
+
+/**
+ * Le solde d'ouverture est le point de départ de tous les soldes : une seule
+ * personne le corrige, l'administrateur. Le serveur applique la même règle.
+ */
+export function peutModifierSoldeOuverture(role: Role | string): boolean {
+  return role === 'admin';
+}
+
+/** La clôture d'exercice engage toute la caisse : elle aussi réservée à l'admin. */
+export function peutCloturer(role: Role | string): boolean {
+  return role === 'admin';
+}

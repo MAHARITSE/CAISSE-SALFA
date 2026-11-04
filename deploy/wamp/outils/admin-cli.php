@@ -111,9 +111,9 @@ if (mb_strlen($motDePasse) < 8) {
 }
 echo '  Nom complet [Administrateur] : ';
 $nom = trim((string) fgets(STDIN)) ?: 'Administrateur';
-echo "  Rôle (admin/caissier/lecteur) [admin] : ";
+echo "  Rôle (admin/caissier/comptable) [admin] : ";
 $role = strtolower(trim((string) fgets(STDIN))) ?: 'admin';
-if (!in_array($role, ['admin', 'caissier', 'lecteur'], true)) {
+if (!in_array($role, ['admin', 'caissier', 'comptable'], true)) {
     fwrite(STDERR, "  Rôle invalide.\n");
     exit(1);
 }

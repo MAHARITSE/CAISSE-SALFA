@@ -107,11 +107,29 @@ il indique le nombre de tables présentes, l'état du livre et celui des comptes
 
 ## 5. Comptes et rôles
 
-| Rôle | Consulter / exporter | Saisir, modifier, supprimer | Clôturer, solde d'ouverture, restaurer |
-| --- | --- | --- | --- |
-| `lecteur` | oui | non | non |
-| `caissier` | oui | oui | non |
-| `admin` | oui | oui | oui |
+| Rôle | Pages ouvertes | Consulter / exporter | Saisir | Solde d'ouverture, clôture, restauration, Administration |
+| --- | --- | --- | --- | --- |
+| `comptable` | livre journal, analyse | oui | non | non |
+| `caissier` | livre journal | oui | oui | non |
+| `admin` | tout | oui | oui | oui |
+
+**Le solde d'ouverture n'est modifiable que par l'administrateur.** Le crayon de
+la synthèse disparaît pour les autres rôles (« Lecture seule »), et le serveur
+refuse de toute façon l'écriture `solde-initial` à quiconque n'est pas `admin` :
+l'interface ne fait que refléter une règle déjà tenue en base.
+
+### Base déjà installée (rôles ajoutés après coup)
+
+L'ancien rôle `lecteur` devient `comptable`. Sur une base existante, exécutez
+une fois :
+
+```
+mysql -u root -p salfa < sql/salfa_roles.sql
+```
+
+ou, via phpMyAdmin : base `caisse_salfa` > onglet **Importer** > `salfa_roles.sql`.
+Le script est idempotent, convertit les comptes `lecteur`, resserre l'ENUM sur
+les trois rôles et contrôle qu'il reste au moins un administrateur actif.
 
 - `outils\creer-admin.bat` crée un compte ou réinitialise un mot de passe.
 - Session : cookie `HttpOnly`, expiration après 12 h ou 30 min d'inactivité.

@@ -14,7 +14,7 @@ require __DIR__ . '/../socle.php';
 salfa_point('categories', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
-    return salfa_mutation('caissier', 'categories', function (array $corps): string {
+    return salfa_mutation('admin', 'categories', function (array $corps): string {
         $sens = $corps['sens'] ?? null;
         if (!is_string($sens) || !in_array($sens, ['RECETTE', 'DEPENSE'], true)) {
             throw new SalFaErreur('Sens attendu : « RECETTE » ou « DEPENSE ».', 400, 'sens_invalide');

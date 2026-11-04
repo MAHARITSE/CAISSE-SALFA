@@ -10,6 +10,6 @@ require __DIR__ . '/../socle.php';
 salfa_point('sauvegarde', function (): array {
     salfa_exiger_methode('GET');
     salfa_demarrer_session();
-    salfa_exiger_role('lecteur');
+    salfa_exiger_role('comptable');
     return ['ok' => true, 'sauvegarde' => salfa_charger_livre(), 'exportedAt' => gmdate('c')];
 });

@@ -125,7 +125,9 @@ CREATE TABLE IF NOT EXISTS salfa_utilisateurs (
   identifiant VARCHAR(80) NOT NULL,
   nom_complet VARCHAR(120) NOT NULL,
   mdp_hash VARCHAR(255) NOT NULL,
-  role ENUM('lecteur','caissier','admin') NOT NULL DEFAULT 'caissier',
+  -- Rôles : admin (tout), caissier (livre journal), comptable (journal + analyse).
+  -- L'ancien « lecteur » est ramené à « comptable » par salfa_roles.sql.
+  role ENUM('comptable','caissier','admin') NOT NULL DEFAULT 'caissier',
   actif TINYINT(1) NOT NULL DEFAULT 1,
   derniere_connexion DATETIME(3) NULL,
   cree_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),

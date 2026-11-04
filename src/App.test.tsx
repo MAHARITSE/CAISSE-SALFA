@@ -22,7 +22,8 @@ async function ouvrirSession(user: ReturnType<typeof userEvent.setup>, identifia
   await user.type(screen.getByLabelText('Identifiant'), identifiant);
   await user.type(screen.getByLabelText('Mot de passe'), motDePasse);
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));
-  await screen.findByRole('heading', { name: 'Livre de caisse' });
+  // `findAllBy` : l'écran précédent peut n'être pas encore démonté.
+  expect((await screen.findAllByRole('heading', { name: 'Livre de caisse' })).length).toBeGreaterThan(0);
 }
 
 /** Les réglages (modèles, catégories, en-tête) vivent dans la page Administration. */
@@ -390,6 +391,27 @@ describe('parcours de caisse', () => {
     expect(screen.queryByRole('button', { name: 'Administration' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
     expect(screen.getByText(/Consultation seule/)).toBeInTheDocument();
+  });
+
+  it('réserve la modification du solde d’ouverture à l’administrateur', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    // L'administrateur voit le crayon.
+    await ouvrirSession(user);
+    expect(screen.getByRole('button', { name: 'Modifier le solde d’ouverture du livre' })).toBeInTheDocument();
+    unmount();
+
+    // Le comptable lit le solde, sans pouvoir y toucher.
+    render(<App />);
+    await ouvrirSession(user, 'comptable', 'compta1234');
+    expect(screen.queryByRole('button', { name: 'Modifier le solde d’ouverture du livre' })).not.toBeInTheDocument();
+    expect(screen.getByText('Lecture seule')).toBeInTheDocument();
+    unmount();
+
+    // La caissière non plus.
+    render(<App />);
+    await ouvrirSession(user, 'caisse', 'caisse1234');
+    expect(screen.queryByRole('button', { name: 'Modifier le solde d’ouverture du livre' })).not.toBeInTheDocument();
   });
 
   it('interdit de clôturer l’année en cours : la clôture n’est ouverte qu’au 1er janvier suivant', async () => {
