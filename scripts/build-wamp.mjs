@@ -35,14 +35,24 @@ cpSync(dist, join(cible, 'frontend'), { recursive: true });
 /** Vérification finale : le paquet doit être autonome. */
 const obligatoires = [
   'frontend/index.html',
-  'api/index.php',
+  'api/socle.php',
+  'api/points/livre.php',
+  'api/points/sante.php',
+  'api/points/cloture.php',
   'api/config.php',
   'sql/salfa_install.sql',
   'outils/installer.bat',
+  'outils/verifier.bat',
   '.htaccess',
-  'install.php',
 ];
 const manquants = obligatoires.filter(f => !existsSync(join(cible, f)));
+// Aucun point d'entrée PHP monolithique ne doit subsister.
+const interdits = ['api/index.php', 'install.php'];
+const restants = interdits.filter(f => existsSync(join(cible, f)));
+if (restants.length) {
+  console.error('Fichiers à supprimer du paquet :', restants.join(', '));
+  process.exit(1);
+}
 const fichiers = (d) => readdirSync(d).reduce((n, f) => {
   const p = join(d, f);
   return n + (statSync(p).isDirectory() ? fichiers(p) : 1);

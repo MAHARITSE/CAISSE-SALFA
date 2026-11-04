@@ -4,36 +4,29 @@
 Options -Indexes
 DirectoryIndex index.html
 
+# L'application est une page statique : toute URL inconnue affiche index.html.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /caisse-salfa/
 
-  # API : /api/... -> /api/index.php?r=...
-  RewriteCond %{REQUEST_URI} ^/caisse-salfa/api/ [NC]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^api/(.*)$ api/index.php?r=$1 [QSA,L]
-
-  # Application monopage : toute autre URL renvoie index.html.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# Le frontend est statique : pas de cache long sur index.html, cache sur les assets.
-<IfModule mod_expires.c>
-  ExpiresActive On
-  ExpiresByType text/css "access plus 1 year"
-  ExpiresByType application/javascript "access plus 1 year"
-  ExpiresByType image/svg+xml "access plus 1 month"
-</IfModule>
-
+# Les fichiers d'API doivent toujours être rechargés (jamais mis en cache).
 <IfModule mod_headers.c>
-  Header always set X-Content-Type-Options "nosniff"
+  <FilesMatch "\.php$">
+    Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header always set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+  <FilesMatch "\.(css|js)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
   Header always set Referrer-Policy "same-origin"
 </IfModule>
 
-# Fichiers sensibles jamais servis en clair.
+# Secrets, sauvegardes SQL et journaux : jamais servis en clair.
 <FilesMatch "^(salfa-config\.php|.*\.sql|.*\.log|admin-cree\.txt|connexion-bootstrap\.php)$">
   <IfModule mod_authz_core.c>
     Require all denied

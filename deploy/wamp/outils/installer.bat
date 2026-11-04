@@ -48,7 +48,6 @@ if errorlevel 8 (
   goto echec
 )
 copy /Y "%DEPLOY%\.htaccess" "%CIBLE%\.htaccess" >nul
-copy /Y "%DEPLOY%\install.php" "%CIBLE%\install.php" >nul
 echo   Frontend et API copies.
 
 echo.
@@ -93,9 +92,8 @@ echo.
 echo [7/7] Termine.
 echo.
 echo   Ouvrez : http://localhost/caisse-salfa/
-echo   Installation : http://localhost/caisse-salfa/install.php
+echo   Controle API : http://localhost/caisse-salfa/api/points/sante.php
 echo.
-echo   Pensez a supprimer install.php et api\connexion-bootstrap.php
 echo   une fois la mise en service terminee.
 exit /b 0
 

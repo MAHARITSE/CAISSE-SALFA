@@ -54,17 +54,19 @@ function baseApi(): string {
 }
 
 /**
- * Envoie une requête à l'API.
- *
- * Si `mod_rewrite` est désactivé sur le serveur, `api/livre` renvoie la page 404
- * d'Apache : la requête est rejouée une fois sous la forme `api/index.php?r=livre`,
- * ce qui fonctionne partout.
+ * Un point d'API = un fichier réel : api/livre.php, api/cloture.php…
+ * Aucun index.php ni réécriture d'URL n'est nécessaire.
  */
-async function appeler<T>(route: string, options: { methode?: 'GET' | 'POST'; corps?: unknown } = {}, repli = true): Promise<T> {
+function urlPoint(route: string): string {
+  return baseApi() + route + '.php';
+}
+
+/** Envoie une requête à un fichier d'API et normalise les erreurs. */
+async function appeler<T>(route: string, options: { methode?: 'GET' | 'POST'; corps?: unknown } = {}): Promise<T> {
   const methode = options.methode ?? 'GET';
   let reponse: Response;
   try {
-    reponse = await fetch(baseApi() + route, {
+    reponse = await fetch(urlPoint(route), {
       method: methode,
       credentials: 'same-origin',
       headers: methode === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
@@ -79,21 +81,15 @@ async function appeler<T>(route: string, options: { methode?: 'GET' | 'POST'; co
     );
   }
 
-  if (repli && (reponse.status === 404 || reponse.status === 405)) {
-    const type = reponse.headers.get('content-type') ?? '';
-    if (!type.includes('application/json')) {
-      if (methode === 'GET') return appeler<T>(`index.php?r=${encodeURIComponent(route)}`, options, false);
-      // Les routes POST gardent leur route en query : index.php?r=ecritures.
-      return appeler<T>(`index.php?r=${encodeURIComponent(route)}`, options, false);
-    }
-  }
-
   let charge: unknown = null;
   try { charge = await reponse.json(); }
   catch {
+    // Page 404 d'Apache, erreur PHP en HTML, mauvais dossier… : message actionnable.
     throw new ErreurApi(
-      `Le serveur a répondu de façon inattendue (HTTP ${reponse.status}). Consultez les journaux PHP de WAMP.`,
-      'reponse_invalide',
+      reponse.status === 404
+        ? `Le fichier d’API « api/${route}.php » est introuvable sur le serveur. Vérifiez que tout le dossier api a bien été copié.`
+        : `Le serveur a répondu de façon inattendue (HTTP ${reponse.status}). Consultez les journaux PHP de WAMP.`,
+      reponse.status === 404 ? 'point_absent' : 'reponse_invalide',
       reponse.status,
     );
   }
@@ -140,9 +136,9 @@ export const mutations = {
   ecriture: (revision: number, ecriture: Ecriture) =>
     appeler<{ livre: Sauvegarde }>('ecritures', { methode: 'POST', corps: { revision, ecriture } }),
   supprimer: (revision: number, id: string) =>
-    appeler<{ livre: Sauvegarde }>('ecritures/supprimer', { methode: 'POST', corps: { revision, id } }),
+    appeler<{ livre: Sauvegarde }>('ecritures-supprimer', { methode: 'POST', corps: { revision, id } }),
   restaurerEcriture: (revision: number, ecriture: Ecriture) =>
-    appeler<{ livre: Sauvegarde }>('ecritures/restaurer', { methode: 'POST', corps: { revision, ecriture } }),
+    appeler<{ livre: Sauvegarde }>('ecritures-restaurer', { methode: 'POST', corps: { revision, ecriture } }),
   masques: (revision: number, masques: MasqueSaisie[]) =>
     appeler<{ livre: Sauvegarde }>('masques', { methode: 'POST', corps: { revision, masques } }),
   soldeInitial: (revision: number, soldeInitial: number) =>

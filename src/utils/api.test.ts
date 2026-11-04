@@ -26,7 +26,7 @@ describe('client de l’API WAMP', () => {
   it('charge le livre depuis le serveur', async () => {
     fetchMock.mockResolvedValueOnce(reponseJson({ ok: true, livre }));
     await expect(chargerLivreApi()).resolves.toMatchObject({ format: 'CAISSE-SALFA' });
-    expect(String(fetchMock.mock.calls[0][0])).toMatch(/api\/livre$/);
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/api\/livre\.php$/);
   });
 
   it('transmet la révision attendue avec chaque mutation', async () => {
@@ -37,12 +37,23 @@ describe('client de l’API WAMP', () => {
     expect(JSON.parse(String(options.body))).toMatchObject({ revision: livre.revision, ecriture: { id: ecriture.id } });
   });
 
-  it('rejoue la requête avec index.php quand Apache renvoie une page 404', async () => {
-    fetchMock
-      .mockResolvedValueOnce(reponseHtml404())
-      .mockResolvedValueOnce(reponseJson({ ok: true, livre }));
-    await expect(chargerLivreApi()).resolves.toMatchObject({ revision: livre.revision });
-    expect(String(fetchMock.mock.calls[1][0])).toMatch(/api\/index\.php\?r=livre$/);
+  it('appelle un fichier réel par point d’API, sans index.php', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(reponseJson({ ok: true, livre })));
+    await chargerLivreApi();
+    await mutations.cloture(3, {});
+    await mutations.supprimer(4, 'e-1');
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls).toEqual([
+      expect.stringMatching(/api\/livre\.php$/),
+      expect.stringMatching(/api\/cloture\.php$/),
+      expect.stringMatching(/api\/ecritures-supprimer\.php$/),
+    ]);
+    expect(urls.join(' ')).not.toContain('index.php');
+  });
+
+  it('explique un fichier d’API absent au lieu d’une erreur générique', async () => {
+    fetchMock.mockResolvedValue(reponseHtml404());
+    await expect(chargerLivreApi()).rejects.toMatchObject({ code: 'point_absent', statut: 404 });
   });
 
   it('reprend le message du serveur en cas de conflit de révision', async () => {
