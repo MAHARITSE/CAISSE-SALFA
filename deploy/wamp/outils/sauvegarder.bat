@@ -1,34 +1,28 @@
 @echo off
 REM ============================================================
-REM  CAISSE SALFA - sauvegarde MySQL (dump quotidien manuel ou planifie)
-REM  Sortie : deploy\wamp\sauvegardes\caisse_AAAA-MM-JJ_HH-MM.sql
+REM  CAISSE SALFA - sauvegarde MySQL datee
+REM  Sortie : data\sauvegardes\caisse_AAAA-MM-JJ_HH-MM.sql
 REM ============================================================
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
 chcp 65001 >nul
-cd /d "%~dp0.."
+set "RACINE=%~dp0.."
+call "%~dp0_wamp.bat"
+if errorlevel 1 exit /b 1
 
-set "DEPLOY=%~dp0.."
-set "WAMP=C:\wamp64"
-if exist "C:\wamp\www" if not exist "%WAMP%\www" set "WAMP=C:\wamp"
-set "MYSQL=%WAMP%\bin\mysql\mysql.exe"
-set "DUMP=%WAMP%\bin\mysql\mysqldump.exe"
-set "SORTIE=%DEPLOY%\sauvegardes"
-
-if not exist "%MYSQL%" set "MYSQL=mysqldump"
-if not exist "%DUMP%" set "DUMP=mysqldump"
-
-if not exist "%SORTIE%" mkdir "%SORTIE%"
-for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set "D=%%I"
-set "DATE=%D:~0,4%-%D:~4,2%-%D:~6,2%_%D:~8,2%-%D:~10,2%"
-set "FICHIER=%SORTIE%\caisse_%DATE%.sql"
-
-echo Sauvegarde de la base caisse_salfa...
-"%DUMP%" -h 127.0.0.1 -u root --single-transaction --routines --default-character-set=utf8mb4 caisse_salfa > "%FICHIER%"
-if errorlevel 1 (
-  echo   Echec : verifiez que WAMP est demarre et que mysqldump est accessible.
-  echo   Adaptez MYSQL/DUMP et le mot de passe dans ce script si necessaire.
+set "DUMP="
+for /f "delims=" %%D in ('dir /b /o-n "%WAMP%\bin\mysql\mysql*\mysqldump.exe" 2^>nul') do if not defined DUMP set "DUMP=%WAMP%\bin\mysql\%%D\mysqldump.exe"
+if not defined DUMP (
+  echo   ERREUR : mysqldump.exe introuvable sous %WAMP%\bin\mysql
   exit /b 1
 )
-echo   Fichier cree : %FICHIER%
-echo   Copiez-le vers un emplacement sur, hors du serveur.
+if not exist "%CIBLE%\data\sauvegardes" mkdir "%CIBLE%\data\sauvegardes"
+for /f "tokens=1-3 delims=/-. " %%a in ('echo %DATE%') do set "JOUR=%%a-%%b-%%c"
+set "HEURE=%TIME:~0,2%-%TIME:~3,2%"
+set "HEURE=%HEURE: =0%"
+set "FICHIER=%CIBLE%\data\sauvegardes\caisse_%JOUR%_%HEURE%.sql"
+
+"%PHP%" "%RACINE%\outils\sauvegarde-cli.php" "%CIBLE%" "%DUMP%" "%FICHIER%"
+if errorlevel 1 exit /b 1
+echo   Sauvegarde ecrite : %FICHIER%
+echo   Copiez ce fichier hors du serveur (cle USB, disque reseau).
 exit /b 0

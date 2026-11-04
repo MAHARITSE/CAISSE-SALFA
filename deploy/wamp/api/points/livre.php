@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('livre', function (): array {
+salfa_point('livre', function (): array {
     salfa_exiger_methode('GET');
     salfa_demarrer_session();
     salfa_utilisateur_courant();

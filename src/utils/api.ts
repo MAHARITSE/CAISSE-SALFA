@@ -54,11 +54,11 @@ function baseApi(): string {
 }
 
 /**
- * Un point d'API = un fichier réel : api/livre.php, api/cloture.php…
- * Aucun index.php ni réécriture d'URL n'est nécessaire.
+ * Aiguillage unique : api/index.php?action=livre.
+ * Chaque action est aussi appelable en direct (api/livre.php) pour le diagnostic.
  */
 function urlPoint(route: string): string {
-  return baseApi() + route + '.php';
+  return `${baseApi()}index.php?action=${encodeURIComponent(route)}`;
 }
 
 /** Envoie une requête à un fichier d'API et normalise les erreurs. */
@@ -87,7 +87,7 @@ async function appeler<T>(route: string, options: { methode?: 'GET' | 'POST'; co
     // Page 404 d'Apache, erreur PHP en HTML, mauvais dossier… : message actionnable.
     throw new ErreurApi(
       reponse.status === 404
-        ? `Le fichier d’API « api/${route}.php » est introuvable sur le serveur. Vérifiez que tout le dossier api a bien été copié.`
+        ? 'L’API est introuvable : vérifiez que le dossier api a bien été copié à côté de index.html.'
         : `Le serveur a répondu de façon inattendue (HTTP ${reponse.status}). Consultez les journaux PHP de WAMP.`,
       reponse.status === 404 ? 'point_absent' : 'reponse_invalide',
       reponse.status,

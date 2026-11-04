@@ -26,7 +26,7 @@ describe('client de l’API WAMP', () => {
   it('charge le livre depuis le serveur', async () => {
     fetchMock.mockResolvedValueOnce(reponseJson({ ok: true, livre }));
     await expect(chargerLivreApi()).resolves.toMatchObject({ format: 'CAISSE-SALFA' });
-    expect(String(fetchMock.mock.calls[0][0])).toMatch(/api\/livre\.php$/);
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/api\/index\.php\?action=livre$/);
   });
 
   it('transmet la révision attendue avec chaque mutation', async () => {
@@ -37,18 +37,17 @@ describe('client de l’API WAMP', () => {
     expect(JSON.parse(String(options.body))).toMatchObject({ revision: livre.revision, ecriture: { id: ecriture.id } });
   });
 
-  it('appelle un fichier réel par point d’API, sans index.php', async () => {
+  it('passe par l’aiguillage api/index.php avec le nom de l’action', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(reponseJson({ ok: true, livre })));
     await chargerLivreApi();
     await mutations.cloture(3, {});
     await mutations.supprimer(4, 'e-1');
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls).toEqual([
-      expect.stringMatching(/api\/livre\.php$/),
-      expect.stringMatching(/api\/cloture\.php$/),
-      expect.stringMatching(/api\/ecritures-supprimer\.php$/),
+      expect.stringMatching(/api\/index\.php\?action=livre$/),
+      expect.stringMatching(/api\/index\.php\?action=cloture$/),
+      expect.stringMatching(/api\/index\.php\?action=ecritures-supprimer$/),
     ]);
-    expect(urls.join(' ')).not.toContain('index.php');
   });
 
   it('explique un fichier d’API absent au lieu d’une erreur générique', async () => {

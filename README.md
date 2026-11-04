@@ -10,8 +10,9 @@ Deux modes, un seul code source :
 | **local** (par défaut) | stockage du navigateur | poste isolé, démonstration, tests |
 | **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
 
-Le mode serveur est produit par `npm run build:wamp` : frontend compilé + API
-PHP/MySQL, **sans aucun Node.js sur le serveur**. Voir `deploy/wamp/INSTALLATION.md`.
+Le mode serveur est produit par `npm run build:wamp` : `index.html` compilé à la
+racine du paquet, API PHP/MySQL, dossier `data/` privé et scripts `.bat` —
+**sans aucun Node.js sur le serveur**. Voir `deploy/wamp/INSTALLATION.md`.
 
 ## Démarrer
 
@@ -27,7 +28,7 @@ npm run check      # lint + tests + build
 Paquet de déploiement Windows/WAMP (frontend compilé + API PHP + scripts `.bat`) :
 
 ```bash
-npm run build:wamp     # compile en mode API et remplit deploy/wamp/frontend
+npm run build:wamp     # compile en mode API et remplit deploy/wamp (index.html racine)
 ```
 
 Tests dans un vrai navigateur (Chromium) :

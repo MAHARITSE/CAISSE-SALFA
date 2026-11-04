@@ -1,103 +1,43 @@
 @echo off
 REM ============================================================
-REM  CAISSE SALFA - installation WAMP / MySQL
-REM  A executer depuis Windows, WAMP demarre (icone verte).
-REM  Aucun Node.js necessaire : le frontend est deja compile.
+REM  CAISSE SALFA - installation dans WAMP
+REM  Copie le site puis prepare MySQL, les tables et le compte admin.
+REM  Aucun Node.js n'est necessaire sur le serveur.
 REM ============================================================
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
 chcp 65001 >nul
-cd /d "%~dp0.."
-
-set "DEPLOY=%~dp0.."
-set "WAMP=C:\wamp64"
-if exist "C:\wamp\www" if not exist "%WAMP%\www" set "WAMP=C:\wamp"
-set "WAMP_PHP=%WAMP%\bin\php\php.exe"
-set "CIBLE=%WAMP%\www\caisse-salfa"
-
-echo ============================================================
-echo   CAISSE SALFA - installation dans WAMP
-echo   Source : %DEPLOY%
-echo   Cible  : %CIBLE%
-echo ============================================================
-echo.
-
-echo [1/7] Verification de WAMP...
-if exist "%WAMP%\www" goto wamp_ok
-echo   ERREUR : dossier WAMP introuvable.
-echo   Adaptez la variable WAMP dans ce script, puis relancez.
-goto echec
-:wamp_ok
-echo   WAMP detecte dans %WAMP%
-if exist "%WAMP_PHP%" goto php_ok
-echo   ERREUR : php.exe introuvable dans %WAMP%\bin\php.
-echo   Installez un serveur PHP via les addons WAMP, puis relancez.
-goto echec
-:php_ok
+set "RACINE=%~dp0.."
+call "%~dp0_wamp.bat"
+if errorlevel 1 goto echec
 
 echo.
-echo [2/7] Copie de l'application (frontend compile + API)...
-if not exist "%CIBLE%" mkdir "%CIBLE%" 2>nul
-robocopy "%DEPLOY%\frontend" "%CIBLE%" /E /NFL /NDL /NJH /NJS /NP >nul
+echo [1/3] Copie du site vers %CIBLE%
+if not exist "%CIBLE%" mkdir "%CIBLE%"
+robocopy "%RACINE%" "%CIBLE%" /E /XD "%RACINE%\outils" /XF salfa-config.php installation.php /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 (
-  echo   ERREUR : copie du frontend impossible. Lancez le script en administrateur.
+  echo   ERREUR : copie impossible. Lancez le script en tant qu'administrateur.
   goto echec
 )
-robocopy "%DEPLOY%\api" "%CIBLE%\api" /E /NFL /NDL /NJH /NJS /NP >nul
-if errorlevel 8 (
-  echo   ERREUR : copie de l'API impossible.
-  goto echec
-)
-copy /Y "%DEPLOY%\.htaccess" "%CIBLE%\.htaccess" >nul
-echo   Frontend et API copies.
+if not exist "%CIBLE%\data" mkdir "%CIBLE%\data"
+if not exist "%CIBLE%\data\sauvegardes" mkdir "%CIBLE%\data\sauvegardes"
+echo   Fichiers copies.
 
 echo.
-echo [3/7] Configuration de la base MySQL...
-if exist "%CIBLE%\api\salfa-config.php" (
-  echo   salfa-config.php deja present : il est conserve.
-  goto config_ok
-)
-echo   Lancement de l'assistant (saisie du compte MySQL WAMP).
-"%WAMP_PHP%" "%DEPLOY%\outils\configurer-base.php"
-if errorlevel 1 goto echec
-:config_ok
-
-echo.
-echo [4/7] Creation de la base et des tables...
-"%WAMP_PHP%" "%DEPLOY%\outils\preparer-base.php"
+echo [2/3] Configuration MySQL et creation de la base
+"%PHP%" "%RACINE%\outils\install-cli.php" "%CIBLE%"
 if errorlevel 1 goto echec
 
 echo.
-echo [5/7] Compte administrateur...
-if exist "%CIBLE%\api\admin-cree.txt" (
-  echo   Un administrateur a deja ete cree : etape ignoree.
-  goto admin_ok
-)
-echo   Saisissez l'identifiant puis le mot de passe de votre choix.
-set /p ADMIN_ID=  Identifiant [admin] :
-if "!ADMIN_ID!"=="" set "ADMIN_ID=admin"
-set /p ADMIN_MDP=  Mot de passe (8 caracteres minimum) :
-set /p ADMIN_NOM=  Nom complet [Administrateur] :
-if "!ADMIN_NOM!"=="" set "ADMIN_NOM=Administrateur"
-"%WAMP_PHP%" "%CIBLE%\api\connexion-bootstrap.php" "!ADMIN_ID!" "!ADMIN_MDP!" "!ADMIN_NOM!"
-if errorlevel 1 goto echec
-echo cree> "%CIBLE%\api\admin-cree.txt"
-:admin_ok
+echo [3/3] Verification
+"%PHP%" "%RACINE%\outils\verifier-cli.php" "%CIBLE%"
 
 echo.
-echo [6/7] Verification...
-"%WAMP_PHP%" "%CIBLE%\api\connexion-bootstrap.php" --verifier >nul 2>&1
-echo   Tables et compte verifies.
-
-echo.
-echo [7/7] Termine.
-echo.
-echo   Ouvrez : http://localhost/caisse-salfa/
-echo   Controle API : http://localhost/caisse-salfa/api/points/sante.php
-echo.
-echo   une fois la mise en service terminee.
+echo ============================================================
+echo   Termine. Ouvrez : http://localhost/caisse-salfa/
+echo ============================================================
 exit /b 0
 
 :echec
 echo.
-echo   Installation interrompue. Corrigez le point indique ci-dessus puis relancez.
+echo   Installation interrompue. Corrigez le probleme ci-dessus puis relancez.
 exit /b 1

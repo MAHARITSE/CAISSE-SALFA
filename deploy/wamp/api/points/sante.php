@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('sante', function (): array {
+salfa_point('sante', function (): array {
     salfa_exiger_methode('GET');
     $livre = salfa_charger_livre();
     return [

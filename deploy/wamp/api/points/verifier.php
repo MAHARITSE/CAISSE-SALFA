@@ -1,0 +1,68 @@
+<?php
+/**
+ * GET api/verifier.php — diagnostic complet, sans authentification.
+ *
+ * Renvoie l'état de PHP, PDO MySQL, la configuration, la connexion à la base,
+ * la présence des tables et du compte administrateur. C'est le premier appel
+ * à faire après l'installation : il est lisible par un humain et par un script.
+ */
+
+declare(strict_types=1);
+
+require __DIR__ . '/../socle.php';
+
+salfa_point('verifier', function (): array {
+    salfa_exiger_methode('GET');
+
+    $controles = [];
+    $ajouter = function (string $nom, bool $ok, string $detail) use (&$controles): void {
+        $controles[] = ['controle' => $nom, 'ok' => $ok, 'detail' => $detail];
+    };
+
+    $ajouter('PHP', version_compare(PHP_VERSION, '8.1', '>='), PHP_VERSION . (version_compare(PHP_VERSION, '8.1', '>=') ? '' : ' — PHP 8.1 ou plus est requis'));
+    $ajouter('PDO MySQL', extension_loaded('pdo_mysql'), extension_loaded('pdo_mysql') ? 'disponible' : 'absent : activer php_pdo_mysql dans WAMP');
+    $ajouter('mbstring', extension_loaded('mbstring'), extension_loaded('mbstring') ? 'disponible' : 'absent : activer php_mbstring dans WAMP');
+    $ajouter('json', extension_loaded('json'), extension_loaded('json') ? 'disponible' : 'absent');
+    $ajouter('sessions PHP', function_exists('session_start'), function_exists('session_start') ? 'disponibles' : 'absentes');
+    $ajouter('api/salfa-config.php', is_file(__DIR__ . '/../salfa-config.php'), is_file(__DIR__ . '/../salfa-config.php')
+        ? 'présent'
+        : 'absent : lancez outils\installer.bat ou copiez api\salfa-config.modele.php');
+    $ajouter('dossier de travail inscriptible', is_writable(__DIR__ . '/../../data') || @mkdir(__DIR__ . '/../../data', 0775, true), 'data/');
+
+    $base = 'non testée';
+    $tables = [];
+    $admin = 0;
+    if (is_file(__DIR__ . '/../salfa-config.php')) {
+        try {
+            salfa_pdo();
+            $base = 'connectée';
+            $prefixe = salfa_prefixe();
+            $tables = salfa_pdo()->query('SHOW TABLES LIKE ' . salfa_pdo()->quote($prefixe . '%'))->fetchAll(PDO::FETCH_COLUMN);
+            $admin = (int) salfa_pdo()->query('SELECT COUNT(*) FROM ' . salfa_table('utilisateurs') . " WHERE role = 'admin' AND actif = 1")->fetchColumn();
+            $ajouter('connexion MySQL', true, 'base « ' . salfa_config()['base'] . ' » sur ' . salfa_config()['hote']);
+            $ajouter('tables', count($tables) >= 12, count($tables) . ' table(s) trouvée(s) : ' . implode(', ', $tables));
+            $ajouter('compte administrateur', $admin > 0, $admin > 0 ? $admin . ' compte(s) actif(s)' : 'aucun : lancez outils\creer-admin.bat');
+            $livre = salfa_charger_livre();
+            $ajouter('livre', true, 'révision ' . $livre['revision'] . ', exercice ' . ($livre['parametres']['exercice'] ?? 'non défini'));
+        } catch (Throwable $e) {
+            $base = 'en échec';
+            $ajouter('connexion MySQL', false, $e->getMessage());
+        }
+    }
+
+    $echecs = count(array_filter($controles, fn (array $c): bool => !$c['ok']));
+    return [
+        'ok' => $echecs === 0,
+        'application' => 'CAISSE SALFA',
+        'versionApi' => '1.2',
+        'php' => PHP_VERSION,
+        'base' => $base,
+        'tables' => count($tables),
+        'administrateurs' => $admin,
+        'echecs' => $echecs,
+        'controles' => $controles,
+        'conseil' => $echecs === 0
+            ? 'Installation correcte : ouvrez index.html et connectez-vous.'
+            : 'Corrigez les lignes « ok: false » ci-dessus, puis relancez outils\verifier.bat.',
+    ];
+});

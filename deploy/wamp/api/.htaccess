@@ -1,12 +1,7 @@
 # CAISSE SALFA — dossiers internes de l'API
-# Stratégie « deny all » : si un futur fichier est ajouté ici par erreur,
-# il restera inaccessible tant que son accès n'est pas explicitly autorisé.
-# Les seuls points d'entrée publics sont api/points/*.php.
-
+# points/, lib/ et tests/ ne sont pas des points d'entrée publics.
 <IfModule mod_authz_core.c>
-  Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-  Order allow,deny
-  Deny from all
+  <FilesMatch "^(salfa-config\.php|installation\.php|admin-cree\.txt)$">
+    Require all denied
+  </FilesMatch>
 </IfModule>
