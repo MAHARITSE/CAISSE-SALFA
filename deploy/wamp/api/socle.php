@@ -17,6 +17,7 @@ if (!defined('SALFA_SOCLE')) {
     require __DIR__ . '/lib/validation.php';
     require __DIR__ . '/lib/aide-objet.php';
     require __DIR__ . '/lib/metier.php';
+    require __DIR__ . '/lib/export-sql.php';
     require __DIR__ . '/points/enveloppe.php';
 }
 

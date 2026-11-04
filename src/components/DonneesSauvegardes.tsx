@@ -5,17 +5,20 @@ import { exporterSauvegarde, exporterSecours, lireSauvegarde } from '../utils/ba
 import { MAX_IMPORT_OCTETS } from '../utils/constants';
 import { formatAr, horodatageFr } from '../utils/format';
 import { totaliser } from '../utils/ledger';
-import { MODE_API } from '../utils/api';
+import { MODE_API, exporterSql } from '../utils/api';
+import { telechargerTexte } from '../utils/export';
 import { Modale } from './Modale';
 
 interface Props {
   livre: Sauvegarde;
+  /** Le dump .sql contient les comptes : seul l'administrateur le produit. */
+  administrateur?: boolean;
   erreur: string | null;
   onRestaurer: (livre: Sauvegarde) => boolean | Promise<boolean>;
   onRecharger: () => void;
 }
 
-export function DonneesSauvegardes({ livre, erreur, onRestaurer, onRecharger }: Props) {
+export function DonneesSauvegardes({ livre, administrateur = false, erreur, onRestaurer, onRecharger }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const id = useId();
   const [apercu, setApercu] = useState<Sauvegarde | null>(null);
@@ -26,6 +29,7 @@ export function DonneesSauvegardes({ livre, erreur, onRestaurer, onRecharger }: 
   const [accepte, setAccepte] = useState(false);
   const [lecture, setLecture] = useState(false);
   const [restauration, setRestauration] = useState(false);
+  const [sqlEnCours, setSqlEnCours] = useState(false);
   const totaux = apercu ? totaliser(apercu.ecritures) : null;
   const poids = (new Blob([JSON.stringify(livre)]).size / 1024).toFixed(1).replace('.', ',');
 
@@ -52,14 +56,37 @@ export function DonneesSauvegardes({ livre, erreur, onRestaurer, onRecharger }: 
     } finally { setRestauration(false); }
   }
 
+  /**
+   * Dump MySQL : le fichier que l'on réimporte tel quel dans phpMyAdmin.
+   * C'est la sauvegarde de référence sous WAMP — elle restitue la structure
+   * des tables, les écritures, les en-têtes et les comptes.
+   */
+  async function exporterBaseSql() {
+    setErreurImport(''); setSqlEnCours(true);
+    try {
+      const { contenu, nom } = await exporterSql();
+      telechargerTexte(contenu, nom, 'application/sql;charset=utf-8');
+      setMessage(`Sauvegarde ${nom} téléchargée : structure et données de la base. Réimportez-la dans phpMyAdmin pour restaurer.`);
+    } catch (e) {
+      setErreurImport(e instanceof Error ? e.message : 'L’export SQL a échoué.');
+    } finally { setSqlEnCours(false); }
+  }
+
   function exporter() {
     try { exporterSauvegarde(livre); setMessage('Sauvegarde JSON téléchargée. Conservez-la dans un dossier sûr, séparé de ce navigateur.'); }
     catch (e) { setErreurImport(e instanceof Error ? e.message : 'Export impossible.'); }
   }
 
   return <div className="space-y-5">
-    <section className="card overflow-hidden"><div className="border-b border-slate-100 p-5 sm:p-6"><div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><ShieldCheck size={23} /></span><div><h2 className="text-base font-bold">Vos données, sous votre responsabilité</h2><p className="mt-1 text-xs text-slate-500">{MODE_API ? 'Les écritures sont enregistrées dans MySQL sur le serveur WAMP. Une sauvegarde régulière (JSON ou dump MySQL) protège votre travail.' : 'Une sauvegarde régulière protège votre travail contre la perte du stockage navigateur.'}</p></div></div></div>
-      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2"><div><h3 className="flex items-center gap-2 text-sm font-semibold"><Download size={17} className="text-brand-700" />Exporter une sauvegarde complète</h3><p className="mt-2 text-xs leading-relaxed text-slate-500">Le fichier JSON contient les écritures, les détails et références, le solde initial, les modèles et les compteurs de pièces. Il peut être restauré sur un autre navigateur.</p><button className="btn-primary mt-4" onClick={exporter} disabled={Boolean(erreur)}><Download size={16} />Télécharger la sauvegarde JSON</button></div>
+    <section className="card overflow-hidden"><div className="border-b border-slate-100 p-5 sm:p-6"><div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><ShieldCheck size={23} /></span><div><h2 className="text-base font-bold">Vos données, sous votre responsabilité</h2><p className="mt-1 text-xs text-slate-500">{MODE_API ? 'Les écritures sont enregistrées dans MySQL sur le serveur WAMP. Une sauvegarde régulière — dump .sql, ou JSON — protège votre travail.' : 'Une sauvegarde régulière protège votre travail contre la perte du stockage navigateur.'}</p></div></div></div>
+      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
+        {MODE_API && administrateur && <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold"><Database size={17} className="text-brand-700" />Sauvegarde de la base (.sql)</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500">Le fichier <code className="rounded bg-slate-100 px-1">.sql</code> contient la structure des tables et toutes les données : écritures, en-têtes, catégories et comptes. C’est la sauvegarde à privilégier sous WAMP : elle se réimporte dans phpMyAdmin par <em>Importer</em>.</p>
+          <button className="btn-primary mt-4" onClick={() => void exporterBaseSql()} disabled={sqlEnCours}><Database size={16} />{sqlEnCours ? 'Préparation…' : 'Télécharger la sauvegarde .sql'}</button>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-400">Réservée à l’administrateur : le fichier contient les comptes. Les mots de passe n’y sont que hachés. Les sessions ouvertes ne sont pas exportées.</p>
+        </div>}
+        <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Download size={17} className="text-brand-700" />Exporter une sauvegarde complète</h3><p className="mt-2 text-xs leading-relaxed text-slate-500">Le fichier JSON contient les écritures, les détails et références, le solde initial, les modèles et les compteurs de pièces. Il peut être restauré sur un autre navigateur.</p><button className="btn-primary mt-4" onClick={exporter} disabled={Boolean(erreur)}><Download size={16} />Télécharger la sauvegarde JSON</button></div>
         <div className="lg:border-l lg:border-slate-100 lg:pl-6"><h3 className="flex items-center gap-2 text-sm font-semibold"><Upload size={17} className="text-brand-700" />Restaurer un fichier</h3><p className="mt-2 text-xs leading-relaxed text-slate-500">Choisissez une sauvegarde CAISSE SALFA. Son contenu est vérifié avant toute modification ; la restauration remplace le livre, elle ne fusionne pas les écritures.</p><input ref={inputRef} type="file" accept=".json,application/json" className="sr-only" aria-label="Fichier de sauvegarde JSON" onChange={e => void chargerFichier(e.target.files?.[0])} /><button className="btn-secondary mt-4" disabled={lecture} onClick={() => inputRef.current?.click()}><Upload size={16} />{lecture ? 'Vérification…' : 'Choisir une sauvegarde JSON'}</button><p className="mt-2 text-[11px] text-slate-400">Format version 1 · 8 Mo maximum</p></div></div>
       {message && <p role="status" className="mx-5 mb-5 flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800"><CheckCircle2 size={16} className="shrink-0" />{message}</p>}
       {erreurImport && <p role="alert" className="mx-5 mb-5 flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-800"><AlertCircle size={16} className="shrink-0" />{erreurImport}</p>}

@@ -157,6 +157,43 @@ export const mutations = {
 };
 
 /**
+ * Dump complet de la base au format .sql.
+ *
+ * Le point répond en fichier joint ; on lit donc le texte brut plutôt que du
+ * JSON. Réservé à l'administrateur : le fichier contient les comptes et leurs
+ * hachages, jamais les mots de passe en clair.
+ */
+export async function exporterSql(): Promise<{ contenu: string; nom: string }> {
+  let reponse: Response;
+  try {
+    reponse = await fetch(`${urlPoint('sauvegarde')}&format=sql`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ErreurApi('Le serveur de la caisse est injoignable. Vérifiez que WAMP est démarré.', 'reseau', 0);
+  }
+  if (!reponse.ok) {
+    // Erreur JSON renvoyée par l'API plutôt qu'un fichier.
+    let message = `Export refusé (HTTP ${reponse.status}).`;
+    let code = 'erreur';
+    try {
+      const corps = await reponse.json() as { erreur?: string; code?: string };
+      if (corps.erreur) message = corps.erreur;
+      if (corps.code) code = corps.code;
+    } catch { /* réponse non JSON : on garde le message générique */ }
+    throw new ErreurApi(message, code, reponse.status);
+  }
+  const contenu = await reponse.text();
+  if (!contenu.includes('CAISSE SALFA')) {
+    throw new ErreurApi('Le serveur n’a pas renvoyé de sauvegarde SQL. Vérifiez la configuration de l’API.', 'export_invalide', reponse.status);
+  }
+  const entete = /filename="([^"]+)"/.exec(reponse.headers.get('Content-Disposition') ?? '');
+  const nom = entete?.[1] ?? `sauvegarde_caisse_salfa_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.sql`;
+  return { contenu, nom };
+}
+
+/**
  * Points d'administration : comptes utilisateurs et leurs rôles.
  * Réservés à l'administrateur, le serveur le vérifie lui-même.
  */

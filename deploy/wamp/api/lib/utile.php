@@ -26,6 +26,8 @@ function salfa_repondre(array $donnees, int $statut = 200): void
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('X-Content-Type-Options: nosniff');
+    // Aucune écriture de ceinture n'est mise en cache par le navigateur.
+    header('Referrer-Policy: same-origin');
     echo json_encode($donnees, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

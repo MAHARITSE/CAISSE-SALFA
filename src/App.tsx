@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, HeartPulse, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, HeartPulse, KeyRound, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
 import type { Ecriture, FiltresJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
 import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerCategories, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
@@ -18,9 +18,11 @@ import { Confirmation } from './components/Confirmation';
 import { Exercices } from './components/Exercices';
 import { Connexion } from './components/Connexion';
 import { Administration } from './components/Administration';
+import { ChangerMotDePasse } from './components/ChangerMotDePasse';
 import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { MODE_API, deconnexion as deconnexionApi, mutations, session as sessionApi, type EtatSession } from './utils/api';
 import { enteteModifie, numeroDocument, type EnteteDocument } from './utils/entete';
+import { retenirSessionLocale } from './utils/utilisateurs';
 import { libelleRole, ongletsAutorises, peutAdministrer, peutModifierSoldeOuverture, peutSaisir, type OngletApplication, type Role } from './utils/roles';
 
 type Onglet = OngletApplication;
@@ -31,6 +33,8 @@ export function App() {
   // L'application s'ouvre toujours sur la page de connexion : aucun écran de
   // caisse n'est visible avant qu'un compte soit reconnu.
   const [session, setSession] = useState<EtatSession | null>(null);
+  /** Chacun change son propre mot de passe : la modale vit au-dessus du shell. */
+  const [motDePasseOuvert, setMotDePasseOuvert] = useState(false);
   const [verificationSession, setVerificationSession] = useState(MODE_API);
 
   // Au démarrage en mode serveur : vérifier la session puis charger le livre MySQL.
@@ -207,6 +211,7 @@ export function App() {
     if (MODE_API) {
       try { await deconnexionApi(); } catch { /* la session est fermée côté serveur au plus tard par expiration */ }
     }
+    retenirSessionLocale(null);
     setSession({ connecte: false, utilisateur: null });
     setNotification('');
   }
@@ -244,6 +249,7 @@ export function App() {
   if (!session || !session.connecte) {
     return <Connexion erreurInitiale={MODE_API ? erreur : null} onConnecte={etat => {
       setSession(etat);
+      if (etat.utilisateur) retenirSessionLocale({ id: String(etat.utilisateur.id) });
       if (MODE_API) rechargerApi();
     }} />;
   }
@@ -260,7 +266,7 @@ export function App() {
             <div><p className="text-lg font-extrabold tracking-tight text-brand-950">SALFA</p><p className="text-[10px] tracking-[0.16em] text-slate-400">GESTION DE CAISSE</p></div>
             <div className="ml-2 hidden border-l border-slate-200 pl-4 sm:block"><p className="text-[11px] text-slate-400">Caisse principale</p><p className="mt-0.5 text-xs font-medium text-slate-600">Exercice {exercice}</p></div>
           </div>
-          <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}><span className={`size-1.5 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? 'Serveur à vérifier' : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-[11px] text-slate-500 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-[11px] font-semibold text-slate-700">{session.utilisateur.nomComplet}</p><p className="text-[10px] uppercase tracking-wide text-slate-400">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={15} /></button></div> : <span className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600" title="Caisse SALFA">CS</span>}</div>
+          <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}><span className={`size-1.5 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? 'Serveur à vérifier' : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-[11px] text-slate-500 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-[11px] font-semibold text-slate-700">{session.utilisateur.nomComplet}</p><p className="text-[10px] uppercase tracking-wide text-slate-400">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={15} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={15} /></button></div> : <span className="flex size-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-600" title="Caisse SALFA">CS</span>}</div>
         </div>
         <nav className="flex flex-wrap gap-1 border-t border-slate-100 px-3 py-2 sm:px-5" aria-label="Navigation principale">{navigation.map(n => <button key={n.id} className={`flex shrink-0 items-center gap-1 rounded-lg px-1.5 py-1.5 text-[10px] font-medium transition-colors sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs ${onglet === n.id ? 'bg-brand-50 font-semibold text-brand-800' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`} aria-current={onglet === n.id ? 'page' : undefined} aria-label={n.label} onClick={() => setOnglet(n.id)}><n.icone size={15} /><span className="sm:hidden">{n.labelCourt}</span><span className="hidden sm:inline">{n.label}</span></button>)}</nav>
       </header>
@@ -282,7 +288,7 @@ export function App() {
         </>}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><input type="month" className="field !w-44" aria-label="Mois de l’analyse" value={mois} onChange={e => { if (e.target.value) { setMois(e.target.value); setToutAfficher(false); } }} /><button className="btn-secondary" aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={livre.parametres.soldeInitial} exercice={exercice} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} />)}
-        {onglet === 'donnees' && <DonneesSauvegardes livre={livre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}
+        {onglet === 'donnees' && <DonneesSauvegardes livre={livre} administrateur={administre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}
         {onglet === 'administration' && (administre
           ? <Administration
             nombreModeles={livre.masques.length}
@@ -302,6 +308,11 @@ export function App() {
       entetes={livre.entetes}
       onEnregistrer={entete => { void enregistrerEnteteDocument(entete); setEnteteOuverte(false); }}
       onFermer={() => setEnteteOuverte(false)}
+    />}
+    {motDePasseOuvert && session?.utilisateur && <ChangerMotDePasse
+      utilisateur={session.utilisateur.identifiant}
+      onFermer={() => setMotDePasseOuvert(false)}
+      onFait={message => { setMotDePasseOuvert(false); setNotification(message); }}
     />}
     {masquesOuverts && <GestionMasquesModal masques={livre.masques} erreurExterne={erreur} onSauvegarderMasques={m => MODE_API ? muterEnLigne(revision => mutations.masques(revision, m)) : Promise.resolve(muter(d => enregistrerMasques(d, m)))} onFermer={() => setMasquesOuverts(false)} />}
     {clotureOuverte && <Confirmation titre={`Clôturer l’exercice ${exercice} ?`} libelleConfirmer={`Clôturer ${exercice} et ouvrir ${exercice + 1}`} onAnnuler={() => setClotureOuverte(false)} onConfirmer={confirmerCloture}>

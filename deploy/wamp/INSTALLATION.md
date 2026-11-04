@@ -132,6 +132,10 @@ Le script est idempotent, convertit les comptes `lecteur`, resserre l'ENUM sur
 les trois rôles et contrôle qu'il reste au moins un administrateur actif.
 
 - `outils\creer-admin.bat` crée un compte ou réinitialise un mot de passe.
+- **Chacun change son mot de passe** sans passer par l'administrateur : bouton
+  « clé » à côté du nom, en haut à droite. L'ancien mot de passe est exigé.
+  L'administrateur n'a plus à le faire pour les autres, et ne peut pas
+  deviner le mot de passe choisi : il ne voit que le hachage en base.
 - Session : cookie `HttpOnly`, expiration après 12 h ou 30 min d'inactivité.
 - 8 tentatives de connexion par quart d'heure et par adresse.
 - Chaque connexion, saisie, suppression, clôture et restauration est journalisée
@@ -139,7 +143,26 @@ les trois rôles et contrôle qu'il reste au moins un administrateur actif.
 
 ---
 
-## 6. Règles appliquées côté serveur
+## 6. Sauvegardes : fichier `.sql`
+
+Sous WAMP, la sauvegarde de référence est le **dump `.sql`** — l'habituel
+export MySQL, réimportable dans phpMyAdmin.
+
+- Onglet **Données & sauvegardes** > **Télécharger la sauvegarde .sql**
+  (administrateur). Le fichier `sauvegarde_caisse_salfa_AAAA-MM-JJ_HH-MM-SS.sql`
+  contient la structure des 12 tables utiles puis leurs données.
+- **Restauration** : arrêter la caisse, puis phpMyAdmin > **Importer** > le
+  fichier > Exécuter. Les tables présentes sont remplacées, les absentes
+  créées. En ligne de commande : `mysql -u root -p caisse_salfa < fichier.sql`.
+- Ce qui n'est **pas** exporté, volontairement : `salfa_sessions` (sessions
+  ouvertes, à rouvrir) et `salfa_tentatives` (compteurs anti-intrusion, propres
+  au serveur).
+- Les mots de passe partent **hachés** (bcrypt) : le fichier ne permet pas de
+  les lire, mais il restitue les comptes.
+- La sauvegarde **JSON** reste disponible à côté : elle ne contient que le
+  livre et repart d'une caisse neuve, utile pour changer de machine.
+
+## 7. Règles appliquées côté serveur
 
 L'API ne fait jamais confiance au navigateur :
 

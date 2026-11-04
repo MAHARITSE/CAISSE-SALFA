@@ -80,7 +80,9 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           <input
             id="identifiant"
             className="field"
-            autoComplete="username"
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             autoFocus
             required
             value={identifiant}
@@ -95,7 +97,9 @@ export function Connexion({ erreurInitiale, onConnecte }: {
               id="mot-de-passe"
               type={afficher ? 'text' : 'password'}
               className="field pr-10"
-              autoComplete="current-password"
+              autoComplete="off"
+              name="salfa-mdp"
+              spellCheck={false}
               required
               value={motDePasse}
               onChange={e => { setMotDePasse(e.target.value); setErreur(''); }}
@@ -145,6 +149,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
         {MODE_API
           ? 'Session fermée automatiquement après 30 minutes d’inactivité.'
           : 'Mode démonstration : les données restent dans ce navigateur.'}
+        <br />Le navigateur ne mémorise pas le mot de passe.
       </p>
     </div>
   </div>;

@@ -202,3 +202,55 @@ export async function verifierConnexionLocale(identifiant: string, motDePasse: s
   const { secret: _secret, ...sansSecret } = compte;
   return sansSecret as Compte;
 }
+
+/**
+ * Change le mot de passe du compte **connecté**, sans passer par l'administrateur.
+ *
+ * L'ancien mot de passe est exigé dans les deux modes : quelqu'un qui
+ * retrouverait une session ouverte ne peut pas s'approprier le compte.
+ */
+export async function changerMonMotDePasse(actuel: string, nouveau: string): Promise<void> {
+  if (nouveau.length < LONGUEUR_MIN_MOT_DE_PASSE) {
+    throw new Error(`Le nouveau mot de passe doit contenir au moins ${LONGUEUR_MIN_MOT_DE_PASSE} caractères.`);
+  }
+  if (nouveau === actuel) {
+    throw new Error('Le nouveau mot de passe doit être différent de l’ancien.');
+  }
+  if (MODE_API) {
+    const { appelerComptes } = await import('./api');
+    await appelerComptes<{ ok: boolean }>('mot-de-passe', {
+      methode: 'POST',
+      corps: { motDePasseActuel: actuel, motDePasse: nouveau },
+    });
+    return;
+  }
+  const liste = await amorcerComptesLocaux();
+  const connecte = lireSessionLocale();
+  const rang = connecte ? liste.findIndex(c => c.id === connecte.id) : -1;
+  if (rang < 0) throw new Error('Aucun compte connecté.');
+  const compte = liste[rang];
+  const [sel, attendu] = (compte.secret ?? '').split('$');
+  if (!attendu || (await hacherLocal(actuel, sel)) !== attendu) {
+    throw new Error('Le mot de passe actuel est incorrect.');
+  }
+  const nouveauSel = selAleatoire();
+  liste[rang] = { ...compte, secret: `${nouveauSel}$${await hacherLocal(nouveau, nouveauSel)}` };
+  ecrireComptes(liste);
+}
+
+export const CLE_SESSION_LOCALE = 'salfa_session_locale_v1';
+
+/** Mémorise le compte connecté hors serveur, pour retrouver qui change son mot de passe. */
+export function retenirSessionLocale(compte: { id: string } | null): void {
+  try {
+    if (!compte) localStorage.removeItem(CLE_SESSION_LOCALE);
+    else localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: compte.id }));
+  } catch { /* stockage indisponible : la session reste en mémoire */ }
+}
+
+function lireSessionLocale(): { id: string } | null {
+  try {
+    const brut = localStorage.getItem(CLE_SESSION_LOCALE);
+    return brut ? JSON.parse(brut) as { id: string } : null;
+  } catch { return null; }
+}
