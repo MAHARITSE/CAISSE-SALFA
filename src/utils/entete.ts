@@ -90,7 +90,8 @@ export const LIBELLES_LIGNES: string[] = [
  * une recette par une autorisation de recette.
  */
 export const TITRE_DOCUMENT: Record<DocumentEntete, string> = {
-  depense: 'DEMANDE D’ENGAGEMENT DE DÉPENSE',
+  // Le même intitulé que l'autorisation de recettes, suivi de son sigle.
+  depense: 'DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)',
   recette: 'AUTORISATION DE RECETTES',
 };
 

@@ -156,13 +156,8 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
     const largeur = colonne?.clientWidth ?? 0;
     if (!largeur) return;
     const parLargeur = (largeur - 2) / (FEUILLE.largeur * PX_PAR_MM);
-    const zone = cadre.current?.closest('.overflow-y-auto') as HTMLElement | null;
-    const dispo = zone
-      ? zone.getBoundingClientRect().bottom - (cadre.current?.getBoundingClientRect().top ?? 0) - 8
-      : window.innerHeight * 0.5;
-    const parHauteur = dispo / (FEUILLE.hauteur * PX_PAR_MM);
-    // Le plancher garantit un texte lisible même sur un écran court.
-    const cible = Math.max(0.3, Math.min(0.95, parLargeur, parHauteur));
+    // L'aperçu est une bande : seule la largeur fixe la réduction.
+    const cible = Math.max(0.35, Math.min(0.95, parLargeur));
     setEchelle(actuelle => Math.abs(actuelle - cible) > 0.005 ? cible : actuelle);
   };
 
@@ -288,6 +283,18 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
     onEnregistrer(brouillon);
   };
 
+  /**
+   * Hauteur visible de la feuille, en millimètres.
+   *
+   * L'en-tête ne vit que dans le haut de la page : on n'affiche donc que cette
+   * bande, courte, pour garder la mise en forme et les images sous les yeux.
+   * Une image posée plus bas étire la bande jusqu'à elle, jamais au-delà de A4.
+   */
+  const hauteurBande = Math.min(FEUILLE.hauteur, Math.max(
+    62,
+    ...brouillon.images.map(image => image.y + image.largeur + 12),
+  ));
+
   const messageErreur = erreur || televersement.erreur;
   const courante = brouillon.lignes[ligneActive];
   const imageSelectionnee = brouillon.images.find(image => image.id === selection);
@@ -398,7 +405,10 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
             <div
               ref={cadre}
               className="entete-cadre"
-              style={{ width: `${FEUILLE.largeur * PX_PAR_MM * echelle}px`, height: `${FEUILLE.hauteur * PX_PAR_MM * echelle}px` }}
+              style={{
+                width: `${FEUILLE.largeur * PX_PAR_MM * echelle}px`,
+                height: `${hauteurBande * PX_PAR_MM * echelle}px`,
+              }}
             >
             <div
               ref={feuille}
@@ -476,7 +486,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                 />
               </div>)}
 
-              <p className="entete-feuille__aide">Déposez une image n’importe où sur la page, puis glissez-la à sa place</p>
+
             </div>
             </div>
           </section>

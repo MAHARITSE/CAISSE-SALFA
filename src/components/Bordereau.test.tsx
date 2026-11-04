@@ -40,8 +40,8 @@ describe('bordereau imprimable conforme aux modèles', () => {
 
   it('ajoute « Demandeur » sur la dépense et son titre propre', () => {
     const { container } = render(<BordereauDocument ligne={ligne('DEPENSE')} entete={enteteParDefaut('depense')} />);
-    // L'imprimé de dépense n'a pas de titre : l'objet désigne la pièce.
-    expect(screen.queryByRole('heading', { name: /ENGAGEMENT/ })).not.toBeInTheDocument();
+    // La dépense porte son titre complet, sigle compris, comme la recette.
+    expect(screen.getByRole('heading', { name: 'DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)' })).toBeInTheDocument();
     expect(screen.getByText('TOTAL DES DEPENSES')).toBeInTheDocument();
     expect(screen.getByText(/Arrêté à la somme de quatre millions quarante-deux mille Ariary/)).toBeInTheDocument();
     for (const titre of ['Demandeur', 'Caissier(e)', 'Gestionnaire', 'Médecin Chef']) expect(screen.getByText(titre)).toBeInTheDocument();

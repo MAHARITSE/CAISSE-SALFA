@@ -24,7 +24,7 @@ describe('en-tête des bordereaux', () => {
     expect(entete.images).toHaveLength(2);
     expect(entete.images.map(i => i.source)).toEqual([expect.stringContaining('data:image/png'), expect.stringContaining('data:image/png')]);
     expect(entete.images[0]).toMatchObject({ x: 7.6, largeur: 15 });
-    expect(TITRE_DOCUMENT.depense).toBe('DEMANDE D’ENGAGEMENT DE DÉPENSE');
+    expect(TITRE_DOCUMENT.depense).toBe('DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)');
     expect(TITRE_DOCUMENT.recette).toBe('AUTORISATION DE RECETTES');
   });
 

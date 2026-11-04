@@ -99,9 +99,9 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
         </>}
     </header>
 
-    {/* Sur les imprimés fournis, l'autorisation de recette porte un titre et la
-        demande d'engagement n'en a pas : l'objet la désigne déjà. */}
-    {recette && <h3 className="bordereau-titre">{TITRE_DOCUMENT.recette}</h3>}
+    {/* Les deux documents portent leur titre, comme les états officiels :
+        AUTORISATION DE RECETTES, DEMANDE D’ENGAGEMENT DE DÉPENSES (DED). */}
+    <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
 
     <p className="bordereau-piece"><strong>Pièce n°</strong></p>
 

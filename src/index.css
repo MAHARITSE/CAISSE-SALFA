@@ -76,7 +76,26 @@
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; }
 
 /* Feuille A4 de l'éditeur : on y dépose les images et on les glisse. */
-.entete-cadre { position: relative; margin: 0 auto; border-radius: 4px; }
+.entete-cadre {
+  position: relative;
+  margin: 0 auto;
+  /* Bande d'aperçu : la feuille A4 continue dessous, simplement rognée. */
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+}
+/* Aide du dépôt de fichier : elle ne doit jamais passer sous l'en-tête. */
+.entete-feuille__aide { display: none; }
+/* Repère du bas de bande : on comprend que la page continue. */
+.entete-cadre::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, #cbd5e1 0 3mm, transparent 3mm 5mm);
+  pointer-events: none;
+}
 .entete-feuille {
   position: absolute;
   top: 0;
@@ -106,7 +125,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 262mm;
+  top: 40mm;
   margin: 0;
   padding: 0 12mm;
   text-align: center;
@@ -240,20 +259,19 @@
 
 /* Titre du document : compact, le tableau doit tenir dans la page. */
 .bordereau-titre {
-  margin: 5.6mm 0 0;
+  margin: 2.4mm 0 0;
   text-align: center;
   /* Les utilitaires Tailwind de la page ne doivent pas écraser ce titre. */
   font-size: 12pt !important;
-  line-height: 1.2 !important;
+  line-height: 1.15 !important;
   font-weight: 700;
   letter-spacing: .02em;
   text-transform: uppercase;
 }
 
-.bordereau-piece { margin: 15.5mm 0 3.8mm; padding-right: 40.5mm; text-align: right; }
-/* L'autorisation de recette porte un titre : « Pièce n° » reste à la même
-   hauteur que sur la demande d'engagement, qui n'en a pas. */
-.bordereau-titre + .bordereau-piece { margin-top: 4.2mm; }
+.bordereau-piece { margin: 7.6mm 0 3.8mm; padding-right: 40.5mm; text-align: right; }
+/* Les deux documents portent leur titre : « Pièce n° » garde la même place
+   sous lui, quelle que soit la pièce imprimée. */
 
 /* « DATE : » et « Objet : » soulignés, valeurs dans une colonne alignée. */
 .bordereau-ligne {
