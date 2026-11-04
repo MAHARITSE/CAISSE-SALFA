@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CLE_ECRITURES, CLE_LIVRE, CLE_PARAMETRES } from './storage';
-import { amorcer, modeDemo } from './amorce';
+import { amorcer, livreVide, modeDemo } from './amorce';
 
 const livre = { format: 'CAISSE-SALFA', version: 1, revision: 4, ecritures: [{ id: 'e1' }] };
 
@@ -22,6 +22,14 @@ describe('amorçage du jeu d’essai', () => {
     expect(enregistre.ecritures).toHaveLength(1);
     expect(enregistre.revision).toBe(0);
     expect(charger).toHaveBeenCalledWith('demo/jeu-essai.json', { cache: 'no-store' });
+  });
+
+  it('remplace un livre vide créé par l’application au premier démarrage', async () => {
+    // L'application enregistre elle-même ce livre : il ne contient aucune donnée.
+    localStorage.setItem(CLE_LIVRE, JSON.stringify({ ...livre, revision: 0, ecritures: [], compteurs: {}, exercicesClotures: [], parametres: { soldeInitial: 0, exercice: 2026, reportPrecedent: null } }));
+    expect(livreVide(localStorage.getItem(CLE_LIVRE))).toBe(true);
+    expect(await amorcer({ charger })).toBe(true);
+    expect(JSON.parse(localStorage.getItem(CLE_LIVRE)!).ecritures).toHaveLength(1);
   });
 
   it('ne touche jamais à un livre existant sans demande explicite', async () => {
@@ -68,6 +76,16 @@ describe('amorçage du jeu d’essai', () => {
     await expect(amorcer({ charger: async () => echec(404) })).rejects.toThrow('introuvable (404)');
     await expect(amorcer({ charger: async () => reponseJson({ format: 'AUTRE' }) })).rejects.toThrow('illisible');
     expect(localStorage.getItem(CLE_LIVRE)).toBeNull();
+  });
+
+  it('reconnaît ce qui constitue un livre vide', () => {
+    expect(livreVide(null)).toBe(true);
+    expect(livreVide(JSON.stringify({ ecritures: [], compteurs: {}, exercicesClotures: [] }))).toBe(true);
+    expect(livreVide(JSON.stringify({ ecritures: [{ id: 'x' }] }))).toBe(false);
+    expect(livreVide(JSON.stringify({ ecritures: [], compteurs: { 'RC-2026': 3 } }))).toBe(false);
+    expect(livreVide(JSON.stringify({ ecritures: [], parametres: { soldeInitial: 5000 } }))).toBe(false);
+    expect(livreVide(JSON.stringify({ ecritures: [], exercicesClotures: [{ annee: 2025 }] }))).toBe(false);
+    expect(livreVide('{illisible')).toBe(false);
   });
 
   it('lit le paramètre ?demo= sans lever d’exception', () => {
