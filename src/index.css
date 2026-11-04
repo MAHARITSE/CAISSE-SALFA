@@ -75,6 +75,17 @@
 .entete-bordereau__image { display: block; width: 100%; height: auto; object-fit: contain; }
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; width: 100%; }
 .entete-bordereau--compact { border: 0; border-radius: 0; padding: 0; gap: 10px; }
+/* Cases de signature : autant de colonnes que de signataires, filets partagés. */
+.bordereau-signatures {
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.bordereau-signatures > div { box-sizing: border-box; min-width: 0; }
+.bordereau-document { max-width: 100%; }
+.bordereau-signatures > div + div { border-left: 1px solid #0f172a; }
+.bordereau-ligne-vide { height: 26px; }
 
 .print-only { display: none; }
 @media screen { .screen-page-hidden { display: none !important; } }
@@ -103,9 +114,15 @@
   .bordereau-document { font-size: 11px; }
   .bordereau-document table { font-size: 10px; }
   .bordereau-entete { break-inside: avoid; }
+  .bordereau-document { page-break-inside: avoid; }
+  .bordereau-signatures { break-inside: avoid; }
   .entete-bordereau { border: 0; border-radius: 0; padding: 0; }
   .entete-bordereau__textes p { font-size: 11px; }
   .entete-bordereau__titre { font-size: 16px !important; }
   @page { size: A4 landscape; margin: 12mm; }
-  @page bordereau { size: A4 portrait; margin: 15mm; }
+  /* Bordereau : A4 portrait, marges franches comme sur les imprimés officiels. */
+  @page bordereau { size: A4 portrait; margin: 12mm; }
+  .print-bordereau { page: bordereau; width: 186mm; }
+  .print-bordereau .bordereau-document { width: 100%; }
+  body:has(.print-bordereau) { page: bordereau; }
 }

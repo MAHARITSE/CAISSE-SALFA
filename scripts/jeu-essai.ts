@@ -218,6 +218,8 @@ for (const categorie of depenses) if (!CATEGORIES_DEPENSE.includes(categorie)) t
 
 const sauvegarde: Sauvegarde = validerSauvegarde({
   ...donnees,
+  // L'en-tête n'est pas figé : le livre affiche celui livré par l'application.
+  entetes: undefined,
   format: 'CAISSE-SALFA',
   version: 1,
   revision: 0,

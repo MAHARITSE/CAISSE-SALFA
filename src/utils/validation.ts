@@ -1,6 +1,6 @@
 import type { DonneesCaisse, Ecriture, ExerciceCloture, LigneDetail, MasqueSaisie, Parametres, Sauvegarde, Sens } from '../types';
 import { ANNEE_MAX, ANNEE_MIN, MAX_CATEGORIES, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MAX_LONGUEUR_CATEGORIE, MONTANT_MAX, categoriesParDefaut, categoriesPour } from './constants';
-import { normaliserEntetes } from './entete';
+import { entetesParDefaut, normaliserEntetes } from './entete';
 import type { Categories } from '../types';
 
 /** Une erreur de validation est toujours bloquante : aucune ligne n'est écartée en silence. */
@@ -259,8 +259,9 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
     solde += e.sens === 'RECETTE' ? e.montant : -e.montant;
     exiger(Number.isSafeInteger(solde), 'Le solde cumulé dépasse la précision numérique fiable. Réduisez les montants du livre.');
   }
-  // Un livre antérieur aux en-têtes personnalisables retombe sur les en-têtes livrés.
-  const entetes = normaliserEntetes(d.entetes);
+  // Un livre qui ne fige pas son en-tête (sauvegarde générique, jeu d'essai)
+  // reprend celui livré par l'application, sans copie obsolète.
+  const entetes = d.entetes === undefined ? normaliserEntetes(entetesParDefaut()) : normaliserEntetes(d.entetes);
   const categories = validerCategories(d.categories);
   return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes, categories };
 }

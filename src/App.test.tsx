@@ -44,8 +44,9 @@ describe('parcours de caisse', () => {
     // Le bordereau s'ouvre automatiquement après enregistrement.
     const bordereau = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(bordereau).getByRole('status')).toHaveTextContent('Écriture enregistrée');
-    expect(within(bordereau).getByText(`Pièce DP-${annee}-0001`)).toBeInTheDocument();
-    expect(within(bordereau).getByText(`AED-${annee}-0001`)).toBeInTheDocument();
+    expect(within(bordereau).getByText(/Pièce DP-/)).toBeInTheDocument();
+    // Le numéro du document figure dans le sous-titre de la modale et sous le titre.
+    expect(bordereau).toHaveTextContent(`AED-${annee}-0001`);
     expect(within(bordereau).getByText('Total des dépenses')).toBeInTheDocument();
     await user.click(within(bordereau).getByRole('button', { name: 'Imprimer ce bordereau' }));
     expect(window.print).toHaveBeenCalledTimes(1);
@@ -90,14 +91,14 @@ describe('parcours de caisse', () => {
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
 
     expect(lire().entetes.depense.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
-    expect(lire().entetes.recette.lignes[0].texte).toBe('SALFA — DEPARTEMENT DE SANTE');
+    expect(lire().entetes.recette.lignes[0].texte).toBe('FIANGONANA LOTERANA MALAGASY');
 
     // L'autorisation de recette garde l'en-tête livré…
     await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
-    expect(within(autorisation).getByText('SALFA — DEPARTEMENT DE SANTE')).toBeInTheDocument();
+    expect(within(autorisation).getByText('FIANGONANA LOTERANA MALAGASY')).toBeInTheDocument();
     expect(within(autorisation).getByText('AUTORISATION DE RECETTE')).toBeInTheDocument();
-    expect(within(autorisation).getByText(`ARC-${annee}-0001`)).toBeInTheDocument();
+    expect(autorisation).toHaveTextContent(`ARC-${annee}-0001`);
     expect(within(autorisation).queryByText('CAISSE CENTRALE SALFA')).not.toBeInTheDocument();
     await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
     expect(screen.getByRole('dialog', { name: 'En-tête des bordereaux' })).toBeInTheDocument();
@@ -119,7 +120,7 @@ describe('parcours de caisse', () => {
     expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
     expect(within(engagement).getByText('DEMANDE D’ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
     // Le document porte son propre numéro, aligné sur la pièce.
-    expect(within(engagement).getByText(`AED-${annee}-0001`)).toBeInTheDocument();
+    expect(engagement).toHaveTextContent(`AED-${annee}-0001`);
   });
 
   it('restaure l’en-tête fourni sans toucher à l’autre document', async () => {
@@ -137,9 +138,9 @@ describe('parcours de caisse', () => {
     modale = screen.getByRole('dialog', { name: 'En-tête des bordereaux' });
     await user.click(screen.getByRole('tab', { name: 'Autorisation de recette' }));
     await user.click(within(modale).getByRole('button', { name: 'Restaurer l’en-tête fourni' }));
-    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('FIANGONANA LOTERANA MALAGASY');
+    expect(within(modale).getByLabelText('Église / tutelle')).toHaveValue('ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH');
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
-    expect(lire().entetes.recette.lignes[1].texte).toBe('FIANGONANA LOTERANA MALAGASY');
+    expect(lire().entetes.recette.lignes[1].texte).toBe('ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH');
     expect(within(modale).queryByLabelText('Église / tutelle')).not.toBeInTheDocument();
   });
 

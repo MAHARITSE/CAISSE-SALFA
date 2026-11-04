@@ -15,7 +15,8 @@ const enteteFixe = (modifications: Partial<EnteteDocument> = {}): EnteteDocument
 describe('en-tête des bordereaux', () => {
   it('livre un en-tête complet par défaut, distinct pour chaque document', () => {
     const entetes = entetesParDefaut();
-    expect(entetes.depense.lignes[0].texte).toContain('SALFA');
+    expect(entetes.depense.lignes[0].texte).toBe('FIANGONANA LOTERANA MALAGASY');
+    expect(entetes.depense.lignes.map(l => l.texte).join(' ')).toContain('SALFA');
     expect(entetes.depense.lignes.filter(l => l.texte.trim())).toHaveLength(7);
     expect(entetes.depense).toEqual(entetes.recette);
     expect(TITRE_DOCUMENT.depense).toBe('DEMANDE D’ENGAGEMENT DE DÉPENSE');

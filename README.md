@@ -59,6 +59,16 @@ garder les versions verrouillées par `package-lock.json`.
   après l’enregistrement d’une pièce, prêt à être imprimé. La colonne « Action »
   du journal propose l’impression, la modification et la suppression de chaque
   pièce, y compris celles saisies en montant unique.
+- **Documents conformes aux modèles officiels** : l’engagement de dépense
+  (« DEMANDE D’ENGAGEMENT DE DÉPENSE ») et l’autorisation de recette
+  (« AUTORISATION DE RECETTE ») reprennent la présentation des imprimés SALFA :
+  en-tête de l’hôpital sur sept lignes, « DATE : » en gras, « Objet : »,
+  « Pièce n° », tableau à cinq colonnes (N°, Libellé, N° Compte, Montant,
+  Observation), ligne de total (« TOTAL DES DÉPENSES » ou
+  « TOTAL DES RECETTES »), mention « Arrêtée à la somme de … ariary » écrite en
+  toutes lettres, puis les cases de signature — Caissier(e), Gestionnaire et
+  Médecin Chef pour une recette, auxquelles s’ajoute le Demandeur pour une
+  dépense. Le document s’imprime seul, sur une page A4 portrait.
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
   majuscules.
@@ -99,7 +109,7 @@ garder les versions verrouillées par `package-lock.json`.
   détaillés non comptés deux fois. Les totaux exportés correspondent à la
   sélection affichée ; le solde de clôture reste celui de la période complète.
 - **Impression** : journal en A4 paysage (toutes les pages de la sélection),
-  bordereau seul en A4 portrait avec zones de signature.
+  bordereau seul en A4 portrait avec ses zones de signature.
 - **Sauvegardes JSON** : export complet, vérification avant import, aperçu,
   confirmation explicite et sauvegarde automatique du livre actuel avant
   remplacement. Un export brut de secours est disponible pour le diagnostic.
@@ -219,6 +229,7 @@ src/
     format.ts                     dates locales et montants
     constants.ts                  catégories, modes, limites, modèles
     entete.ts                     modèle, validation et valeurs par défaut des en-têtes
+    nombreEnLettres.ts            montants écrits en toutes lettres (ariary)
   test/                           configuration et fixtures de tests
 tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 ```

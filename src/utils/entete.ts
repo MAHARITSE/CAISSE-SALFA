@@ -42,10 +42,10 @@ export const MAX_LIGNES_ENTETE = 8;
 export const LIBELLES_LIGNES: string[] = [
   'Nom principal de l’établissement',
   'Église / tutelle',
-  'Département',
-  'Établissement et coordonnées',
-  'Téléphone / BP',
-  'NIF et STAT',
+  'Synode / paritany',
+  'Œuvre et département',
+  'Département de santé (langue 2)',
+  'Établissement et BP',
   'E-mail',
   'Ligne libre',
 ];
@@ -83,15 +83,15 @@ function lignesParDefaut(prefixe: string[]): LigneEntete[] {
 }
 
 export function enteteParDefaut(_document: DocumentEntete): EnteteDocument {
+  // Reprend l'en-tête des documents officiels de l'hôpital, tel qu'imprimé.
   const commun = [
-    'SALFA — DEPARTEMENT DE SANTE',
     'FIANGONANA LOTERANA MALAGASY',
-    'SERVICE DE TRESORERIE',
-    'Caisse principale — Dispensaire Tanambao',
-    'Tél. 034 00 000 00 · BP 99',
-    'NIF : 5000767080 · STAT : 851 125 120 120 001 36',
-    'E-mail : caisse@salfa.mg',
-    '',
+    'ÉGLISE LUTHÉRIENNE MALAGACHE · MALAGASY LUTHERAN CHURCH',
+    'SYNODAM-PARITANY FIHAVANANA LOTERANA',
+    'SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)',
+    'DÉPARTEMENT DE SANTÉ · HEALTH DEPARTMENT',
+    'HOPITALY LOTERANA TOJARY TANAMBAO · BP 99',
+    'E-mail : salfa.tukas@gmail.com',
   ];
   return {
     mode: 'textes',
