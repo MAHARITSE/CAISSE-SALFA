@@ -26,7 +26,11 @@ function salfa_config(): array
     if ($config !== null) {
         return $config;
     }
-    $fichier = __DIR__ . '/salfa-config.php';
+    // Configuration dans data/ (hors web) ou, à défaut, à côté de l'API.
+    $fichier = dirname(__DIR__) . '/data/salfa-config.php';
+    if (!is_file($fichier)) {
+        $fichier = __DIR__ . '/salfa-config.php';
+    }
     $valeurs = [
         'hote' => '127.0.0.1',
         'port' => 3306,
@@ -67,7 +71,20 @@ function salfa_config(): array
 
 function salfa_est_installe(): bool
 {
-    return is_file(__DIR__ . '/salfa-config.php') || getenv('SALFA_DB_NAME') !== false;
+    return is_file(dirname(__DIR__) . '/data/salfa-config.php')
+        || is_file(__DIR__ . '/salfa-config.php')
+        || getenv('SALFA_DB_NAME') !== false;
+}
+
+/** Chemin réel du fichier de configuration utilisé (null si absent). */
+function salfa_fichier_config(): ?string
+{
+    foreach ([dirname(__DIR__) . '/data/salfa-config.php', __DIR__ . '/salfa-config.php'] as $fichier) {
+        if (is_file($fichier)) {
+            return $fichier;
+        }
+    }
+    return null;
 }
 
 function salfa_prefixe(): string

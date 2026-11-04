@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('cloture', function (): array {
+salfa_point('cloture', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
     salfa_exiger_role('admin');

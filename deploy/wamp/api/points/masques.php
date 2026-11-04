@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('masques', function (): array {
+salfa_point('masques', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
     return salfa_mutation('caissier', 'masques', function (array $corps): string {

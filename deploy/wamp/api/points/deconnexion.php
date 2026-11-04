@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('deconnexion', function (): array {
+salfa_point('deconnexion', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
     $utilisateur = salfa_utilisateur_courant(false);

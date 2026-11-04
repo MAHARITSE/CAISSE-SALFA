@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../socle.php';
 
-salfa_executer_point('ecritures-restaurer', function (): array {
+salfa_point('ecritures-restaurer', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
     return salfa_mutation('caissier', 'restauration', function (array $corps): string {

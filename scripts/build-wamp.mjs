@@ -1,11 +1,16 @@
 /**
- * Build du paquet WAMP :
- *  1. compile le frontend en mode API (base relative, donc servable depuis
- *     http://localhost/caisse-salfa/) ;
- *  2. copie dist/ dans deploy/wamp/frontend/ ;
- *  3. copie l'API, le .htaccess et install.php.
+ * Build du paquet WAMP — structure attendue dans C:\wamp64\www\caisse-salfa :
  *
- * Aucun Node n'est nécessaire sur le serveur : seul ce résultat est publié.
+ *   index.html        page d'accueil (React compilé)
+ *   assets/           JS, CSS, images
+ *   api/              API PHP/MySQL (index.php + points/)
+ *   data/             configuration et sauvegardes (hors web)
+ *   outils/           scripts .bat + assistants PHP
+ *   sql/              schéma MySQL
+ *   .htaccess         configuration Apache
+ *   INSTALLATION.md   mode d'emploi
+ *
+ * Aucun Node.js n'est nécessaire sur le serveur : seul ce résultat est publié.
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -13,9 +18,9 @@ import { execSync } from 'node:child_process';
 
 const racine = resolve(import.meta.dirname, '..');
 const dist = join(racine, 'dist');
-const cible = join(racine, 'deploy', 'wamp');
+const paquet = join(racine, 'deploy', 'wamp');
 
-console.log('→ Compilation du frontend (mode API)…');
+console.log('→ Compilation du frontend (mode API, chemins relatifs)…');
 execSync('npx tsc --noEmit && npx vite build --base ./', {
   cwd: racine,
   stdio: 'inherit',
@@ -27,39 +32,60 @@ if (!existsSync(join(dist, 'index.html'))) {
   process.exit(1);
 }
 
-console.log('→ Copie vers deploy/wamp/frontend…');
-rmSync(join(cible, 'frontend'), { recursive: true, force: true });
-mkdirSync(join(cible, 'frontend'), { recursive: true });
-cpSync(dist, join(cible, 'frontend'), { recursive: true });
+console.log('→ Copie du frontend à la racine du paquet…');
+for (const dossier of ['assets']) {
+  rmSync(join(paquet, dossier), { recursive: true, force: true });
+  if (existsSync(join(dist, dossier))) {
+    cpSync(join(dist, dossier), join(paquet, dossier), { recursive: true });
+  }
+}
+for (const fichier of ['index.html', 'favicon.svg']) {
+  if (existsSync(join(dist, fichier))) {
+    cpSync(join(dist, fichier), join(paquet, fichier));
+  }
+}
+// Ancienne structure : ne doit plus exister.
+rmSync(join(paquet, 'frontend'), { recursive: true, force: true });
 
-/** Vérification finale : le paquet doit être autonome. */
+mkdirSync(join(paquet, 'data'), { recursive: true });
+mkdirSync(join(paquet, 'data', 'sauvegardes'), { recursive: true });
+
 const obligatoires = [
-  'frontend/index.html',
+  'index.html',
+  'assets',
+  '.htaccess',
+  'INSTALLATION.md',
+  'api/index.php',
   'api/socle.php',
   'api/points/livre.php',
   'api/points/sante.php',
   'api/points/cloture.php',
+  'api/points/verifier.php',
+  'api/points/installer.php',
   'api/config.php',
+  'data/.htaccess',
   'sql/salfa_install.sql',
   'outils/installer.bat',
   'outils/verifier.bat',
-  '.htaccess',
+  'outils/creer-admin.bat',
+  'outils/sauvegarder.bat',
+  'outils/install-cli.php',
+  'outils/verifier-cli.php',
 ];
-const manquants = obligatoires.filter(f => !existsSync(join(cible, f)));
-// Aucun point d'entrée PHP monolithique ne doit subsister.
-const interdits = ['api/index.php', 'install.php'];
-const restants = interdits.filter(f => existsSync(join(cible, f)));
-if (restants.length) {
-  console.error('Fichiers à supprimer du paquet :', restants.join(', '));
-  process.exit(1);
-}
-const fichiers = (d) => readdirSync(d).reduce((n, f) => {
+const manquants = obligatoires.filter(f => !existsSync(join(paquet, f)));
+const interdits = ['frontend', 'install.php', 'api/salfa-config.php', 'data/salfa-config.php'].filter(f => existsSync(join(paquet, f)));
+
+const compter = (d) => readdirSync(d).reduce((n, f) => {
   const p = join(d, f);
-  return n + (statSync(p).isDirectory() ? fichiers(p) : 1);
+  return n + (statSync(p).isDirectory() ? compter(p) : 1);
 }, 0);
 
 if (manquants.length) {
   console.error('Fichiers manquants dans deploy/wamp :', manquants.join(', '));
   process.exit(1);
 }
-console.log(`✓ Paquet WAMP prêt : ${fichiers(cible)} fichiers dans deploy/wamp/`);
+if (interdits.length) {
+  console.error('Éléments à retirer de deploy/wamp :', interdits.join(', '));
+  process.exit(1);
+}
+console.log(`✓ Paquet WAMP prêt : ${compter(paquet)} fichiers dans deploy/wamp/`);
