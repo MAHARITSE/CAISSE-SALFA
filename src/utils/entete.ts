@@ -50,11 +50,33 @@ export const LIBELLES_LIGNES: string[] = [
   'Ligne libre',
 ];
 
-/** Titre imprimé du document, fixe : il désigne la nature de la pièce. */
+/**
+ * Titre imprimé du document, fixe : il désigne la nature de la pièce.
+ * Une dépense est couverte par une demande d'engagement de dépense,
+ * une recette par une autorisation de recette.
+ */
 export const TITRE_DOCUMENT: Record<DocumentEntete, string> = {
-  depense: 'ENGAGEMENT DE DÉPENSE',
+  depense: 'DEMANDE D’ENGAGEMENT DE DÉPENSE',
   recette: 'AUTORISATION DE RECETTE',
 };
+
+/** Préfixe de numérotation : AED pour un engagement, ARC pour une autorisation. */
+export const PREFIXE_DOCUMENT: Record<DocumentEntete, string> = {
+  depense: 'AED',
+  recette: 'ARC',
+};
+
+/**
+ * Numéro du document d'une pièce : reprend l'année et le rang de la pièce.
+ * AED-2026-0007 accompagne la dépense DP-2026-0007 : les deux se répondent
+ * toujours, même après une réimpression ou un tri du journal.
+ */
+export function numeroDocument(numeroPiece: string): string | null {
+  const correspondance = /^(RC|DP)-(\d{4})-(\d+)$/.exec(numeroPiece.trim());
+  if (!correspondance) return null;
+  const [, prefixe, annee, rang] = correspondance;
+  return `${PREFIXE_DOCUMENT[prefixe === 'RC' ? 'recette' : 'depense']}-${annee}-${rang}`;
+}
 
 function lignesParDefaut(prefixe: string[]): LigneEntete[] {
   return prefixe.map((texte, index) => ({ texte, gras: index === 0, taille: index === 0 ? 16 : 9 }));

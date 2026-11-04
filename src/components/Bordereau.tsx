@@ -2,19 +2,23 @@ import { createPortal } from 'react-dom';
 import { Printer, Settings2 } from 'lucide-react';
 import type { LigneJournal } from '../types';
 import { dateFr, formatAr, nombre } from '../utils/format';
-import { TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
+import { numeroDocument, TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { ApercuEntete } from './EnteteBordereauModal';
 import { Modale } from './Modale';
 
 /** Document imprimable : en-tête personnalisé, postes, total et signatures. */
 export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; entete: EnteteDocument }) {
   const recette = ligne.sens === 'RECETTE';
+  const document = numeroDocument(ligne.numero);
   return <article className="bordereau-document bg-white text-slate-900">
     <header className="bordereau-entete border-b-2 border-slate-800 pb-3">
       <ApercuEntete entete={entete} compact />
       <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
         <h3 className="text-base font-bold uppercase">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
-        <p className="font-mono text-sm">{ligne.numero}</p>
+        <div className="text-right">
+          {document && <p className="font-mono text-sm font-semibold">{document}</p>}
+          <p className="font-mono text-[11px] text-slate-500">Pièce {ligne.numero}</p>
+        </div>
       </div>
     </header>
     <div className="my-5 grid grid-cols-2 gap-4 text-xs sm:grid-cols-3"><div><span className="label">Date de l’opération</span><p className="font-semibold">{dateFr(ligne.date)}</p></div><div><span className="label">Service / tiers</span><p className="font-semibold break-words">{ligne.tiers || 'Caisse principale'}</p></div><div><span className="label">Mode de paiement</span><p className="font-semibold">Espèces</p></div></div>
@@ -26,7 +30,7 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
         : <tr><td className="border border-slate-300 p-2 text-center">1</td><td className="border border-slate-300 p-2 font-medium">{ligne.libelle}</td><td className="border border-slate-300 p-2 font-mono">{ligne.reference || '—'}</td><td className="border border-slate-300 p-2 text-right tabular-nums">{nombre(ligne.montant)}</td></tr>}
     </tbody><tfoot><tr className="bg-slate-100 font-bold"><td colSpan={3} className="border border-slate-400 p-3 uppercase">Total {recette ? 'des recettes' : 'des dépenses'}</td><td className="border border-slate-400 p-3 text-right tabular-nums">{formatAr(ligne.montant)}</td></tr></tfoot></table>
     <div className="mt-10 grid grid-cols-2 gap-8 text-center text-xs"><div className="min-h-24 border border-dashed border-slate-400 p-3"><p className="font-semibold">Le caissier</p><p className="mt-1 text-slate-500">Signature & date</p></div><div className="min-h-24 border border-dashed border-slate-400 p-3"><p className="font-semibold">Le trésorier / responsable</p><p className="mt-1 text-slate-500">Visa & approbation</p></div></div>
-    <p className="mt-5 text-[10px] text-slate-500">Document établi depuis le livre journal · {ligne.numero} · Montants en ariary (MGA)</p>
+    <p className="mt-5 text-[10px] text-slate-500">Document {document ?? ligne.numero} établi depuis le livre journal · Pièce {ligne.numero} · Montants en ariary (MGA)</p>
   </article>;
 }
 

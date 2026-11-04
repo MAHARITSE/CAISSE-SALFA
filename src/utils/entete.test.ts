@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAX_LIGNES_ENTETE, TITRE_DOCUMENT, enteteParDefaut, entetesIdentiques, entetesParDefaut,
-  normaliserEntete, normaliserEntetes, poidsImages, type EnteteDocument,
+  normaliserEntete, normaliserEntetes, numeroDocument, poidsImages, type EnteteDocument,
 } from './entete';
 import { enregistrerEntete } from './ledger';
 import { livreTest } from '../test/fixtures';
@@ -18,8 +18,17 @@ describe('en-tête des bordereaux', () => {
     expect(entetes.depense.lignes[0].texte).toContain('SALFA');
     expect(entetes.depense.lignes.filter(l => l.texte.trim())).toHaveLength(7);
     expect(entetes.depense).toEqual(entetes.recette);
-    expect(TITRE_DOCUMENT.depense).toBe('ENGAGEMENT DE DÉPENSE');
+    expect(TITRE_DOCUMENT.depense).toBe('DEMANDE D’ENGAGEMENT DE DÉPENSE');
     expect(TITRE_DOCUMENT.recette).toBe('AUTORISATION DE RECETTE');
+  });
+
+  it('donne à chaque pièce son document : AED pour une dépense, ARC pour une recette', () => {
+    expect(numeroDocument('DP-2026-0007')).toBe('AED-2026-0007');
+    expect(numeroDocument('RC-2026-0042')).toBe('ARC-2026-0042');
+    expect(numeroDocument('DP-2027-0001')).toBe('AED-2027-0001');
+    // Une pièce hors format (ancienne numérotation) n'invente pas de document.
+    expect(numeroDocument('PIECE-1')).toBeNull();
+    expect(numeroDocument('')).toBeNull();
   });
 
   it('retombe sur l’en-tête livré quand la donnée est absente ou corrompue', () => {

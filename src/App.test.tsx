@@ -44,7 +44,8 @@ describe('parcours de caisse', () => {
     // Le bordereau s'ouvre automatiquement après enregistrement.
     const bordereau = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(bordereau).getByRole('status')).toHaveTextContent('Écriture enregistrée');
-    expect(within(bordereau).getByText(`DP-${annee}-0001`)).toBeInTheDocument();
+    expect(within(bordereau).getByText(`Pièce DP-${annee}-0001`)).toBeInTheDocument();
+    expect(within(bordereau).getByText(`AED-${annee}-0001`)).toBeInTheDocument();
     expect(within(bordereau).getByText('Total des dépenses')).toBeInTheDocument();
     await user.click(within(bordereau).getByRole('button', { name: 'Imprimer ce bordereau' }));
     expect(window.print).toHaveBeenCalledTimes(1);
@@ -96,6 +97,7 @@ describe('parcours de caisse', () => {
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(autorisation).getByText('SALFA — DEPARTEMENT DE SANTE')).toBeInTheDocument();
     expect(within(autorisation).getByText('AUTORISATION DE RECETTE')).toBeInTheDocument();
+    expect(within(autorisation).getByText(`ARC-${annee}-0001`)).toBeInTheDocument();
     expect(within(autorisation).queryByText('CAISSE CENTRALE SALFA')).not.toBeInTheDocument();
     await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
     expect(screen.getByRole('dialog', { name: 'En-tête des bordereaux' })).toBeInTheDocument();
@@ -115,7 +117,9 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: `Imprimer le bordereau DP-${annee}-0001` })[0]);
     const engagement = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
-    expect(within(engagement).getByText('ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
+    expect(within(engagement).getByText('DEMANDE D’ENGAGEMENT DE DÉPENSE')).toBeInTheDocument();
+    // Le document porte son propre numéro, aligné sur la pièce.
+    expect(within(engagement).getByText(`AED-${annee}-0001`)).toBeInTheDocument();
   });
 
   it('restaure l’en-tête fourni sans toucher à l’autre document', async () => {

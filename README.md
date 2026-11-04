@@ -62,6 +62,11 @@ garder les versions verrouillées par `package-lock.json`.
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
   majuscules.
+- **Document par pièce** : chaque dépense reçoit une **demande d’engagement**
+  (`AED-AAAA-0001`) et chaque recette une **autorisation de recette**
+  (`ARC-AAAA-0001`). Le numéro reprend l’année et le rang de la pièce
+  (`DP-2026-0007` → `AED-2026-0007`) : les deux se répondent toujours, y compris
+  après réimpression.
 - **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
   recette ont chacun leur propre en-tête, modifiable depuis le bouton
   « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et

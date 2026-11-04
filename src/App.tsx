@@ -17,7 +17,7 @@ import { Confirmation } from './components/Confirmation';
 import { Exercices } from './components/Exercices';
 import { Connexion } from './components/Connexion';
 import { MODE_API, deconnexion as deconnexionApi, mutations, session as sessionApi, type EtatSession, type Utilisateur } from './utils/api';
-import type { DocumentEntete, EnteteDocument } from './utils/entete';
+import { numeroDocument, type DocumentEntete, type EnteteDocument } from './utils/entete';
 
 type Onglet = 'journal' | 'analyse' | 'exercices' | 'donnees';
 
@@ -88,7 +88,10 @@ export function App() {
       : muter(d => enregistrerEcriture(d, ecriture));
     if (!reussi) return false;
     setSaisie(null); setDerniereSupprimee(null); setMois(ecriture.date.slice(0, 7)); setToutAfficher(false); reinitialiser();
-    setNotification(edition ? 'Modification enregistrée. Les soldes ont été recalculés.' : 'Écriture enregistrée avec son numéro définitif.');
+    const document = numeroDocument(ecriture.numero);
+    setNotification(edition
+      ? 'Modification enregistrée. Les soldes ont été recalculés.'
+      : `Écriture enregistrée avec son numéro définitif${document ? ` et son document ${document}` : ''}.`);
     // Le bordereau imprimable s'ouvre aussitôt : l'utilisateur n'a plus à le rechercher dans le journal.
     ouvrirBordereauApresEnregistrement(ecriture);
     return true;
