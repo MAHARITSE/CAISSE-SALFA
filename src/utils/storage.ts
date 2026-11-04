@@ -1,235 +1,203 @@
-import { Ecriture, LigneDetail, MasqueSaisie, Parametres, Sens } from '../types';
+import type { ChargementLivre, DonneesCaisse, Ecriture, LigneDetail, MasqueSaisie, Sauvegarde, Sens } from '../types';
+import { categoriesPour, masquesParDefaut } from './constants';
+import { comparerEcritures, creerDonnees, identifiant } from './ledger';
+import { estDateValide, exiger, montantEntier, objet, validerDonnees, validerSauvegarde } from './validation';
 
-const CLE_ECRITURES = 'salfa_tresorerie_ecritures_v1';
-const CLE_PARAMETRES = 'salfa_tresorerie_parametres_v1';
-const CLE_ANCIENNE_CAISSE = 'salfa_caisse_transactions';
+export { categoriesPour, masquesParDefaut } from './constants';
+export const CLE_LIVRE = 'salfa_tresorerie_livre_v2';
+export const CLE_ECRITURES = 'salfa_tresorerie_ecritures_v1';
+export const CLE_PARAMETRES = 'salfa_tresorerie_parametres_v1';
+export const CLE_MASQUES = 'salfa_tresorerie_masques_v1';
+export const CLE_ANCIENNE_CAISSE = 'salfa_caisse_transactions';
+const CLES_SECOURS = [CLE_LIVRE, CLE_ECRITURES, CLE_PARAMETRES, CLE_MASQUES, CLE_ANCIENNE_CAISSE];
 
-/** Postes types de recettes journalières hospitalières (selon bordereau SALFA) */
-export const SERVICES_RECETTES_JOUR = [
-  'CONSULTATION',
-  'ECHOGRAPHIE',
-  'CHAMBRE',
-  'LABORATOIRE',
-  'MATERNITE',
-  'MEDICAMENT',
-  'SOINS',
-  'HOSPITALISATION',
-  'DENTISTERIE',
-  'BLOC',
-  'DIVERS',
-  'VACCIN',
-];
-
-/** Postes types de dépenses fréquentes */
-export const SERVICES_DEPENSES_TYPES = [
-  'ACHATS MEDICAMENTS',
-  'FOURNITURES ET CONSOMMABLES',
-  'CARBURANT & TRANSPORT',
-  'MAINTENANCE ET REPARATION',
-  'SALAIRES ET PRIMES',
-  'HONORAIRES MEDICAUX',
-  'EAU ET ELECTRICITE',
-  'TELEPHONE ET INTERNET',
-  'FRAIS DE MISSION',
-  'DIVERS DEPENSES',
-];
-
-export const CATEGORIES_RECETTE = [
-  'Recettes journalières',
-  'Consultations',
-  'Pharmacie',
-  'Laboratoire',
-  'Hospitalisation',
-  'Maternité',
-  'Imagerie',
-  'Subventions & dons',
-  'Remboursements',
-  'Autres recettes',
-];
-
-export const CATEGORIES_DEPENSE = [
-  'Achats médicaments',
-  'Consommables médicaux',
-  'Fournitures de bureau',
-  'Carburant & transport',
-  'Maintenance & équipements',
-  'Salaires & primes',
-  'Frais de mission',
-  'Honoraires',
-  'Eau & électricité',
-  'Téléphone & internet',
-  'Divers',
-];
-
-export const categoriesPour = (sens: Sens): string[] =>
-  sens === 'RECETTE' ? CATEGORIES_RECETTE : CATEGORIES_DEPENSE;
-
-const texte = (v: unknown): string => (typeof v === 'string' ? v : '');
-const montantPositif = (v: unknown): number =>
-  typeof v === 'number' && isFinite(v) && v > 0 ? Math.round(v) : 0;
-
-function lire(cle: string): unknown {
-  try {
-    const brut = localStorage.getItem(cle);
-    return brut ? JSON.parse(brut) : null;
-  } catch {
-    return null;
-  }
+function decoder(brut: string, champ: string): unknown {
+  try { return JSON.parse(brut) as unknown; }
+  catch { throw new Error(`${champ} : les données JSON sont illisibles. Le stockage d’origine n’a pas été modifié.`); }
 }
 
-const parId = (a: Ecriture, b: Ecriture) =>
-  a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
-
-/** Lit le livre journal ; importe une fois les données de l'ancienne caisse. */
-export function chargerEcritures(): Ecriture[] {
-  const brut = lire(CLE_ECRITURES);
-  if (Array.isArray(brut)) {
-    return brut
-      .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
-      .map(normaliser)
-      .filter((e): e is Ecriture => e !== null)
-      .sort(parId);
-  }
-
-  const anciennes = lire(CLE_ANCIENNE_CAISSE);
-  if (Array.isArray(anciennes)) {
-    const reprises = anciennes
-      .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
-      .map(e =>
-        normaliser({
-          ...e,
-          sens: e.sens ?? e.type,
-          tiers: e.tiers ?? e.beneficiaire,
-          mode: e.mode ?? e.modePaiement,
-          numero: e.numero ?? e.numeroPiece,
-        }),
-      )
-      .filter((e): e is Ecriture => e !== null)
-      .sort(parId);
-    if (reprises.length > 0) {
-      enregistrerEcritures(reprises);
-      return reprises;
-    }
-  }
-
-  return [];
+function lireJson(cle: string): unknown | null {
+  const brut = localStorage.getItem(cle);
+  return brut === null ? null : decoder(brut, cle);
 }
 
-export function enregistrerEcritures(ecritures: Ecriture[]): void {
-  localStorage.setItem(CLE_ECRITURES, JSON.stringify(ecritures));
-}
+function texte(v: unknown): string { return typeof v === 'string' ? v.trim() : ''; }
 
-function normaliser(e: Record<string, unknown>): Ecriture | null {
-  const sens: Sens = e.sens === 'RECETTE' || e.type === 'RECETTE' ? 'RECETTE' : 'DEPENSE';
-  const date = texte(e.date);
-
-  let lignesDetail: LigneDetail[] | undefined = undefined;
-  if (Array.isArray(e.lignesDetail)) {
-    const parsed = e.lignesDetail
-      .filter((l): l is Record<string, unknown> => !!l && typeof l === 'object')
-      .map((l, idx) => ({
-        id: texte(l.id) || `d-${idx}-${Math.random().toString(36).slice(2)}`,
-        libelle: texte(l.libelle),
-        reference: texte(l.reference) || undefined,
-        montant: montantPositif(l.montant),
-      }))
-      .filter(l => Boolean(l.libelle) || l.montant > 0);
-    if (parsed.length > 0) {
-      lignesDetail = parsed;
-    }
+function migrerEcriture(v: unknown, index: number, reparations: { total: number }): Ecriture {
+  const e = objet(v, `Ancienne écriture ${index + 1}`);
+  const type = texte(e.sens ?? e.type).toUpperCase();
+  exiger(type === 'RECETTE' || type === 'DEPENSE', `Ancienne écriture ${index + 1} : type « ${type || 'absent'} » non reconnu.`);
+  const sens: Sens = type;
+  const bruteDate = texte(e.date);
+  const date = /^(\d{4}-\d{2}-\d{2})T/.test(bruteDate) ? bruteDate.slice(0, 10) : bruteDate;
+  exiger(estDateValide(date), `Ancienne écriture ${index + 1} : date invalide (${date || 'absente'}).`);
+  let lignesDetail: LigneDetail[] | undefined;
+  if (Array.isArray(e.lignesDetail) && e.lignesDetail.length) {
+    lignesDetail = e.lignesDetail.map(v => {
+      const vObj = objet(v, 'Ancien poste');
+      const m = montantEntier(vObj.montant, 'Ancien montant de poste');
+      return {
+        id: texte(vObj.id) || identifiant('d'),
+        libelle: texte(vObj.libelle) || 'Poste sans libellé',
+        reference: texte(vObj.reference) || undefined,
+        montant: m,
+      };
+    }).filter(l => l.montant > 0);
+    if (!lignesDetail.length) lignesDetail = undefined;
   }
-
-  const totalDetails = lignesDetail ? lignesDetail.reduce((s, d) => s + d.montant, 0) : 0;
-  const montant = montantPositif(e.montant) || totalDetails;
-
-  if (!montant || !date) return null;
+  const totalDetails = lignesDetail?.reduce((s, l) => s + l.montant, 0) ?? 0;
+  const montant = lignesDetail ? totalDetails : montantEntier(e.montant, 'Ancien montant');
+  exiger(montant > 0, `Ancienne écriture ${index + 1} : montant nul ou invalide.`);
+  if (lignesDetail && typeof e.montant === 'number' && e.montant !== montant) reparations.total++;
+  const createdAt = texte(e.createdAt);
+  const reference = texte(e.reference) || undefined;
+  const observation = texte(e.observation ?? e.notes) || undefined;
   return {
-    id: texte(e.id) || `e-${Math.random().toString(36).slice(2)}`,
-    numero: texte(e.numero) || texte(e.numeroPiece),
-    date,
-    sens,
-    libelle: texte(e.libelle),
-    categorie: texte(e.categorie) || (sens === 'RECETTE' ? 'Autres recettes' : 'Divers'),
-    tiers: texte(e.tiers) || texte(e.beneficiaire) || undefined,
-    montant,
-    lignesDetail,
-    reference: texte(e.reference) || undefined,
-    observation: texte(e.observation) || texte(e.notes) || undefined,
-    createdAt: texte(e.createdAt) || new Date().toISOString(),
+    id: texte(e.id) || identifiant(),
+    numero: texte(e.numero ?? e.numeroPiece),
+    date, sens,
+    libelle: texte(e.libelle) || (sens === 'RECETTE' ? 'Recettes journalières' : 'Dépenses diverses'),
+    categorie: texte(e.categorie) || categoriesPour(sens).slice(-1)[0],
+    tiers: texte(e.tiers ?? e.beneficiaire) || undefined,
+    montant, lignesDetail,
+    mode: texte(e.mode ?? e.modePaiement) || undefined,
+    reference,
+    observation: observation === reference ? undefined : observation,
+    createdAt: Number.isFinite(Date.parse(createdAt)) ? createdAt : new Date().toISOString(),
   };
 }
 
-export function chargerParametres(): Parametres {
-  const brut = lire(CLE_PARAMETRES);
-  if (brut && typeof brut === 'object') {
-    const soldeInitial = (brut as Record<string, unknown>).soldeInitial;
-    if (typeof soldeInitial === 'number' && isFinite(soldeInitial)) return { soldeInitial };
+function migrerMasques(brut: unknown): MasqueSaisie[] {
+  if (brut === null) return masquesParDefaut();
+  exiger(Array.isArray(brut), 'Anciens masques : liste attendue.');
+  // Un choix explicite de supprimer tous les masques doit rester possible.
+  return brut.map((v, i) => {
+    const m = objet(v, `Ancien masque ${i + 1}`);
+    exiger(Array.isArray(m.lignes), 'Ancien masque : postes manquants.');
+    return {
+      id: texte(m.id) || identifiant('masque'),
+      nom: texte(m.nom), sens: m.sens,
+      description: texte(m.description) || undefined,
+      lignes: m.lignes.map(v => {
+        const l = objet(v, 'Ancien poste de masque');
+        return { description: texte(l.description), montantDefaut: l.montantDefaut == null ? undefined : l.montantDefaut };
+      }),
+    } as MasqueSaisie;
+  });
+}
+
+function migrer(): { donnees: DonneesCaisse; avertissement: string | null } {
+  const brutEcritures = lireJson(CLE_ECRITURES) ?? lireJson(CLE_ANCIENNE_CAISSE);
+  const brutParametres = lireJson(CLE_PARAMETRES);
+  const brutMasques = lireJson(CLE_MASQUES);
+  if (brutEcritures === null && brutParametres === null && brutMasques === null) {
+    return { donnees: creerDonnees(), avertissement: null };
   }
-  return { soldeInitial: 0 };
-}
-
-export function enregistrerParametres(parametres: Parametres): void {
-  localStorage.setItem(CLE_PARAMETRES, JSON.stringify(parametres));
-}
-
-/** Numéro suivant pour un sens et une année donnés (ex. DP-2026-0007). */
-export function prochainNumero(ecritures: Ecriture[], sens: Sens, date: string): string {
-  const annee = (date || '').slice(0, 4) || String(new Date().getFullYear());
-  const prefixe = `${sens === 'RECETTE' ? 'RC' : 'DP'}-${annee}-`;
-  const max = ecritures
-    .filter(e => e.sens === sens && e.numero.startsWith(prefixe))
-    .reduce((acc, e) => Math.max(acc, Number.parseInt(e.numero.slice(prefixe.length), 10) || 0), 0);
-  return `${prefixe}${String(max + 1).padStart(4, '0')}`;
-}
-
-const CLE_MASQUES = 'salfa_tresorerie_masques_v1';
-
-export const MASQUES_DEFAUT: MasqueSaisie[] = [
-  {
-    id: 'masque-recettes-hopital',
-    nom: 'Bordereau recettes hôpital (12 postes)',
-    sens: 'RECETTE',
-    description: 'Postes types du carnet de caisse hospitalier',
-    lignes: [
-      { description: 'CONSULTATION' },
-      { description: 'ECHOGRAPHIE' },
-      { description: 'CHAMBRE' },
-      { description: 'LABORATOIRE' },
-      { description: 'MATERNITE' },
-      { description: 'MEDICAMENT' },
-      { description: 'SOINS' },
-      { description: 'HOSPITALISATION' },
-      { description: 'DENTISTERIE' },
-      { description: 'BLOC' },
-      { description: 'DIVERS' },
-      { description: 'VACCIN' },
-    ],
-  },
-  {
-    id: 'masque-depenses-courantes',
-    nom: 'Charges courantes & fonctionnement',
-    sens: 'DEPENSE',
-    description: 'Dépenses périodiques d exploitation',
-    lignes: [
-      { description: 'ACHATS MEDICAMENTS' },
-      { description: 'FOURNITURES MEDICALES' },
-      { description: 'CARBURANT' },
-      { description: 'EAU & ELECTRICITE' },
-      { description: 'MAINTENANCE' },
-      { description: 'DIVERS' },
-    ],
-  },
-];
-
-export function chargerMasques(): MasqueSaisie[] {
-  const brut = lire(CLE_MASQUES);
-  if (Array.isArray(brut) && brut.length > 0) {
-    return brut as MasqueSaisie[];
+  exiger(brutEcritures === null || Array.isArray(brutEcritures), 'Ancien livre : liste d’écritures attendue.');
+  const reparations = { total: 0 };
+  const ecritures = (brutEcritures ?? []).map((e, i) => migrerEcriture(e, i, reparations)).sort(comparerEcritures);
+  const compteurs: Record<string, number> = {};
+  // Recenser les numéros existants avant d'attribuer ceux qui manquent.
+  for (const e of ecritures) {
+    const match = e.numero.match(/^(RC|DP)-(\d{4})-(\d+)$/);
+    if (match) {
+      const cle = `${match[1]}-${match[2]}`;
+      compteurs[cle] = Math.max(compteurs[cle] ?? 0, Number(match[3]));
+    }
   }
-  enregistrerMasques(MASQUES_DEFAUT);
-  return MASQUES_DEFAUT;
+  for (const e of ecritures) {
+    if (!e.numero) {
+      const prefixe = `${e.sens === 'RECETTE' ? 'RC' : 'DP'}-${e.date.slice(0, 4)}`;
+      const suivant = (compteurs[prefixe] ?? 0) + 1;
+      e.numero = `${prefixe}-${String(suivant).padStart(4, '0')}`;
+      compteurs[prefixe] = suivant;
+    }
+  }
+  const p = brutParametres === null ? { soldeInitial: 0 } : objet(brutParametres, 'Anciens paramètres');
+  const donnees = validerDonnees({
+    ecritures,
+    parametres: { soldeInitial: p.soldeInitial ?? 0 },
+    masques: migrerMasques(brutMasques),
+    compteurs,
+  });
+  return {
+    donnees,
+    avertissement: reparations.total
+      ? `${reparations.total} ancien(s) total(s) ont été recalculés à partir des postes valides. Les données d’origine sont conservées ; vérifiez ces pièces et téléchargez une sauvegarde.`
+      : 'Vos anciennes données ont été reprises. Les clés d’origine sont conservées ; téléchargez une sauvegarde JSON pour les protéger.',
+  };
 }
 
-export function enregistrerMasques(masques: MasqueSaisie[]): void {
-  localStorage.setItem(CLE_MASQUES, JSON.stringify(masques));
+/** Lecture sans écriture implicite : un stockage corrompu n'est jamais remplacé par un livre vide. */
+export function chargerLivre(): ChargementLivre {
+  const vide: Sauvegarde = { format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: new Date().toISOString(), ...creerDonnees() };
+  try {
+    const brut = localStorage.getItem(CLE_LIVRE);
+    if (brut !== null) {
+      const livre = validerSauvegarde(decoder(brut, 'Livre enregistré'));
+      return { livre, erreur: null, avertissement: null, migration: false, normalisation: livre.parametres.exercice === undefined, };
+    }
+    const { donnees, avertissement } = migrer();
+    return { livre: { ...vide, ...donnees }, erreur: null, avertissement, migration: avertissement !== null, normalisation: false, };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Le stockage local est inaccessible.';
+    return {
+      livre: vide, migration: false, avertissement: null, normalisation: false,
+      erreur: `${message} Les modifications sont bloquées pour protéger vos données. Téléchargez les données de secours dans « Données & sauvegardes », puis rechargez ou restaurez une sauvegarde valide.`,
+    };
+  }
+}
+
+function erreurStockage(e: unknown): Error {
+  if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+    return new Error('Le stockage du navigateur est plein. La modification n’a pas été enregistrée : exportez une sauvegarde et libérez de l’espace avant de réessayer.');
+  }
+  return new Error('Le navigateur a refusé la sauvegarde locale. La modification n’a pas été enregistrée. Vérifiez les autorisations de stockage, puis réessayez.');
+}
+
+/** Un seul setItem atomique pour les écritures, paramètres, masques et compteurs. */
+export function sauvegarderLivre(livre: Sauvegarde, revisionAttendue: number, recuperation = false): Sauvegarde {
+  const propre = validerSauvegarde(livre);
+  let brut: string | null;
+  try { brut = localStorage.getItem(CLE_LIVRE); }
+  catch (e) { throw erreurStockage(e); }
+  let revisionActuelle = 0;
+  let successeur = false;
+  if (brut !== null) {
+    let actuel: Sauvegarde | null;
+    try { actuel = validerSauvegarde(decoder(brut, 'Livre enregistré')); }
+    catch (e) {
+      if (!recuperation) throw e;
+      // Récupération explicite d'un stockage corrompu : l'appelant a exporté les données brutes.
+      revisionActuelle = Math.max(propre.revision, revisionAttendue);
+      actuel = null;
+    }
+    if (actuel) {
+      // La restauration est une action explicite et vérifiée : elle constitue la révision suivante.
+      successeur = recuperation && actuel.revision === revisionAttendue - 1;
+      exiger(actuel.revision === revisionAttendue || successeur,
+        'Le livre a été modifié dans un autre onglet. Rechargez les données avant d’enregistrer pour éviter d’écraser une écriture.');
+      revisionActuelle = actuel.revision;
+    }
+  } else {
+    // Le chargement ne doit jamais créer de valeur vide : seule une migration ou une restauration explicite peut initialiser.
+    exiger(revisionAttendue === 0 || recuperation,
+      'Le stockage a été supprimé dans un autre onglet. Rechargez le livre avant de continuer.');
+  }
+  const suivant: Sauvegarde = {
+    ...propre, revision: (successeur ? revisionActuelle : Math.max(revisionActuelle, revisionAttendue)) + 1,
+    updatedAt: new Date().toISOString(), exportedAt: undefined,
+  };
+  try { localStorage.setItem(CLE_LIVRE, JSON.stringify(suivant)); }
+  catch (e) { throw erreurStockage(e); }
+  return suivant;
+}
+
+export function donneesSecours(): Record<string, string> {
+  const cles: Record<string, string> = {};
+  for (const cle of CLES_SECOURS) {
+    try { const brut = localStorage.getItem(cle); if (brut !== null) cles[cle] = brut; }
+    catch { cles[cle] = '[lecture refusée par le navigateur]'; }
+  }
+  return cles;
 }

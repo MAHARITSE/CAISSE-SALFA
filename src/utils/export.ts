@@ -1,94 +1,68 @@
-import { LigneJournal } from '../types';
-import { dateFr, nombre } from './format';
+import type { LigneJournal } from '../types';
+import { dateFr } from './format';
 
-interface OptionsExport {
+export interface OptionsExport {
   periode: string;
   soldeOuverture: number;
   recettes: number;
   depenses: number;
   soldeFin: number;
+  selection?: boolean;
 }
 
-const cellule = (valeur: string | number): string => {
-  const texte = String(valeur);
-  return /[;"\n]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte;
-};
+/** Neutralise les formules Excel sans modifier les montants numériques. */
+export function celluleCsv(valeur: string | number): string {
+  if (typeof valeur === 'number') return String(valeur);
+  const dangereux = /^[\s]*[=+\-@]/.test(valeur) || /^[\t\r\n]/.test(valeur);
+  const texte = dangereux ? `'${valeur}` : valeur;
+  return /[;"\r\n]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte;
+}
 
-const ligne = (valeurs: (string | number)[]): string => valeurs.map(cellule).join(';');
+const ligne = (valeurs: (string | number)[]): string => valeurs.map(celluleCsv).join(';');
 
-/**
- * Exporte le livre journal dans un CSV lisible par Excel
- * (séparateur « ; » et BOM UTF-8, comme les classeurs français).
- */
-export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport): void {
+/** CSV UTF-8, séparateur ;, montants numériques non doublés sur les pièces détaillées. */
+export function genererLivreCsv(lignes: LigneJournal[], options: OptionsExport): string {
   const contenu: string[] = [
     ligne(['CAISSE SALFA', 'Livre journal des recettes et dépenses']),
     ligne(['Période', options.periode]),
-    ligne(['Solde d ouverture', nombre(options.soldeOuverture)]),
+    ligne(['Vue', options.selection ? 'Sélection filtrée' : 'Période complète']),
+    ligne(['Solde d’ouverture', options.soldeOuverture]),
     '',
-    ligne([
-      'Date',
-      'N° pièce',
-      'Libellé',
-      'Catégorie',
-      'Tiers / service',
-      'Observation / Réf',
-      'Recette',
-      'Dépense',
-      'Solde',
-    ]),
-    ligne([
-      '',
-      '',
-      'Report à nouveau',
-      '',
-      '',
-      '',
-      '',
-      '',
-      nombre(options.soldeOuverture),
-    ]),
+    ligne(['Date', 'N° pièce', 'Libellé', 'Catégorie', 'Tiers / service', 'Référence', 'Observation', 'Recette (MGA)', 'Dépense (MGA)', 'Solde cumulé (MGA)']),
+    ligne(['', '', 'Report à nouveau', '', '', '', '', '', '', '', options.soldeOuverture]),
     ...lignes.flatMap(l => {
-      const lignePrincipale = ligne([
-        dateFr(l.date),
-        l.numero,
-        l.libelle,
-        l.categorie,
-        l.tiers ?? '',
-        l.observation || l.reference || '',
-        l.sens === 'RECETTE' ? nombre(l.montant) : '',
-        l.sens === 'DEPENSE' ? nombre(l.montant) : '',
-        nombre(l.solde),
+      const detail = l.lignesDetail && l.lignesDetail.length > 0;
+      const principale = ligne([
+        dateFr(l.date), l.numero, l.libelle, l.categorie, l.tiers ?? '',
+        l.reference ?? '', l.observation ?? '',
+        !detail && l.sens === 'RECETTE' ? l.montant : '',
+        !detail && l.sens === 'DEPENSE' ? l.montant : '',
+        l.solde,
       ]);
-
-      if (l.lignesDetail && l.lignesDetail.length > 0) {
-        const sousLignes = l.lignesDetail.map((d, idx) =>
-          ligne([
-            '',
-            '',
-            `  ↳ ${idx + 1}. ${d.libelle}`,
-            'Détail poste',
-            '',
-            d.reference ?? '',
-            l.sens === 'RECETTE' ? nombre(d.montant) : '',
-            l.sens === 'DEPENSE' ? nombre(d.montant) : '',
-            '',
-          ]),
-        );
-        return [lignePrincipale, ...sousLignes];
-      }
-      return [lignePrincipale];
+      if (!detail) return [principale];
+      return [principale, ...l.lignesDetail!.map((d, idx) => ligne([
+        '', '', `  ↳ ${idx + 1}. ${d.libelle}`, 'Détail du poste', '', '', d.reference ?? '', '',
+        l.sens === 'RECETTE' ? d.montant : '', l.sens === 'DEPENSE' ? d.montant : '', '',
+      ]))];
     }),
-    ligne(['', '', 'TOTAUX DE LA PÉRIODE', '', '', '', nombre(options.recettes), nombre(options.depenses), nombre(options.soldeFin)]),
+    ligne(['', '', options.selection ? 'TOTAUX DE LA SÉLECTION' : 'TOTAUX DE LA PÉRIODE', '', '', '', '', '', options.recettes, options.depenses, '']),
+    ligne(['', '', 'SOLDE DE CLÔTURE — PÉRIODE COMPLÈTE', '', '', '', '', '', '', '', options.soldeFin]),
   ];
+  return '\uFEFF' + contenu.join('\r\n');
+}
 
-  const blob = new Blob(['\uFEFF' + contenu.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+export function telecharger(contenu: string, nom: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([contenu], { type }));
   const lien = document.createElement('a');
   lien.href = url;
-  lien.download = `livre_journal_${options.periode.replace(/\s+/g, '_').toLowerCase()}.csv`;
+  lien.download = nom;
   document.body.appendChild(lien);
   lien.click();
-  document.body.removeChild(lien);
-  URL.revokeObjectURL(url);
+  lien.remove();
+  // Laisse au navigateur le temps de démarrer le téléchargement.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport): void {
+  telecharger(genererLivreCsv(lignes, options), `livre_journal_${options.periode.replace(/\s+/g, '_').toLowerCase()}.csv`, 'text/csv;charset=utf-8;');
 }
