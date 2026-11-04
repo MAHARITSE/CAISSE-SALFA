@@ -20,7 +20,11 @@ const SALFA_MAX_CLOTURES = 400;
 // En-têtes imprimables : mêmes bornes que l'application (1 Mo d'image, 300 Ko de logo).
 const MAX_IMAGE_ENTETE = 1024 * 1024;
 const MAX_LOGO_ENTETE = 300 * 1024;
-const MAX_LIGNES_ENTETE = 8;
+const MAX_LIGNES_ENTETE = 24;
+const MAX_IMAGES_ENTETE = 20;
+// Catégories de saisie : listes séparées pour les recettes et les dépenses.
+const MAX_CATEGORIES = 200;
+const MAX_LONGUEUR_CATEGORIE = 120;
 const SALFA_DEFAUT_LIMITE = 60;      // tentatives par fenêtre
 const SALFA_DEFAUT_FENETRE = 60;     // secondes
 

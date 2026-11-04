@@ -63,6 +63,12 @@ export interface MasqueSaisie {
   lignes: { description: string; montantDefaut?: number }[];
 }
 
+/** Catégories de saisie, gérées séparément pour les recettes et les dépenses. */
+export interface Categories {
+  recette: string[];
+  depense: string[];
+}
+
 export interface DonneesCaisse {
   ecritures: Ecriture[];
   parametres: Parametres;
@@ -73,6 +79,8 @@ export interface DonneesCaisse {
   exercicesClotures: ExerciceCloture[];
   /** En-têtes imprimables de l'engagement de dépense et de l'autorisation de recette. */
   entetes: EntetesDocuments;
+  /** Catégories proposées à la saisie, distinctes par sens. */
+  categories: Categories;
 }
 
 /** Même format pour le stockage local et les sauvegardes JSON importables. */

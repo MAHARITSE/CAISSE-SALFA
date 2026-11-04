@@ -59,7 +59,7 @@ Dans WAMP : clic sur l'icône → **PHP → Version** → choisir 8.1 ou plus.
    `C:\wamp64\www\caisse-salfa`).
 2. Double-cliquer sur **`outils\installer.bat`**.
    Le script détecte WAMP, copie le site, demande les accès MySQL, crée la base,
-   les 13 tables, les modèles de saisie et le compte administrateur.
+   les 14 tables, les modèles de saisie, les catégories et le compte administrateur.
 3. Ouvrir **<http://localhost/caisse-salfa/>**.
 
 Le script n'affiche jamais le mot de passe MySQL en clair et le stocke hors du
@@ -107,13 +107,35 @@ il indique le nombre de tables présentes, l'état du livre et celui des comptes
 
 ## 5. Comptes et rôles
 
-| Rôle | Consulter / exporter | Saisir, modifier, supprimer | Clôturer, solde d'ouverture, restaurer |
-| --- | --- | --- | --- |
-| `lecteur` | oui | non | non |
-| `caissier` | oui | oui | non |
-| `admin` | oui | oui | oui |
+| Rôle | Pages ouvertes | Consulter / exporter | Saisir | Solde d'ouverture, clôture, restauration, Administration |
+| --- | --- | --- | --- | --- |
+| `comptable` | livre journal, analyse | oui | non | non |
+| `caissier` | livre journal | oui | oui | non |
+| `admin` | tout | oui | oui | oui |
+
+**Le solde d'ouverture n'est modifiable que par l'administrateur.** Le crayon de
+la synthèse disparaît pour les autres rôles (« Lecture seule »), et le serveur
+refuse de toute façon l'écriture `solde-initial` à quiconque n'est pas `admin` :
+l'interface ne fait que refléter une règle déjà tenue en base.
+
+### Base déjà installée (rôles ajoutés après coup)
+
+L'ancien rôle `lecteur` devient `comptable`. Sur une base existante, exécutez
+une fois :
+
+```
+mysql -u root -p salfa < sql/salfa_roles.sql
+```
+
+ou, via phpMyAdmin : base `caisse_salfa` > onglet **Importer** > `salfa_roles.sql`.
+Le script est idempotent, convertit les comptes `lecteur`, resserre l'ENUM sur
+les trois rôles et contrôle qu'il reste au moins un administrateur actif.
 
 - `outils\creer-admin.bat` crée un compte ou réinitialise un mot de passe.
+- **Chacun change son mot de passe** sans passer par l'administrateur : bouton
+  « clé » à côté du nom, en haut à droite. L'ancien mot de passe est exigé.
+  L'administrateur n'a plus à le faire pour les autres, et ne peut pas
+  deviner le mot de passe choisi : il ne voit que le hachage en base.
 - Session : cookie `HttpOnly`, expiration après 12 h ou 30 min d'inactivité.
 - 8 tentatives de connexion par quart d'heure et par adresse.
 - Chaque connexion, saisie, suppression, clôture et restauration est journalisée
@@ -121,7 +143,26 @@ il indique le nombre de tables présentes, l'état du livre et celui des comptes
 
 ---
 
-## 6. Règles appliquées côté serveur
+## 6. Sauvegardes : fichier `.sql`
+
+Sous WAMP, la sauvegarde de référence est le **dump `.sql`** — l'habituel
+export MySQL, réimportable dans phpMyAdmin.
+
+- Onglet **Données & sauvegardes** > **Télécharger la sauvegarde .sql**
+  (administrateur). Le fichier `sauvegarde_caisse_salfa_AAAA-MM-JJ_HH-MM-SS.sql`
+  contient la structure des 12 tables utiles puis leurs données.
+- **Restauration** : arrêter la caisse, puis phpMyAdmin > **Importer** > le
+  fichier > Exécuter. Les tables présentes sont remplacées, les absentes
+  créées. En ligne de commande : `mysql -u root -p caisse_salfa < fichier.sql`.
+- Ce qui n'est **pas** exporté, volontairement : `salfa_sessions` (sessions
+  ouvertes, à rouvrir) et `salfa_tentatives` (compteurs anti-intrusion, propres
+  au serveur).
+- Les mots de passe partent **hachés** (bcrypt) : le fichier ne permet pas de
+  les lire, mais il restitue les comptes.
+- La sauvegarde **JSON** reste disponible à côté : elle ne contient que le
+  livre et repart d'une caisse neuve, utile pour changer de machine.
+
+## 7. Règles appliquées côté serveur
 
 L'API ne fait jamais confiance au navigateur :
 

@@ -256,15 +256,21 @@ function salfa_journaliser(string $action, ?int $utilisateurId, string $resultat
 }
 
 /**
- * Rôle minimal exigé. « lecteur » consulte et exporte ; « caissier » saisit ;
- * « admin » clôture, modifie le solde d'ouverture et restaure une sauvegarde.
+ * Rôle minimal exigé.
+ *
+ *   comptable — consulte le livre journal et l'analyse, exporte ;
+ *   caissier  — saisit les recettes et les dépenses ;
+ *   admin     — tout, et seul à corriger le solde d'ouverture ou à clôturer.
+ *
+ * L'ancien rôle « lecteur » est accepté à la hauteur du comptable : une base
+ * qui n'aurait pas encore reçu sql/salfa_roles.sql continue de fonctionner.
  *
  * @return array<string, mixed>
  */
 function salfa_exiger_role(string $roleMinimum): array
 {
     $utilisateur = salfa_utilisateur_courant();
-    $roles = ['lecteur' => 0, 'caissier' => 1, 'admin' => 2];
+    $roles = ['lecteur' => 0, 'comptable' => 0, 'caissier' => 1, 'admin' => 2];
     $obtenu = $roles[(string) $utilisateur['role']] ?? 0;
     if ($obtenu < ($roles[$roleMinimum] ?? 0)) {
         throw new SalFaErreur('Votre rôle ne permet pas cette action.', 403, 'role_insuffisant');

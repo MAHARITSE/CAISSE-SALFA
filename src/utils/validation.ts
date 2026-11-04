@@ -1,6 +1,7 @@
 import type { DonneesCaisse, Ecriture, ExerciceCloture, LigneDetail, MasqueSaisie, Parametres, Sauvegarde, Sens } from '../types';
-import { ANNEE_MAX, ANNEE_MIN, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MONTANT_MAX } from './constants';
-import { normaliserEntetes } from './entete';
+import { ANNEE_MAX, ANNEE_MIN, MAX_CATEGORIES, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MAX_LONGUEUR_CATEGORIE, MONTANT_MAX, categoriesParDefaut, categoriesPour } from './constants';
+import { entetesParDefaut, normaliserEntetes } from './entete';
+import type { Categories } from '../types';
 
 /** Une erreur de validation est toujours bloquante : aucune ligne n'est écartée en silence. */
 export function exiger(condition: unknown, message: string): asserts condition {
@@ -172,6 +173,31 @@ function validerCloture(valeur: unknown, index: number): ExerciceCloture {
   };
 }
 
+/**
+ * Catégories de saisie, séparées par sens. Une catégorie peut toutefois avoir
+ * disparu de la liste : les écritures déjà enregistrées restent lisibles.
+ */
+export function validerCategories(valeur: unknown): Categories {
+  if (valeur === undefined || valeur === null) return categoriesParDefaut();
+  const c = objet(valeur, 'Catégories');
+  const liste = (v: unknown, sens: Sens): string[] => {
+    if (v === undefined || v === null) return categoriesPour(sens);
+    const brutes = tableau(v, `Catégories de ${sens === 'RECETTE' ? 'recettes' : 'dépenses'}`, MAX_CATEGORIES);
+    const vues = new Set<string>();
+    const propres: string[] = [];
+    for (const [index, brut] of brutes.entries()) {
+      const nom = texte(brut, `Catégorie ${index + 1}`, MAX_LONGUEUR_CATEGORIE, true).trim();
+      const cle = nom.toLowerCase();
+      if (vues.has(cle)) continue; // un doublon est ignoré, il n'empêche pas l'enregistrement
+      vues.add(cle);
+      propres.push(nom);
+    }
+    exiger(propres.length > 0, `La liste des catégories de ${sens === 'RECETTE' ? 'recettes' : 'dépenses'} ne peut pas être vide.`);
+    return propres;
+  };
+  return { recette: liste(c.recette, 'RECETTE'), depense: liste(c.depense, 'DEPENSE') };
+}
+
 export function validerDonnees(valeur: unknown): DonneesCaisse {
   const d = objet(valeur, 'Livre');
   const liste = tableau(d.ecritures, 'Écritures', MAX_ECRITURES);
@@ -233,9 +259,11 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
     solde += e.sens === 'RECETTE' ? e.montant : -e.montant;
     exiger(Number.isSafeInteger(solde), 'Le solde cumulé dépasse la précision numérique fiable. Réduisez les montants du livre.');
   }
-  // Un livre antérieur aux en-têtes personnalisables retombe sur les en-têtes livrés.
-  const entetes = normaliserEntetes(d.entetes);
-  return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes };
+  // Un livre qui ne fige pas son en-tête (sauvegarde générique, jeu d'essai)
+  // reprend celui livré par l'application, sans copie obsolète.
+  const entetes = d.entetes === undefined ? normaliserEntetes(entetesParDefaut()) : normaliserEntetes(d.entetes);
+  const categories = validerCategories(d.categories);
+  return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes, categories };
 }
 
 export function validerSauvegarde(valeur: unknown): Sauvegarde {

@@ -1,5 +1,5 @@
 import type { DonneesCaisse, Ecriture, ExerciceCloture, FiltresJournal, LigneJournal, Sauvegarde, Sens } from '../types';
-import { ANNEE_MAX, ANNEE_MIN, masquesParDefaut, MONTANT_MAX } from './constants';
+import { ANNEE_MAX, ANNEE_MIN, categoriesParDefaut, masquesParDefaut, MONTANT_MAX } from './constants';
 import { dateValide, exiger, validerDonnees } from './validation';
 import { entetesParDefaut, normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
 
@@ -12,6 +12,7 @@ export function creerDonnees(annee = new Date().getFullYear()): DonneesCaisse {
   return {
     ecritures: [], parametres: { soldeInitial: 0, exercice: annee, reportPrecedent: null },
     masques: masquesParDefaut(), compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut(),
+    categories: categoriesParDefaut(),
   };
 }
 
@@ -63,6 +64,7 @@ export function cloturerExercice(donnees: DonneesCaisse, clotureLe = new Date().
     },
     masques: donnees.masques,
     entetes: donnees.entetes,
+    categories: donnees.categories,
     compteurs: donnees.compteurs,
     exercicesClotures: [...donnees.exercicesClotures, archive].sort((a, b) => a.annee - b.annee),
   };
@@ -226,13 +228,22 @@ export function changerSoldeInitial(donnees: DonneesCaisse, soldeInitial: number
   return validerDonnees({ ...donnees, parametres: { soldeInitial } });
 }
 
-/** Enregistre l'en-tête d'un seul document, sans toucher à l'autre. */
-export function enregistrerEntete(donnees: DonneesCaisse, document: DocumentEntete, entete: EnteteDocument): DonneesCaisse {
-  const entetes = normaliserEntetes({ ...donnees.entetes, [document]: entete });
-  const propre = entetes[document];
+/**
+ * Enregistre l'en-tête, commun aux deux imprimés.
+ * `document` est conservé pour les appelants : il ne désigne plus qu'un
+ * document d'où l'on ouvre l'éditeur, l'en-tête étant partagé.
+ */
+export function enregistrerEntete(donnees: DonneesCaisse, _document: DocumentEntete, entete: EnteteDocument): DonneesCaisse {
+  const propre = normaliserEntetes(entete);
   exiger(propre.mode === 'image' ? propre.image !== '' : propre.lignes.some(l => l.texte.trim() !== ''),
     'L’en-tête est vide : choisissez une image ou renseignez au moins une ligne de texte.');
-  return { ...donnees, entetes };
+  return { ...donnees, entetes: propre };
+}
+
+/** Remplace les catégories d'un sens, sans toucher à l'autre liste. */
+export function enregistrerCategories(donnees: DonneesCaisse, sens: Sens, categories: string[]): DonneesCaisse {
+  const donneesSuivantes = { ...donnees, categories: { ...donnees.categories, [sens === 'RECETTE' ? 'recette' : 'depense']: categories } };
+  return { ...donnees, categories: validerDonnees(donneesSuivantes).categories };
 }
 
 export function enregistrerMasques(donnees: DonneesCaisse, masques: DonneesCaisse['masques']): DonneesCaisse {

@@ -91,9 +91,19 @@ CREATE TABLE IF NOT EXISTS salfa_entetes (
   mode ENUM('image','textes') NOT NULL DEFAULT 'textes',
   image MEDIUMTEXT NULL,
   lignes MEDIUMTEXT NULL,
+  -- Images placées librement sur la feuille : [{id, source, x, y, largeur, alt}].
+  images MEDIUMTEXT NULL,
   logo_gauche MEDIUMTEXT NULL,
   logo_droit MEDIUMTEXT NULL,
   modifie_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Catégories de saisie, distinctes pour les recettes et les dépenses.
+CREATE TABLE IF NOT EXISTS salfa_categories (
+  sens ENUM('RECETTE','DEPENSE') NOT NULL,
+  nom VARCHAR(120) NOT NULL,
+  ordre SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (sens, nom)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS salfa_compteurs (
@@ -115,7 +125,9 @@ CREATE TABLE IF NOT EXISTS salfa_utilisateurs (
   identifiant VARCHAR(80) NOT NULL,
   nom_complet VARCHAR(120) NOT NULL,
   mdp_hash VARCHAR(255) NOT NULL,
-  role ENUM('lecteur','caissier','admin') NOT NULL DEFAULT 'caissier',
+  -- Rôles : admin (tout), caissier (livre journal), comptable (journal + analyse).
+  -- L'ancien « lecteur » est ramené à « comptable » par salfa_roles.sql.
+  role ENUM('comptable','caissier','admin') NOT NULL DEFAULT 'caissier',
   actif TINYINT(1) NOT NULL DEFAULT 1,
   derniere_connexion DATETIME(3) NULL,
   cree_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -161,6 +173,31 @@ INSERT INTO salfa_livre (id, revision) VALUES (1, 0)
 INSERT INTO salfa_parametres (id, solde_initial, exercice, report_annee, report_solde)
   VALUES (1, 0, YEAR(CURDATE()), NULL, NULL)
   ON DUPLICATE KEY UPDATE id = id;
+
+-- Catégories de saisie par défaut, séparées par sens (modifiables depuis l'application)
+INSERT INTO salfa_categories (sens, nom, ordre) VALUES
+  ('RECETTE', 'Recettes journalières', 0),
+  ('RECETTE', 'Consultations', 1),
+  ('RECETTE', 'Pharmacie', 2),
+  ('RECETTE', 'Laboratoire', 3),
+  ('RECETTE', 'Hospitalisation', 4),
+  ('RECETTE', 'Maternité', 5),
+  ('RECETTE', 'Imagerie', 6),
+  ('RECETTE', 'Subventions & dons', 7),
+  ('RECETTE', 'Remboursements', 8),
+  ('RECETTE', 'Autres recettes', 9),
+  ('DEPENSE', 'Achats médicaments', 0),
+  ('DEPENSE', 'Consommables médicaux', 1),
+  ('DEPENSE', 'Fournitures de bureau', 2),
+  ('DEPENSE', 'Carburant & transport', 3),
+  ('DEPENSE', 'Maintenance & équipements', 4),
+  ('DEPENSE', 'Salaires & primes', 5),
+  ('DEPENSE', 'Frais de mission', 6),
+  ('DEPENSE', 'Honoraires', 7),
+  ('DEPENSE', 'Eau & électricité', 8),
+  ('DEPENSE', 'Téléphone & internet', 9),
+  ('DEPENSE', 'Divers', 10)
+  ON DUPLICATE KEY UPDATE nom = nom;
 
 -- Modèles de saisie par défaut (facultatifs, supprimables depuis l'application)
 INSERT INTO salfa_masques (id, nom, sens, description, ordre) VALUES

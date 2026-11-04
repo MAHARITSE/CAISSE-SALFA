@@ -63,6 +63,11 @@ export function telecharger(contenu: string, nom: string, type: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Télécharge un contenu déjà mis en forme (dump .sql, par exemple). */
+export function telechargerTexte(contenu: string, nom: string, type: string): void {
+  telecharger(contenu, nom, type);
+}
+
 export function exporterLivreCsv(lignes: LigneJournal[], options: OptionsExport): void {
   telecharger(genererLivreCsv(lignes, options), `livre_journal_${options.periode.replace(/\s+/g, '_').toLowerCase()}.csv`, 'text/csv;charset=utf-8;');
 }

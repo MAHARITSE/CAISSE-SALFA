@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Charger le jeu d’essai — Caisse SALFA</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #f1f5f9; color: #0f172a; }
+    .carte { width: min(560px, 100%); background: #fff; border: 1px solid #e2e8f0; border-radius: 18px;
+      box-shadow: 0 20px 50px rgb(15 23 42 / .10); overflow: hidden; }
+    .tete { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; gap: 12px; align-items: center; }
+    .logo { width: 40px; height: 40px; border-radius: 12px; background: #0f766e; color: #fff;
+      display: grid; place-items: center; font-weight: 800; }
+    h1 { font-size: 17px; margin: 0; }
+    .tete p { margin: 2px 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #94a3b8; }
+    .corps { padding: 22px 24px; font-size: 13px; line-height: 1.6; }
+    ul { margin: 10px 0 18px; padding-left: 18px; color: #334155; }
+    li { margin: 4px 0; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    button, a.bouton { border: 0; cursor: pointer; font: inherit; font-weight: 600; font-size: 13px;
+      padding: 11px 16px; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+    .principal { background: #0f766e; color: #fff; }
+    .principal:hover { background: #115e59; }
+    .secondaire { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+    .note { margin-top: 18px; padding: 12px 14px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0;
+      color: #065f46; font-size: 12px; }
+    .erreur { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+    code { background: #f1f5f9; padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main class="carte">
+    <header class="tete">
+      <span class="logo">CS</span>
+      <div><h1>Jeu d’essai — trois derniers mois</h1><p>Caisse SALFA</p></div>
+    </header>
+    <div class="corps">
+      <p>Ce fichier installe un livre de démonstration dans <strong>ce navigateur</strong>, puis ouvre l’application.</p>
+      <ul id="resume"><li>Lecture du jeu de données…</li></ul>
+      <div class="actions">
+        <button class="principal" id="charger">Charger et ouvrir l’application</button>
+        <a class="bouton secondaire" href="../">Ouvrir sans charger</a>
+      </div>
+      <div class="note" id="note" hidden></div>
+    </div>
+  </main>
+  <script type="module">
+    const CLE = 'salfa_tresorerie_livre_v2';
+    const cible = new URL('..', location.href).href;
+    const resume = document.getElementById('resume');
+    const note = document.getElementById('note');
+    const bouton = document.getElementById('charger');
+
+    const montant = n => n.toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ') + ' Ar';
+    const moisFr = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+    function afficher(message, erreur = false) {
+      note.hidden = false;
+      note.textContent = message;
+      note.classList.toggle('erreur', erreur);
+    }
+
+    let livre = null;
+    try {
+      const reponse = await fetch('jeu-essai.json', { cache: 'no-store' });
+      if (!reponse.ok) throw new Error(`fichier introuvable (${reponse.status})`);
+      livre = await reponse.json();
+      const parMois = new Map();
+      for (const e of livre.ecritures) {
+        const cle = e.date.slice(0, 7);
+        const ligne = parMois.get(cle) ?? { n: 0, recettes: 0, depenses: 0 };
+        ligne.n++;
+        if (e.sens === 'RECETTE') ligne.recettes += e.montant; else ligne.depenses += e.montant;
+        parMois.set(cle, ligne);
+      }
+      resume.innerHTML = '';
+      for (const [cle, v] of parMois) {
+        const [annee, mois] = cle.split('-');
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${moisFr[Number(mois) - 1]} ${annee}</strong> — ${v.n} pièces · recettes ${montant(v.recettes)} · dépenses ${montant(v.depenses)}`;
+        resume.appendChild(li);
+      }
+    } catch (e) {
+      bouton.disabled = true;
+      resume.innerHTML = '<li>Jeu de données illisible.</li>';
+      afficher(`Le jeu de données n’a pas pu être lu : ${e.message}. Ouvrez cette page depuis le dossier demo/ du dépôt, ou importez le fichier JSON depuis l’onglet « Données & sauvegardes ».`, true);
+    }
+
+    bouton.addEventListener('click', () => {
+      if (!livre) return;
+      try {
+        const existant = localStorage.getItem(CLE);
+        if (existant) {
+          const sauvegarde = `salfa_essai_precedent_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
+          localStorage.setItem(sauvegarde, existant);
+          afficher(`Livre précédent conservé sous la clé « ${sauvegarde} ».`);
+        }
+        localStorage.setItem(CLE, JSON.stringify({ ...livre, revision: 0, updatedAt: new Date().toISOString() }));
+        location.href = cible;
+      } catch (e) {
+        afficher(`Enregistrement impossible : ${e.message}. Utilisez plutôt l’import du fichier JSON dans l’onglet « Données & sauvegardes ».`, true);
+      }
+    });
+  </script>
+</body>
+</html>

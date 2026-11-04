@@ -1,4 +1,4 @@
-import type { Ecriture, MasqueSaisie, Sauvegarde } from '../types';
+import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
 import type { DocumentEntete, EnteteDocument } from './entete';
 
 /**
@@ -33,10 +33,12 @@ export class ErreurApi extends Error {
 }
 
 export interface Utilisateur {
-  id: number;
+  /** Entier côté MySQL ; chaîne pour la session locale de démonstration. */
+  id: number | string;
   identifiant: string;
   nomComplet: string;
-  role: 'lecteur' | 'caissier' | 'admin';
+  /** « comptable » remplace l'ancien « lecteur » : même lecture, nom métier. */
+  role: 'comptable' | 'caissier' | 'admin';
 }
 
 export interface EtatSession {
@@ -144,6 +146,8 @@ export const mutations = {
     appeler<{ livre: Sauvegarde }>('masques', { methode: 'POST', corps: { revision, masques } }),
   entete: (revision: number, document: DocumentEntete, entete: EnteteDocument) =>
     appeler<{ livre: Sauvegarde }>('entete', { methode: 'POST', corps: { revision, document, entete } }),
+  categories: (revision: number, sens: Sens, categories: string[]) =>
+    appeler<{ livre: Sauvegarde }>('categories', { methode: 'POST', corps: { revision, sens, categories } }),
   soldeInitial: (revision: number, soldeInitial: number) =>
     appeler<{ livre: Sauvegarde }>('solde-initial', { methode: 'POST', corps: { revision, soldeInitial } }),
   cloture: (revision: number, archive: unknown) =>
@@ -151,3 +155,51 @@ export const mutations = {
   restauration: (sauvegarde: Sauvegarde) =>
     appeler<{ livre: Sauvegarde }>('restauration', { methode: 'POST', corps: { sauvegarde } }),
 };
+
+/**
+ * Dump complet de la base au format .sql.
+ *
+ * Le point répond en fichier joint ; on lit donc le texte brut plutôt que du
+ * JSON. Réservé à l'administrateur : le fichier contient les comptes et leurs
+ * hachages, jamais les mots de passe en clair.
+ */
+export async function exporterSql(): Promise<{ contenu: string; nom: string }> {
+  let reponse: Response;
+  try {
+    reponse = await fetch(`${urlPoint('sauvegarde')}&format=sql`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+  } catch {
+    throw new ErreurApi('Le serveur de la caisse est injoignable. Vérifiez que WAMP est démarré.', 'reseau', 0);
+  }
+  if (!reponse.ok) {
+    // Erreur JSON renvoyée par l'API plutôt qu'un fichier.
+    let message = `Export refusé (HTTP ${reponse.status}).`;
+    let code = 'erreur';
+    try {
+      const corps = await reponse.json() as { erreur?: string; code?: string };
+      if (corps.erreur) message = corps.erreur;
+      if (corps.code) code = corps.code;
+    } catch { /* réponse non JSON : on garde le message générique */ }
+    throw new ErreurApi(message, code, reponse.status);
+  }
+  const contenu = await reponse.text();
+  if (!contenu.includes('CAISSE SALFA')) {
+    throw new ErreurApi('Le serveur n’a pas renvoyé de sauvegarde SQL. Vérifiez la configuration de l’API.', 'export_invalide', reponse.status);
+  }
+  const entete = /filename="([^"]+)"/.exec(reponse.headers.get('Content-Disposition') ?? '');
+  const nom = entete?.[1] ?? `sauvegarde_caisse_salfa_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.sql`;
+  return { contenu, nom };
+}
+
+/**
+ * Points d'administration : comptes utilisateurs et leurs rôles.
+ * Réservés à l'administrateur, le serveur le vérifie lui-même.
+ */
+export async function appelerComptes<T>(
+  route: string,
+  options: { methode?: 'GET' | 'POST'; corps?: unknown } = {},
+): Promise<T> {
+  return appeler<T>(route, options);
+}

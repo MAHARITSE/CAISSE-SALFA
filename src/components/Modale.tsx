@@ -8,7 +8,8 @@ interface ModaleProps {
   onFermer: () => void;
   children: ReactNode;
   pied?: ReactNode;
-  largeur?: 'petite' | 'normale' | 'large';
+  /** `document` : une feuille imprimable, qui mérite toute la largeur de l'écran. */
+  largeur?: 'petite' | 'normale' | 'large' | 'document';
   enteteClass?: string;
 }
 
@@ -32,7 +33,7 @@ export function Modale({ titre, sousTitre, icone, onFermer, children, pied, larg
     <dialog
       ref={ref}
       aria-labelledby={titreId}
-      className={`modal-shell no-print ${largeur === 'petite' ? 'max-w-md' : largeur === 'large' ? 'max-w-4xl' : 'max-w-3xl'}`}
+      className={`modal-shell no-print ${largeur === 'petite' ? 'max-w-md' : largeur === 'large' ? 'max-w-4xl' : largeur === 'document' ? 'max-w-6xl' : 'max-w-3xl'}`}
       onCancel={e => { e.preventDefault(); onFermer(); }}
       onClick={e => {
         if (e.target !== e.currentTarget) return;

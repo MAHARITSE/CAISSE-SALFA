@@ -33,12 +33,17 @@ salfa_point('index', function (): void {
         'ecritures-restaurer' => 'ecritures-restaurer',
         'masques' => 'masques',
         'entete' => 'entete',
+        'categories' => 'categories',
         'solde-initial' => 'solde-initial',
         'cloture' => 'cloture',
         'restauration' => 'restauration',
         'sauvegarde' => 'sauvegarde',
         'verifier' => 'verifier',
         'installer' => 'installer',
+        'utilisateurs' => 'utilisateurs',
+        'utilisateurs-creer' => 'utilisateurs',
+        'utilisateurs-modifier' => 'utilisateurs',
+        'utilisateurs-supprimer' => 'utilisateurs',
     ];
     if ($action === '') {
         throw new SalFaErreur(

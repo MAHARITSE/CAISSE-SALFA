@@ -52,16 +52,52 @@ garder les versions verrouillées par `package-lock.json`.
   référence de pièce et observation distinctes, catégorie, tiers/service. Le
   total d’une écriture détaillée doit être exactement égal à la somme de ses
   postes.
-- **Bordereaux détaillés** : postes, références/quittances, modèles réutilisables
-  avec montants par défaut facultatifs et ordre des postes conservé.
-- **En-tête personnalisable** : l’engagement de dépense et l’autorisation de
-  recette ont chacun leur propre en-tête, modifiable depuis le bouton
-  « En-tête » du journal ou depuis un bordereau ouvert. Deux modes : « Textes et
-  logos » (huit lignes de texte, deux logos facultatifs, aperçu immédiat) ou
-  « Image complète » (PNG/JPEG d’1 Mo maximum). « Restaurer l’en-tête fourni »
-  revient au modèle livré, pour le seul document affiché. L’en-tête suit le
-  livre : il est enregistré localement ou dans MySQL (`salfa_entetes`) et
-  transporté par les sauvegardes JSON.
+- **Bordereaux détaillés** : postes et montants, modèles réutilisables avec
+  montants par défaut facultatifs et ordre des postes conservé. Un seul poste
+  complété suffit ; les lignes laissées vides sont ignorées à l’enregistrement.
+- **Impression immédiate** : le bordereau imprimable s’ouvre automatiquement
+  après l’enregistrement d’une pièce, prêt à être imprimé. La colonne « Action »
+  du journal propose l’impression, la modification et la suppression de chaque
+  pièce, y compris celles saisies en montant unique.
+- **Documents conformes aux modèles officiels** : l’engagement de dépense
+  (« DEMANDE D’ENGAGEMENT DE DÉPENSE ») et l’autorisation de recette
+  (« AUTORISATION DE RECETTES ») reproduisent les imprimés SALFA fournis.
+  L’en-tête de l’hôpital occupe sept lignes entre ses deux logos ; viennent
+  ensuite le titre, « Pièce n° », « DATE : » et « Objet : » soulignés, le
+  tableau à cinq colonnes (N°, Libellé, N° Compte, Montant, Observation), la
+  ligne « TOTAL DES RECETTES » ou « TOTAL DES DÉPENSES », la mention « Arrêtez
+  à la somme de … Ariary » écrite en toutes lettres, puis les cases de
+  signature — Caissier(e), Gestionnaire et Médecin Chef pour une recette,
+  auxquelles s’ajoute le Demandeur pour une dépense.
+  Les cotes sont celles des modèles, relevées en millimètres sur une page A4 :
+  marges de 7,6 mm, colonnes de 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de
+  11,6 mm. À l’écran, la feuille est réduite d’un seul bloc, si bien que
+  l’aperçu montre exactement ce qui sortira de l’imprimante : une page A4
+  portrait. Les montants portent deux décimales (2 657 400,00).
+- **Masques de saisie** : les montants s’écrivent avec séparation des milliers
+  (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
+  majuscules.
+- **Catégories gérées par sens** : les recettes et les dépenses ont chacune
+  leur liste de catégories, modifiable depuis le bouton « Gérer » du formulaire
+  de saisie (ajout, renommage, ordre, suppression, restauration des listes
+  livrées). Retirer une catégorie ne modifie jamais une écriture existante.
+- **Document par pièce** : chaque dépense reçoit une **demande d’engagement**
+  (`AED-AAAA-0001`) et chaque recette une **autorisation de recette**
+  (`ARC-AAAA-0001`). Le numéro reprend l’année et le rang de la pièce
+  (`DP-2026-0007` → `AED-2026-0007`) : les deux se répondent toujours, y compris
+  après réimpression.
+- **En-tête personnalisable** : la demande d’engagement de dépense et
+  l’autorisation de recette portent le **même papier à en-tête**, réglé une
+  seule fois depuis le bouton « En-tête ». Chaque ligne se met en forme comme
+  dans un traitement de texte — police, taille au demi-point, gras, italique,
+  souligné, alignement — et l’on ajoute, réordonne ou supprime des lignes.
+  Les images se **glissent librement sur la feuille A4** : on les dépose, on les
+  déplace à la souris ou au doigt, puis on les règle au millimètre (position et
+  largeur). L’aperçu montre la feuille entière. « Restaurer l’en-tête fourni »
+  revient au modèle livré, logos compris. Un livre créé avant cette version
+  reprend ses deux anciens logos comme images placées. L’en-tête suit le livre :
+  il est enregistré localement ou dans MySQL (`salfa_entetes`) et transporté par
+  les sauvegardes JSON.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
@@ -82,7 +118,7 @@ garder les versions verrouillées par `package-lock.json`.
   détaillés non comptés deux fois. Les totaux exportés correspondent à la
   sélection affichée ; le solde de clôture reste celui de la période complète.
 - **Impression** : journal en A4 paysage (toutes les pages de la sélection),
-  bordereau seul en A4 portrait avec zones de signature.
+  bordereau seul en A4 portrait avec ses zones de signature.
 - **Sauvegardes JSON** : export complet, vérification avant import, aperçu,
   confirmation explicite et sauvegarde automatique du livre actuel avant
   remplacement. Un export brut de secours est disponible pour le diagnostic.
@@ -181,13 +217,16 @@ src/
   hooks/useLivre.ts               état, persistance, migration, multi-onglets
   components/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
-    LivreJournal.tsx              journal, détails, bordereau imprimable
-    EnteteBordereauModal.tsx      en-tête modifiable des deux bordereaux
+    LivreJournal.tsx              journal, détails et dépliage des postes
+    Bordereau.tsx                 document imprimable et sa boîte de dialogue
+    EnteteBordereauModal.tsx      éditeur de l’en-tête commun (polices, images libres)
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
     Exercices.tsx                 exercice en cours, clôtures et archives
     DonneesSauvegardes.tsx        export/import JSON et secours brut
     GestionMasquesModal.tsx       modèles de bordereaux
+    GestionCategoriesModal.tsx    catégories de recettes et de dépenses
+    ChampMontant.tsx              saisie monétaire à séparateurs de milliers
     Modale.tsx / Confirmation.tsx dialogues natifs accessibles
     ErrorBoundary.tsx             garde-fou d’affichage
   utils/
@@ -199,6 +238,10 @@ src/
     format.ts                     dates locales et montants
     constants.ts                  catégories, modes, limites, modèles
     entete.ts                     modèle, validation et valeurs par défaut des en-têtes
+    nombreEnLettres.ts            montants écrits en toutes lettres (ariary)
+  assets/
+    logo-salfa-gauche.png         logos des imprimés, incorporés au paquet
+    logo-salfa-droit.png
   test/                           configuration et fixtures de tests
 tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 ```

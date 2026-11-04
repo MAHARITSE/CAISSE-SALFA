@@ -15,7 +15,7 @@ require __DIR__ . '/../socle.php';
 salfa_point('entete', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
-    return salfa_mutation('caissier', 'entete', function (array $corps): string {
+    return salfa_mutation('admin', 'entete', function (array $corps): string {
         $document = $corps['document'] ?? null;
         if (!is_string($document) || !in_array($document, ['depense', 'recette'], true)) {
             throw new SalFaErreur('Document attendu : « depense » ou « recette ».', 400, 'document_invalide');
