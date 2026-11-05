@@ -46,6 +46,7 @@ export function masquesParDefaut(): MasqueSaisie[] {
       nom: 'Bordereau recettes hôpital',
       sens: 'RECETTE',
       description: 'Les 12 postes du carnet de caisse hospitalier.',
+      libelle: 'RECETTES JOURNALIERES DU SERVICE',
       lignes: [
         'CONSULTATION', 'ECHOGRAPHIE', 'CHAMBRE', 'LABORATOIRE',
         'MATERNITE', 'MEDICAMENT', 'SOINS', 'HOSPITALISATION',
@@ -57,6 +58,7 @@ export function masquesParDefaut(): MasqueSaisie[] {
       nom: 'Charges courantes & fonctionnement',
       sens: 'DEPENSE',
       description: 'Dépenses périodiques d’exploitation.',
+      libelle: 'CHARGES COURANTES D’EXPLOITATION',
       lignes: [
         'ACHATS MEDICAMENTS', 'FOURNITURES MEDICALES', 'CARBURANT',
         'EAU & ELECTRICITE', 'MAINTENANCE', 'DIVERS',

@@ -1,12 +1,38 @@
 <!DOCTYPE html>
 <html lang="fr">
   <head>
+    <script>
+      (function() {
+        try {
+          var _fetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get: function() { return _fetch; },
+            set: function(v) { _fetch = v; }
+          });
+        } catch (_) {}
+        try {
+          var theme = localStorage.getItem('salfa_theme');
+          var supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (!theme && supportDark)) {
+            document.documentElement.classList.add('dark');
+          }
+          var taille = localStorage.getItem('salfa_taille_police');
+          if (taille) {
+            document.documentElement.style.fontSize = taille + 'px';
+          }
+        } catch (_) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e6351" />
-    <title>CAISSE SALFA — Livre journal de trésorerie</title>
-    <meta name="description" content="Livre journal de trésorerie hospitalière SALFA : recettes, dépenses, bordereaux détaillés, analyse et sauvegardes locales." />
+    <title>Gestion de Caisse SALFA</title>
+    <meta name="description" content="Système de gestion de caisse, demandes de fonds, bénéficiaires et ordres de virement pour SALFA" />
+    <meta property="og:title" content="Gestion de Caisse SALFA" />
+    <meta property="og:description" content="Système de gestion de caisse, demandes de fonds, bénéficiaires et ordres de virement pour SALFA" />
   </head>
   <body class="antialiased">
     <div id="root"></div>

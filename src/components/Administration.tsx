@@ -135,52 +135,52 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
     <section className="card p-5" aria-label="Utilisateurs de la caisse">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><Users size={17} className="text-brand-700" />Utilisateurs</h2>
-          <p className="mt-1 text-[11px] text-slate-500">Chaque compte ouvre exactement ce que son rôle autorise.</p>
+          <h2 className="flex items-center gap-2 text-base font-bold text-slate-900"><Users size={19} className="text-brand-700" />Utilisateurs</h2>
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm">Chaque compte ouvre exactement ce que son rôle autorise.</p>
         </div>
         <button type="button" className="btn-primary" onClick={() => { setErreur(''); setFormulaire(formulaireVide()); }}>
-          <UserPlus size={15} />Nouvel utilisateur
+          <UserPlus size={16} />Nouvel utilisateur
         </button>
       </div>
 
       {/* Les trois rôles, rappelés en clair. */}
       <ul className="mt-4 grid gap-2 sm:grid-cols-3">
-        {ROLES.map(role => <li key={role.valeur} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        {ROLES.map(role => <li key={role.valeur} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-              {role.valeur === 'admin' ? <ShieldCheck size={14} className="text-brand-700" /> : null}{role.libelle}
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+              {role.valeur === 'admin' ? <ShieldCheck size={16} className="text-brand-700" /> : null}{role.libelle}
             </p>
             <span className="badge badge-neutral">{parRole[role.valeur].length}</span>
           </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{role.resume}</p>
-          <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">{resumeDroits(role.valeur)}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-[13px]">{role.resume}</p>
+          <p className="mt-1.5 text-xs uppercase tracking-wide text-slate-400">{resumeDroits(role.valeur)}</p>
         </li>)}
       </ul>
 
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-xs">
+        <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-[10px] uppercase tracking-wide text-slate-500">
-              <th className="py-2 pr-3 font-semibold">Identifiant</th>
-              <th className="py-2 pr-3 font-semibold">Nom complet</th>
-              <th className="py-2 pr-3 font-semibold">Rôle</th>
-              <th className="py-2 pr-3 font-semibold">Accès</th>
-              <th className="py-2 pr-3 font-semibold">État</th>
-              <th className="py-2 text-right font-semibold">Action</th>
+            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+              <th className="py-2.5 pr-3 font-semibold">Identifiant</th>
+              <th className="py-2.5 pr-3 font-semibold">Nom complet</th>
+              <th className="py-2.5 pr-3 font-semibold">Rôle</th>
+              <th className="py-2.5 pr-3 font-semibold">Accès</th>
+              <th className="py-2.5 pr-3 font-semibold">État</th>
+              <th className="py-2.5 text-right font-semibold">Action</th>
             </tr>
           </thead>
           <tbody>
-            {comptes === null && <tr><td colSpan={6} className="py-6 text-center text-slate-500">Chargement des comptes…</td></tr>}
-            {comptes?.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-slate-500">Aucun compte enregistré.</td></tr>}
+            {comptes === null && <tr><td colSpan={6} className="py-6 text-center text-sm text-slate-500">Chargement des comptes…</td></tr>}
+            {comptes?.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-sm text-slate-500">Aucun compte enregistré.</td></tr>}
             {comptes?.map(compte => <tr key={compte.id} className="border-b border-slate-100 last:border-0">
-              <td className="py-2.5 pr-3 font-mono text-[11px] font-semibold text-slate-800">{compte.identifiant}</td>
-              <td className="py-2.5 pr-3 text-slate-700">{compte.nomComplet}</td>
+              <td className="py-2.5 pr-3 font-mono text-xs font-semibold text-slate-800 sm:text-sm">{compte.identifiant}</td>
+              <td className="py-2.5 pr-3 text-slate-800">{compte.nomComplet}</td>
               <td className="py-2.5 pr-3"><span className={`badge ${compte.role === 'admin' ? 'badge-green' : 'badge-neutral'}`}>{libelleRole(compte.role)}</span></td>
-              <td className="py-2.5 pr-3 text-[11px] text-slate-500">{resumeDroits(compte.role)}</td>
+              <td className="py-2.5 pr-3 text-xs text-slate-500 sm:text-sm">{resumeDroits(compte.role)}</td>
               <td className="py-2.5 pr-3">
                 {compte.actif
-                  ? <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Actif</span>
-                  : <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400"><span className="size-1.5 rounded-full bg-slate-300" />Désactivé</span>}
+                  ? <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700"><span className="size-1.5 rounded-full bg-emerald-500" />Actif</span>
+                  : <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400"><span className="size-1.5 rounded-full bg-slate-300" />Désactivé</span>}
               </td>
               <td className="py-2.5">
                 <div className="flex justify-end gap-1">

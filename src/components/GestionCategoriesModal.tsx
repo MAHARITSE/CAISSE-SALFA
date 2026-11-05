@@ -111,12 +111,12 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
           type="button"
           role="tab"
           aria-selected={onglet.cle === sens}
-          className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${onglet.cle === sens ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-brand-700'}`}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${onglet.cle === sens ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-brand-700'}`}
           onClick={() => { setSens(onglet.cle); setErreur(''); }}
         >{onglet.libelle} <span className="font-normal text-slate-400">({brouillon[onglet.cle === 'RECETTE' ? 'recette' : 'depense'].length})</span></button>)}
       </div>
 
-      <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] leading-relaxed text-sky-900">
+      <p className="rounded-lg border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-xs leading-relaxed text-sky-900 sm:text-sm">
         Cette liste ne concerne que les <strong>{sens === 'RECETTE' ? 'recettes' : 'dépenses'}</strong> ; celle des {autre} reste inchangée.
         Retirer une catégorie ne modifie aucune écriture déjà enregistrée.
       </p>
@@ -138,9 +138,9 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
       </div>
 
       <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-        {!liste.length && <p className="p-6 text-center text-xs text-slate-500">Aucune catégorie : ajoutez-en une ou restaurez la liste par défaut.</p>}
+        {!liste.length && <p className="p-6 text-center text-sm text-slate-500">Aucune catégorie : ajoutez-en une ou restaurez la liste par défaut.</p>}
         {liste.map((categorie, index) => <div key={index} className="flex items-center gap-2 p-2">
-          <span className="w-6 shrink-0 text-center text-[10px] tabular-nums text-slate-400">{index + 1}</span>
+          <span className="w-7 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-400">{index + 1}</span>
           <input
             className="field min-w-0"
             aria-label={`Catégorie ${index + 1}`}
@@ -149,14 +149,14 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
             onChange={e => renommer(index, masqueMajuscules(e.target.value))}
           />
           <div className="flex shrink-0">
-            <button type="button" className="icon-button" disabled={index === 0} aria-label={`Monter la catégorie ${index + 1}`} onClick={() => deplacer(index, -1)}><ArrowUp size={14} /></button>
-            <button type="button" className="icon-button" disabled={index === liste.length - 1} aria-label={`Descendre la catégorie ${index + 1}`} onClick={() => deplacer(index, 1)}><ArrowDown size={14} /></button>
-            <button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer la catégorie ${index + 1}`} onClick={() => changerListe(liste.filter((_, i) => i !== index))}><Trash2 size={14} /></button>
+            <button type="button" className="icon-button" disabled={index === 0} aria-label={`Monter la catégorie ${index + 1}`} onClick={() => deplacer(index, -1)}><ArrowUp size={15} /></button>
+            <button type="button" className="icon-button" disabled={index === liste.length - 1} aria-label={`Descendre la catégorie ${index + 1}`} onClick={() => deplacer(index, 1)}><ArrowDown size={15} /></button>
+            <button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer la catégorie ${index + 1}`} onClick={() => changerListe(liste.filter((_, i) => i !== index))}><Trash2 size={15} /></button>
           </div>
         </div>)}
       </div>
 
-      {(erreur || erreurExterne) && <p role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800"><AlertCircle size={16} className="shrink-0" />{erreur || erreurExterne}</p>}
+      {(erreur || erreurExterne) && <p role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-800"><AlertCircle size={18} className="shrink-0" />{erreur || erreurExterne}</p>}
     </form>
   </Modale>;
 }

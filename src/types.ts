@@ -60,6 +60,8 @@ export interface MasqueSaisie {
   nom: string;
   sens: Sens;
   description?: string;
+  /** Libellé par défaut prérempli dans l'écriture lors de l'application du modèle. */
+  libelle?: string;
   lignes: { description: string; montantDefaut?: number }[];
 }
 

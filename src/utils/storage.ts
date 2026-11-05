@@ -78,6 +78,7 @@ function migrerMasques(brut: unknown): MasqueSaisie[] {
       id: texte(m.id) || identifiant('masque'),
       nom: texte(m.nom), sens: m.sens,
       description: texte(m.description) || undefined,
+      libelle: texte(m.libelle) || undefined,
       lignes: m.lignes.map(v => {
         const l = objet(v, 'Ancien poste de masque');
         return { description: texte(l.description), montantDefaut: l.montantDefaut == null ? undefined : l.montantDefaut };

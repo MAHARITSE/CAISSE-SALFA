@@ -55,6 +55,20 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [masqueAConfirmer, setMasqueAConfirmer] = useState<MasqueSaisie | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
   const soumission = useRef(false);
+  const libelleRef = useRef<HTMLInputElement>(null);
+  const masquesPourSens = masques.filter(m => m.sens === sens);
+
+  // Positionne immédiatement le curseur à la fin du champ libellé pour continuer la saisie sans clic.
+  function positionnerCurseurFinLibelle(texte?: string) {
+    requestAnimationFrame(() => {
+      const el = libelleRef.current;
+      if (!el) return;
+      el.focus();
+      const pos = texte !== undefined ? texte.length : el.value.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   // Une écriture éditée garde sa catégorie d'origine, même retirée de la liste.
   const categories = [...new Set([...categoriesPourSens, ...(edition ? [edition.categorie] : [])])];
   const numero = edition?.numero ?? (
@@ -83,7 +97,14 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
 
   function appliquerMasque(m: MasqueSaisie) {
     setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: l.description, montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
-    setDetaille(true); setErreur(''); changer();
+    setDetaille(true);
+    setErreur('');
+    changer();
+
+    // Rattaché au modèle : libellé prérempli et reprise de saisie directement à la fin du champ
+    const libelleAAppliquer = m.libelle ? masqueMajuscules(m.libelle) : (libelle.trim() ? libelle : masqueMajuscules(m.nom));
+    setLibelle(libelleAAppliquer);
+    positionnerCurseurFinLibelle(libelleAAppliquer);
   }
 
   function choisirMasque(id: string) {
@@ -140,13 +161,62 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
         enteteClass={estRecette ? 'bg-emerald-50/70' : 'bg-rose-50/70'} onFermer={demanderFermeture}
         pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'} disabled={enregistrement}><Check size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button></div></div>}>
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
+          {/* Choix de modèle en haut du formulaire avec reprise de saisie directe */}
+          {masquesPourSens.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/70 p-3.5 dark:border-brand-900/60 dark:bg-brand-950/40">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-white shadow-xs dark:bg-brand-600">
+                  <Layers size={18} />
+                </span>
+                <div>
+                  <label htmlFor={`${formId}-modele-rapide`} className="text-xs font-bold text-slate-800 dark:text-slate-100 sm:text-sm">
+                    Modèle de saisie
+                  </label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Préremplit les postes et le libellé avec curseur direct à la fin du champ
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  id={`${formId}-modele-rapide`}
+                  className="field !w-auto min-w-44 !py-1.5 !text-xs font-semibold sm:!text-sm"
+                  aria-label="Choisir un modèle de saisie"
+                  value=""
+                  onChange={e => {
+                    if (e.target.value) {
+                      choisirMasque(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">Choisir un modèle…</option>
+                  {masquesPourSens.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.nom} ({m.lignes.length} postes){m.libelle ? ` — ${m.libelle}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn-secondary !py-1.5 !text-xs sm:!text-sm"
+                  onClick={onOuvrirGestionMasques}
+                  title="Gérer les modèles de saisie"
+                >
+                  <Layers size={14} />
+                  Gérer les modèles
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min={`${exercice}-01-01`} max={`${exercice}-12-31`} required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
-            <div className="flex items-end"><p className="flex h-[38px] w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-500"><span className="size-1.5 rounded-full bg-emerald-500" />Caisse en espèces — aucun autre mode n’est géré</p></div>
+            <div className="flex items-end"><p className="flex min-h-[42px] w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500 sm:text-[13px] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400"><span className="size-2 shrink-0 rounded-full bg-emerald-500" />Caisse en espèces — aucun autre mode n’est géré</p></div>
           </div>
-          <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. Recettes journalières — caisse principale' : 'Ex. Achat de carburant — ambulance'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
+          <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-[11px] font-medium text-brand-700 hover:underline" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -155,23 +225,23 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
           </div>
           <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4" aria-label="Montants de l’écriture">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold">Montant de l’opération</h3>
+              <h3 className="text-base font-semibold">Montant de l’opération</h3>
               <div className="segmented" aria-label="Mode de saisie du montant"><button type="button" aria-pressed={!detaille} onClick={() => { setDetaille(false); changer(); }}>Montant unique</button><button type="button" aria-pressed={detaille} onClick={() => { setDetaille(true); changer(); }}>Détail par postes</button></div>
             </div>
-            {!detaille ? <div><ChampMontant id={`${formId}-montant`} label="Montant total (Ar) *" className="text-lg font-semibold" valeur={montantSimple} onChange={setMontantSimple} placeholder="0" obligatoire aide={`Montant entier en ariary, séparé par milliers. Maximum : ${formatAr(MONTANT_MAX)}.`} /></div> : <>
-              <div className="flex flex-wrap items-end gap-2"><div className="min-w-40 flex-1"><label className="label" htmlFor={`${formId}-modele`}>Modèle de bordereau</label><select id={`${formId}-modele`} className="field" value="" onChange={e => choisirMasque(e.target.value)}><option value="">Choisir un modèle…</option>{masques.filter(m => m.sens === sens).map(m => <option key={m.id} value={m.id}>{m.nom} ({m.lignes.length} postes)</option>)}</select></div><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={15} />Gérer les modèles</button></div>
+            {!detaille ? <div><ChampMontant id={`${formId}-montant`} label="Montant total (Ar) *" className="text-xl font-bold" valeur={montantSimple} onChange={setMontantSimple} placeholder="0" obligatoire aide={`Montant entier en ariary, séparé par milliers. Maximum : ${formatAr(MONTANT_MAX)}.`} /></div> : <>
+              <div className="flex flex-wrap items-end gap-2"><div className="min-w-40 flex-1"><label className="label" htmlFor={`${formId}-modele`}>Modèle de bordereau</label><select id={`${formId}-modele`} className="field" value="" onChange={e => choisirMasque(e.target.value)}><option value="">Choisir un modèle…</option>{masques.filter(m => m.sens === sens).map(m => <option key={m.id} value={m.id}>{m.nom} ({m.lignes.length} postes)</option>)}</select></div><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button></div>
               <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_150px_auto]">
                 <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(masqueMajuscules(e.target.value))} onKeyDown={toucheAjout} placeholder="Consultation…" /></div>
                 <div><ChampMontant id={`${formId}-mnt-poste`} label="Montant (Ar)" valeur={nouveauMontant} onChange={setNouveauMontant} placeholder="0" /></div>
                 <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[420px] text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
-                  {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={24} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
-                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: masqueMajuscules(e.target.value) } : x)); changer(); }} /></td><td className="p-1.5"><ChampMontant label="" etiquetteSeule={`Montant du poste ${i + 1}`} id={`${formId}-mnt-${l.id}`} className="w-32" valeur={l.montant} placeholder="0" onChange={valeur => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: valeur } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={15} /></button></td></tr>)}
+                <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
+                  {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-sm text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={26} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
+                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: masqueMajuscules(e.target.value) } : x)); changer(); }} /></td><td className="p-1.5"><ChampMontant label="" etiquetteSeule={`Montant du poste ${i + 1}`} id={`${formId}-mnt-${l.id}`} className="w-32" valeur={l.montant} placeholder="0" onChange={valeur => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: valeur } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" tabIndex={-1} className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} title={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={16} /></button></td></tr>)}
                 </tbody></table>
               </div>
-              <p className="text-[11px] text-slate-500">Le total est calculé automatiquement sur les postes complétés. Un seul poste suffit pour enregistrer ; les lignes laissées vides sont ignorées.</p>
+              <p className="text-xs text-slate-500 sm:text-sm">Le total est calculé automatiquement sur les postes complétés. Un seul poste suffit pour enregistrer ; les lignes laissées vides sont ignorées.</p>
             </>}
           </section>
           {Number(date.slice(0, 4)) !== exercice && <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"><AlertCircle size={17} className="shrink-0" /><p>Cette date n’appartient pas à l’exercice {exercice} ouvert. Les écritures doivent toutes être rattachées à l’année en cours de clôture.</p></div>}

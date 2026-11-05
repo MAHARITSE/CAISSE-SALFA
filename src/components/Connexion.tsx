@@ -66,13 +66,13 @@ export function Connexion({ erreurInitiale, onConnecte }: {
     setErreur('');
   };
 
-  return <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-    <div className="w-full max-w-sm">
+  return <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 transition-colors dark:bg-slate-950">
+    <div className="w-full max-w-md">
       {/* La carte seule : rien à côté, l'attention reste sur la connexion. */}
-      <form onSubmit={envoyer} className="card space-y-4 p-6">
+      <form onSubmit={envoyer} className="card space-y-4 p-7">
         <div>
-          <h1 className="flex items-center gap-2 text-base font-bold text-slate-900"><LogIn size={18} className="text-brand-700" />Connexion à la caisse</h1>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à la caisse</h1>
+          <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
 
         <div>
@@ -106,46 +106,46 @@ export function Connexion({ erreurInitiale, onConnecte }: {
             />
             <button
               type="button"
-              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200"
               aria-label={afficher ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               title={afficher ? 'Masquer' : 'Afficher'}
               onClick={() => setAfficher(v => !v)}
-            >{afficher ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            >{afficher ? <EyeOff size={18} /> : <Eye size={18} />}</button>
           </div>
         </div>
 
-        {(erreur || erreurInitiale) && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-800">
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" />{erreur || erreurInitiale}
+        {(erreur || erreurInitiale) && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+          <AlertTriangle size={17} className="mt-0.5 shrink-0" />{erreur || erreurInitiale}
         </p>}
 
-        <button type="submit" className="btn-primary w-full justify-center" disabled={enCours}>
-          {enCours ? <><Loader2 size={16} className="animate-spin" />Vérification…</> : <><KeyRound size={16} />Se connecter</>}
+        <button type="submit" className="btn-primary w-full justify-center !py-2.5 text-sm" disabled={enCours}>
+          {enCours ? <><Loader2 size={18} className="animate-spin" />Vérification…</> : <><KeyRound size={18} />Se connecter</>}
         </button>
 
         {MODE_API
-          ? <p className="text-center text-[11px] leading-relaxed text-slate-400">
-            Mot de passe oublié ? Utilisez <code className="rounded bg-slate-100 px-1">outils\creer-admin.bat</code> sur le serveur.
+          ? <p className="text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+            Mot de passe oublié ? Utilisez <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">outils\creer-admin.bat</code> sur le serveur.
           </p>
-          : <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              <BookOpen size={12} />Comptes de démonstration
+          : <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <BookOpen size={14} />Comptes de démonstration
             </p>
-            <p className="text-[11px] leading-relaxed text-slate-500">Cliquez un rôle pour remplir le formulaire, puis « Se connecter ».</p>
-            <div className="grid gap-1.5">
+            <p className="text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-400">Cliquez un rôle pour remplir le formulaire, puis « Se connecter ».</p>
+            <div className="grid gap-2">
               {COMPTES_DEMO.map(compte => <button
                 key={compte.identifiant}
                 type="button"
                 onClick={() => remplir(compte)}
-                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-[11px] hover:border-brand-300 hover:bg-brand-50/40"
+                className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs transition-colors hover:border-brand-300 hover:bg-brand-50/40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-brand-500 dark:hover:bg-slate-700 sm:text-sm"
               >
-                <span className="font-semibold text-slate-700">{libelleRole(compte.role as Role)}</span>
-                <span className="font-mono text-[10px] text-slate-500">{compte.identifiant} · {compte.motDePasse}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{libelleRole(compte.role as Role)}</span>
+                <span className="font-mono text-xs text-slate-500 dark:text-slate-400">{compte.identifiant} · {compte.motDePasse}</span>
               </button>)}
             </div>
           </div>}
       </form>
 
-      <p className="mt-4 text-center text-[10px] leading-relaxed text-slate-400">
+      <p className="mt-4 text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
         {MODE_API
           ? 'Session fermée automatiquement après 30 minutes d’inactivité.'
           : 'Mode démonstration : les données restent dans ce navigateur.'}

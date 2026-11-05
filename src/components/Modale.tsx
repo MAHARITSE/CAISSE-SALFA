@@ -41,18 +41,18 @@ export function Modale({ titre, sousTitre, icone, onFermer, children, pied, larg
         if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onFermer();
       }}
     >
-      <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6 ${enteteClass}`}>
+      <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6 dark:border-slate-800 ${enteteClass}`}>
         <div className="flex min-w-0 items-center gap-3">
-          {icone && <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-brand-700 shadow-xs">{icone}</div>}
+          {icone && <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/80 text-brand-700 shadow-xs dark:bg-slate-800 dark:text-brand-400">{icone}</div>}
           <div className="min-w-0">
-            <h2 id={titreId} className="text-base font-bold tracking-tight text-slate-900">{titre}</h2>
-            {sousTitre && <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{sousTitre}</p>}
+            <h2 id={titreId} className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-xl">{titre}</h2>
+            {sousTitre && <p className="mt-0.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{sousTitre}</p>}
           </div>
         </div>
         <button type="button" className="icon-button shrink-0" onClick={onFermer} aria-label={`Fermer ${titre}`} title="Fermer (Échap)"><X size={18} /></button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">{children}</div>
-      {pied && <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">{pied}</div>}
+      {pied && <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6 dark:border-slate-800 dark:bg-slate-900/90">{pied}</div>}
     </dialog>
   );
 }

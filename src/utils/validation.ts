@@ -116,6 +116,7 @@ function validerMasque(valeur: unknown, index: number): MasqueSaisie {
     nom: texte(m.nom, 'Nom du masque', 120, true),
     sens: sensValide(m.sens, 'Type du masque'),
     description: texteFacultatif(m.description, 'Description du masque', 500),
+    libelle: texteFacultatif(m.libelle, 'Libellé associé du masque', 200),
     lignes: lignes.map((v, i) => {
       const l = objet(v, `Poste ${i + 1}`);
       return {
