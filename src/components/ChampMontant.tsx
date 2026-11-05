@@ -77,7 +77,7 @@ export function ChampMontant({ valeur, onChange, label, id, placeholder, obligat
         setCurseur(null);
       }}
     />
-    {aide && <p className="mt-1 text-xs text-slate-500 sm:text-[13px]">{aide}</p>}
+    {aide && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-[13px]">{aide}</p>}
   </>;
 }
 

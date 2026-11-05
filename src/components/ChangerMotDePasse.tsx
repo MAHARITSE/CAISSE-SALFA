@@ -77,7 +77,7 @@ export function ChangerMotDePasse({ utilisateur, onFermer, onFait }: {
           />
           <button
             type="button"
-            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 hover:text-slate-600"
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-600"
             aria-label={afficher ? 'Masquer les mots de passe' : 'Afficher les mots de passe'}
             title={afficher ? 'Masquer' : 'Afficher'}
             onClick={() => setAfficher(v => !v)}
@@ -96,7 +96,7 @@ export function ChangerMotDePasse({ utilisateur, onFermer, onFait }: {
           value={nouveau}
           onChange={e => { setNouveau(e.target.value); setErreur(''); }}
         />
-        <p className={`mt-1 text-[11px] ${nouveau && !assezLong ? 'text-amber-700' : 'text-slate-500'}`}>
+        <p className={`mt-1 text-[11px] ${nouveau && !assezLong ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
           {LONGUEUR_MIN_MOT_DE_PASSE} caractères minimum.
         </p>
       </div>
@@ -112,10 +112,10 @@ export function ChangerMotDePasse({ utilisateur, onFermer, onFait }: {
           value={confirmation}
           onChange={e => { setConfirmation(e.target.value); setErreur(''); }}
         />
-        {confirmation !== '' && !concordent && <p className="mt-1 text-[11px] text-rose-700">Les deux saisies diffèrent.</p>}
+        {confirmation !== '' && !concordent && <p className="mt-1 text-[11px] text-rose-700 dark:text-rose-400">Les deux saisies diffèrent.</p>}
       </div>
 
-      {erreur && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-800">
+      {erreur && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 p-3 text-xs text-rose-800 dark:text-rose-300">
         <AlertTriangle size={15} className="mt-0.5 shrink-0" />{erreur}
       </p>}
     </form>

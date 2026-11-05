@@ -1,11 +1,29 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+
+/**
+ * L'application s'ouvre sur la page de connexion : chaque parcours commence par
+ * une session ouverte avec le compte d'administration livré en démonstration.
+ * Le même enchaînement sert après une actualisation, qui referme la session.
+ */
+async function ouvrirSession(page: Page, identifiant = 'admin', motDePasse = 'admin1234') {
+  const champIdentifiant = page.locator('#identifiant');
+  const titre = page.getByRole('heading', { name: 'Livre de caisse' });
+  // Après une actualisation, la session est refermée : on attend l'un ou l'autre.
+  await champIdentifiant.or(titre).first().waitFor({ state: 'visible', timeout: 20_000 });
+  if (await champIdentifiant.count()) {
+    await champIdentifiant.fill(identifiant);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(motDePasse);
+    await page.getByRole('button', { name: /Se connecter/ }).click();
+  }
+  await expect(titre).toBeVisible();
+}
 
 test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dialogue accessible', async ({ page }) => {
   const erreurs: string[] = [];
   page.on('pageerror', e => erreurs.push(e.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Livre de caisse' })).toBeVisible();
+  await ouvrirSession(page);
   await page.getByRole('button', { name: 'Nouvelle recette', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle recette', exact: true });
   await expect(dialog).toBeVisible();
@@ -33,6 +51,7 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   await expect(autoBordereau).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Recettes journalières', exact: false }).first()).toBeVisible();
   await page.reload();
+  await ouvrirSession(page);
   await expect(page.locator('#journal').getByText('Recettes journalières', { exact: true }).first()).toBeVisible();
   const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('salfa_tresorerie_livre_v2')!));
   expect(stocke.ecritures[0]).toMatchObject({ montant: 10000, reference: 'Bordereau F-1', observation: 'Contrôle navigateur' });
@@ -73,7 +92,7 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
 test('mobile : aucun débordement de page et saisie utilisable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Livre de caisse' })).toBeVisible();
+  await ouvrirSession(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Nouvelle recette', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvelle recette', exact: true });
@@ -91,7 +110,8 @@ test('mobile : aucun débordement de page et saisie utilisable', async ({ page }
 test('deux onglets : les numéros restent uniques après actualisation inter-onglets', async ({ context }) => {
   const a = await context.newPage();
   const b = await context.newPage();
-  await a.goto('/'); await b.goto('/');
+  await a.goto('/'); await ouvrirSession(a);
+  await b.goto('/'); await ouvrirSession(b);
   for (const [page, libelle] of [[a, 'Onglet A'], [b, 'Onglet B']] as const) {
     await page.getByRole('button', { name: 'Nouvelle recette', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Nouvelle recette', exact: true });
@@ -124,6 +144,7 @@ test('clôture annuelle : archive figée, solde reporté et saisie sur le nouvel
     }));
   });
   await page.goto('/');
+  await ouvrirSession(page);
   await expect(page.getByText(`L’exercice ${annee - 1} doit être clôturé.`)).toBeVisible();
   const telechargement = page.waitForEvent('download');
   await page.getByRole('button', { name: `Clôturer l’exercice ${annee - 1}` }).first().click();
@@ -174,6 +195,7 @@ test('livre antérieur multi-années : converti sans perte et signalé', async (
     }));
   });
   await page.goto('/');
+  await ouvrirSession(page);
   await expect(page.getByText(/clôturés automatiquement et archivés/)).toBeVisible();
   await expect(page.getByText('Stockage à vérifier')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Livre de caisse' })).toBeVisible();
@@ -189,6 +211,7 @@ test('livre antérieur multi-années : converti sans perte et signalé', async (
 test('clôture refusée tant que l’année est en cours', async ({ page }) => {
   const annee = new Date().getFullYear();
   await page.goto('/');
+  await ouvrirSession(page);
   await page.getByRole('button', { name: 'Exercices & clôtures' }).click();
   await expect(page.getByText(`À partir du 1er janvier ${annee + 1}`, { exact: true })).toBeVisible();
   // Bouton volontairement désactivé : la clôture ne peut pas être demandée.
@@ -202,4 +225,58 @@ test('clôture refusée tant que l’année est en cours', async ({ page }) => {
     expect(livre.parametres.exercice).toBe(annee);
     expect(livre.exercicesClotures).toHaveLength(0);
   }
+});
+
+test('mode sombre : textes clairs, surfaces sombres et préférence conservée', async ({ page }) => {
+  await page.goto('/');
+  await ouvrirSession(page);
+  await page.getByRole('button', { name: 'Activer le mode sombre' }).click();
+  await expect(page.locator('html')).toHaveClass(/dark/);
+
+  const lum = await page.evaluate(() => {
+    const luminance = (couleur: string) => {
+      const [r, g, b] = (couleur.match(/\d+/g) ?? ['0', '0', '0']).map(Number);
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    };
+    const titre = document.querySelector('h1')!;
+    const carte = document.querySelector('main .card')!;
+    return {
+      texte: luminance(getComputedStyle(titre).color),
+      fond: luminance(getComputedStyle(document.body).backgroundColor),
+      carte: luminance(getComputedStyle(carte).backgroundColor),
+    };
+  });
+
+  // Fond et cartes sombres, titre clair : pas de texte foncé sur fond foncé.
+  expect(lum.fond).toBeLessThan(80);
+  expect(lum.carte).toBeLessThan(80);
+  expect(lum.texte).toBeGreaterThan(150);
+
+  // Le choix survit à une actualisation, avant même le premier rendu.
+  await page.reload();
+  await ouvrirSession(page);
+  await expect(page.locator('html')).toHaveClass(/dark/);
+});
+
+test('barre de filtres : accrochée sous l’en-tête mesuré, simple bloc sur téléphone', async ({ page }) => {
+  await page.goto('/');
+  await ouvrirSession(page);
+
+  const mesurer = () => page.evaluate(() => {
+    const entete = document.getElementById('entete')!;
+    const barre = document.querySelector('[aria-label="Période, filtres et nouvelles écritures"]')!.parentElement as HTMLElement;
+    return {
+      position: getComputedStyle(barre).position,
+      ecart: Math.round(parseFloat(getComputedStyle(barre).top) - entete.offsetHeight),
+    };
+  });
+
+  const bureau = await mesurer();
+  expect(bureau.position).toBe('sticky');
+  // La barre commence exactement au bas de l'en-tête, quelle que soit sa hauteur.
+  expect(Math.abs(bureau.ecart)).toBeLessThanOrEqual(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobile = await mesurer();
+  expect(mobile.position).toBe('static');
 });

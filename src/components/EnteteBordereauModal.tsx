@@ -80,7 +80,7 @@ function BoutonFormat({ actif, titre, onClick, children, desactive }: {
     // Le bouton ne prend pas le focus : la saisie reste dans la feuille.
     onMouseDown={evenement => evenement.preventDefault()}
     onClick={onClick}
-    className={`inline-flex size-7 items-center justify-center rounded border text-slate-700 disabled:opacity-40 ${actif ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+    className={`inline-flex size-7 items-center justify-center rounded border text-slate-700 disabled:opacity-40 dark:text-slate-200 ${actif ? 'border-brand-300 bg-brand-50 text-brand-800 dark:border-brand-600 dark:bg-brand-950/60 dark:text-brand-300' : 'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700'}`}
   >{children}</button>;
 }
 
@@ -314,21 +314,21 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
     </div>}
   >
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-100 p-1">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
         {([['textes', 'Textes et images', <Type key="t" size={14} />], ['image', 'Image complète', <FileImage key="i" size={14} />]] as const).map(([cle, libelle, icone]) => <button
           key={cle}
           type="button"
           aria-pressed={brouillon.mode === cle}
-          className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${brouillon.mode === cle ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-brand-700'}`}
+          className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${brouillon.mode === cle ? 'bg-white text-brand-800 shadow-xs dark:bg-slate-700 dark:text-brand-300' : 'text-slate-600 hover:text-brand-700 dark:text-slate-300 dark:hover:text-brand-300'}`}
           onClick={() => modifier({ mode: cle })}
         >{icone}{libelle}</button>)}
       </div>
 
       {brouillon.mode === 'image'
-        ? <section className="grid gap-4 rounded-xl border border-slate-200 p-4 sm:grid-cols-[1fr_240px]">
+        ? <section className="grid gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700 sm:grid-cols-[1fr_240px]">
           <div>
-            <p className="text-xs font-semibold text-slate-700">Image de l’en-tête</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Image de l’en-tête</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
               PNG ou JPEG, 1 Mo maximum. Prévoyez une image large : elle occupe toute la largeur de la page.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -340,26 +340,26 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
               {brouillon.image && <button type="button" className="btn-secondary" onClick={() => { modifier({ image: '' }); if (champImage.current) champImage.current.value = ''; }}><ImageMinus size={15} />Retirer</button>}
             </div>
           </div>
-          <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-2">
+          <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-2 dark:border-slate-600 dark:bg-slate-800">
             {brouillon.image
               ? <img src={brouillon.image} alt="En-tête complet" className="max-h-40 w-full object-contain" />
-              : <p className="text-[11px] text-slate-400">Aperçu de l’image</p>}
+              : <p className="text-[11px] text-slate-400 dark:text-slate-500">Aperçu de l’image</p>}
           </div>
         </section>
         : <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
 
           <section className="min-w-0 space-y-3">
             {/* Barre de mise en forme : elle agit sur la ligne ouverte. */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
               <div className="min-w-0">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">Ligne ouverte</p>
-                <p className="truncate text-xs font-semibold text-slate-800">{ligneActive + 1} sur {brouillon.lignes.length} — {roleLigne}</p>
+                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Ligne ouverte</p>
+                <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200">{ligneActive + 1} sur {brouillon.lignes.length} — {roleLigne}</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 <select
                   aria-label="Police"
-                  className="input h-8 w-36 py-0 text-xs"
+                  className="field !h-8 !w-36 !py-0 !text-xs"
                   value={courante?.police ?? 'Arial'}
                   onChange={e => modifierLigne(ligneActive, { police: e.target.value })}
                 >{POLICES.map(p => <option key={p.valeur} value={p.valeur}>{p.libelle}</option>)}</select>
@@ -370,7 +370,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                   min={6}
                   max={40}
                   step={0.5}
-                  className="input h-8 w-16 py-0 text-xs"
+                  className="field !h-8 !w-16 !py-0 !text-xs"
                   value={courante?.taille ?? 9}
                   /* La frappe reste libre ; la borne s'applique quand on quitte le champ. */
                   onChange={e => {
@@ -384,7 +384,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                 <BoutonFormat titre="Italique" actif={courante?.italique} onClick={() => courante && modifierLigne(ligneActive, { italique: !courante.italique })}><Italic size={13} /></BoutonFormat>
                 <BoutonFormat titre="Souligné" actif={courante?.souligne} onClick={() => courante && modifierLigne(ligneActive, { souligne: !courante.souligne })}><Underline size={13} /></BoutonFormat>
 
-                <span className="mx-1 h-5 w-px bg-slate-200" />
+                <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
                 {([['gauche', AlignLeft, 'Aligner à gauche'], ['centre', AlignCenter, 'Centrer'], ['droite', AlignRight, 'Aligner à droite']] as const).map(([valeur, Icone, titre]) => <BoutonFormat
                   key={valeur}
                   titre={titre}
@@ -392,7 +392,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                   onClick={() => modifierLigne(ligneActive, { alignement: valeur })}
                 ><Icone size={13} /></BoutonFormat>)}
 
-                <span className="mx-1 h-5 w-px bg-slate-200" />
+                <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
                 {/* Noms distincts de ceux de la poignée, posée sur la feuille. */}
                 <BoutonFormat titre="Remonter la ligne ouverte" desactive={ligneActive === 0} onClick={() => deplacerLigne(ligneActive, -1)}><ArrowUp size={13} /></BoutonFormat>
                 <BoutonFormat titre="Descendre la ligne ouverte" desactive={ligneActive >= brouillon.lignes.length - 1} onClick={() => deplacerLigne(ligneActive, 1)}><ArrowDown size={13} /></BoutonFormat>
@@ -493,9 +493,9 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
 
           {/* Colonne des images : réglage au millimètre. */}
           <section className="space-y-3">
-            <div className="rounded-xl border border-slate-200 p-3">
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold text-slate-700">Images</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">Images</p>
                 <input ref={champFond} type="file" accept="image/png,image/jpeg" className="sr-only" id="entete-image-libre" onChange={async e => {
                   const fichier = e.target.files?.[0];
                   const data = await televersement.lire(fichier, MAX_LOGO_OCTETS);
@@ -512,26 +512,26 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                       aria-label={`Sélectionner ${image.alt}`}
                       aria-pressed={selection === image.id}
                       onClick={() => setSelection(image.id)}
-                      className={`flex h-16 w-full items-center justify-center rounded-lg border bg-white p-1 ${selection === image.id ? 'border-brand-400 ring-2 ring-brand-100' : 'border-slate-200 hover:border-slate-300'}`}
+                      className={`flex h-16 w-full items-center justify-center rounded-lg border bg-white p-1 dark:bg-slate-800 ${selection === image.id ? 'border-brand-400 ring-2 ring-brand-100 dark:border-brand-500 dark:ring-brand-900' : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'}`}
                     >
                       <img src={image.source} alt="" className="max-h-full max-w-full object-contain" />
                     </button>
                   </li>)}
                 </ul>
-                : <p className="mt-3 text-[11px] leading-relaxed text-slate-500">Aucune image. Ajoutez le logo, ou déposez un fichier directement sur la feuille.</p>}
+                : <p className="mt-3 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Aucune image. Ajoutez le logo, ou déposez un fichier directement sur la feuille.</p>}
 
-              {imageSelectionnee && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Position au millimètre</p>
+              {imageSelectionnee && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Position au millimètre</p>
                 <div className="grid grid-cols-2 gap-2">
                   {([['x', 'Gauche (mm)', -10, FEUILLE.largeur - 5], ['y', 'Haut (mm)', -10, FEUILLE.hauteur - 5], ['largeur', 'Largeur (mm)', 3, 120]] as const).map(([cle, libelle, min, max]) => <label key={cle} className="block text-[11px]">
-                    <span className="block text-slate-500">{libelle}</span>
+                    <span className="block text-slate-500 dark:text-slate-400">{libelle}</span>
                     <input
                       type="number"
                       step={0.5}
                       min={min}
                       max={max}
                       aria-label={libelle}
-                      className="input h-8 w-full py-0 text-xs"
+                      className="field !h-8 !w-full !py-0 !text-xs"
                       value={imageSelectionnee[cle]}
                       onChange={e => {
                         const valeur = Number(e.target.value);
@@ -545,8 +545,8 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
               </div>}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-[11px] leading-relaxed text-slate-600">
-              <p className="font-semibold text-slate-700">Comment faire</p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-[11px] leading-relaxed text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+              <p className="font-semibold text-slate-700 dark:text-slate-200">Comment faire</p>
               <ul className="mt-1 list-disc space-y-1 pl-4">
                 <li>Cliquez une ligne de la feuille, puis tapez : <span className="font-semibold">Entrée</span> ouvre la suivante.</li>
                 <li>La barre du haut règle la police, la taille, le gras, l’italique, le souligné et l’alignement.</li>
@@ -557,7 +557,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
           </section>
         </div>}
 
-      {messageErreur && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">{messageErreur}</p>}
+      {messageErreur && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-300">{messageErreur}</p>}
     </div>
   </Modale>;
 }

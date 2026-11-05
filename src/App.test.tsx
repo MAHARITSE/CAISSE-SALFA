@@ -304,7 +304,7 @@ describe('parcours de caisse', () => {
     const saisie = screen.getByRole('dialog', { name: 'Nouvelle recette' });
     await user.type(within(saisie).getByLabelText(/Libellé de l’écriture/), 'Recette modèle');
     await user.click(within(saisie).getByRole('button', { name: 'Détail par postes' }));
-    await user.selectOptions(within(saisie).getByLabelText('Modèle de bordereau'), modele.id);
+    await user.selectOptions(within(saisie).getByRole('combobox', { name: /choisir un modèle de saisie/i }), modele.id);
     expect(within(saisie).getByLabelText('Montant du poste 1')).toHaveValue('500');
     await user.click(within(saisie).getByRole('button', { name: 'Enregistrer' }));
     expect(lire().ecritures[0].montant).toBe(500);

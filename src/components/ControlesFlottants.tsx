@@ -98,7 +98,7 @@ export function ControlesFlottants() {
   return (
     <aside
       aria-label="Accessibilité et affichage"
-      className="no-print fixed bottom-4 right-4 z-40 flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/95 p-1 shadow-lg shadow-slate-900/10 backdrop-blur transition-all dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-black/40 sm:bottom-5 sm:right-5 sm:p-1.5"
+      className="no-print fixed bottom-4 left-4 z-40 flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/95 p-1 shadow-lg shadow-slate-900/10 backdrop-blur transition-all dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-black/40 sm:bottom-5 sm:left-5 sm:p-1.5"
     >
       {/* Bascule Mode Sombre / Mode Clair */}
       <button
@@ -111,7 +111,7 @@ export function ControlesFlottants() {
         {theme === 'dark' ? (
           <Sun size={17} className="text-amber-400" />
         ) : (
-          <Moon size={17} className="text-slate-700" />
+          <Moon size={17} className="text-slate-700 dark:text-slate-200" />
         )}
       </button>
 

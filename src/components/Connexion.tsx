@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { AlertTriangle, BookOpen, Eye, EyeOff, KeyRound, Loader2, LogIn } from 'lucide-react';
+import { AlertTriangle, BookOpen, Eye, EyeOff, HeartPulse, KeyRound, Loader2, LogIn } from 'lucide-react';
 import type { EtatSession } from '../utils/api';
 import { MODE_API, connexion } from '../utils/api';
 import { verifierConnexionLocale, COMPTES_DEMO } from '../utils/utilisateurs';
@@ -70,7 +70,16 @@ export function Connexion({ erreurInitiale, onConnecte }: {
     <div className="w-full max-w-md">
       {/* La carte seule : rien à côté, l'attention reste sur la connexion. */}
       <form onSubmit={envoyer} className="card space-y-4 p-7">
-        <div>
+        {/* L'identité de la caisse, la même que dans la barre d'en-tête. */}
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm dark:bg-brand-600"><HeartPulse size={23} strokeWidth={2} /></span>
+          <div className="min-w-0">
+            <p className="text-lg font-extrabold leading-none tracking-tight text-brand-950 dark:text-brand-300">SALFA</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Caisse principale · Gestion de caisse</p>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
           <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à la caisse</h1>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
@@ -80,7 +89,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           <input
             id="identifiant"
             className="field"
-            autoComplete="off"
+            autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
             autoFocus
@@ -97,8 +106,8 @@ export function Connexion({ erreurInitiale, onConnecte }: {
               id="mot-de-passe"
               type={afficher ? 'text' : 'password'}
               className="field pr-10"
-              autoComplete="off"
-              name="salfa-mdp"
+              autoComplete="current-password"
+              name="mot-de-passe"
               spellCheck={false}
               required
               value={motDePasse}
@@ -145,7 +154,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           </div>}
       </form>
 
-      <p className="mt-4 text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+      <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400">
         {MODE_API
           ? 'Session fermée automatiquement après 30 minutes d’inactivité.'
           : 'Mode démonstration : les données restent dans ce navigateur.'}

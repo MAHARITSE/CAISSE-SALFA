@@ -105,23 +105,23 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
     </div>}
   >
     <form id={formId} onSubmit={enregistrer} className="space-y-5">
-      <div role="tablist" aria-label="Type de catégories" className="flex gap-1 rounded-xl bg-slate-100 p-1">
+      <div role="tablist" aria-label="Type de catégories" className="flex gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
         {ONGLETS.map(onglet => <button
           key={onglet.cle}
           type="button"
           role="tab"
           aria-selected={onglet.cle === sens}
-          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${onglet.cle === sens ? 'bg-white text-brand-800 shadow-xs' : 'text-slate-600 hover:text-brand-700'}`}
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${onglet.cle === sens ? 'bg-white dark:bg-slate-900 text-brand-800 dark:text-brand-300 shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-brand-700'}`}
           onClick={() => { setSens(onglet.cle); setErreur(''); }}
-        >{onglet.libelle} <span className="font-normal text-slate-400">({brouillon[onglet.cle === 'RECETTE' ? 'recette' : 'depense'].length})</span></button>)}
+        >{onglet.libelle} <span className="font-normal text-slate-400 dark:text-slate-500">({brouillon[onglet.cle === 'RECETTE' ? 'recette' : 'depense'].length})</span></button>)}
       </div>
 
-      <p className="rounded-lg border border-sky-200 bg-sky-50 px-3.5 py-2.5 text-xs leading-relaxed text-sky-900 sm:text-sm">
+      <p className="rounded-lg border border-sky-200 dark:border-sky-900/60 bg-sky-50 dark:bg-sky-950/40 px-3.5 py-2.5 text-xs leading-relaxed text-sky-900 dark:text-sky-200 sm:text-sm">
         Cette liste ne concerne que les <strong>{sens === 'RECETTE' ? 'recettes' : 'dépenses'}</strong> ; celle des {autre} reste inchangée.
         Retirer une catégorie ne modifie aucune écriture déjà enregistrée.
       </p>
 
-      <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1fr_auto]">
+      <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 p-3 sm:grid-cols-[1fr_auto]">
         <div>
           <label className="label" htmlFor={`${formId}-nouvelle`}>Nouvelle catégorie</label>
           <input
@@ -137,10 +137,10 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
         <button type="button" className="btn-secondary self-end" onClick={ajouter}><Plus size={16} />Ajouter</button>
       </div>
 
-      <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-        {!liste.length && <p className="p-6 text-center text-sm text-slate-500">Aucune catégorie : ajoutez-en une ou restaurez la liste par défaut.</p>}
+      <div className="divide-y divide-slate-100 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        {!liste.length && <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">Aucune catégorie : ajoutez-en une ou restaurez la liste par défaut.</p>}
         {liste.map((categorie, index) => <div key={index} className="flex items-center gap-2 p-2">
-          <span className="w-7 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-400">{index + 1}</span>
+          <span className="w-7 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">{index + 1}</span>
           <input
             className="field min-w-0"
             aria-label={`Catégorie ${index + 1}`}
@@ -156,7 +156,7 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
         </div>)}
       </div>
 
-      {(erreur || erreurExterne) && <p role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-800"><AlertCircle size={18} className="shrink-0" />{erreur || erreurExterne}</p>}
+      {(erreur || erreurExterne) && <p role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/50 p-3.5 text-sm text-rose-800 dark:text-rose-300"><AlertCircle size={18} className="shrink-0" />{erreur || erreurExterne}</p>}
     </form>
   </Modale>;
 }

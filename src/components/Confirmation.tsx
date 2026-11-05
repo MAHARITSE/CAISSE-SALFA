@@ -21,7 +21,7 @@ export function Confirmation({ titre, children, onAnnuler, onConfirmer, libelleC
     <Modale titre={titre} onFermer={onAnnuler} largeur="petite"
       icone={<AlertTriangle size={20} className={danger ? 'text-rose-600' : 'text-amber-600'} />}
       pied={<div className="flex flex-wrap justify-end gap-2"><button className="btn-secondary" onClick={onAnnuler} autoFocus>Annuler</button><button className={danger ? 'btn-danger' : 'btn-primary'} onClick={() => void confirmer()} disabled={enCours}>{enCours ? 'En cours…' : libelleConfirmer}</button></div>}>
-      <div className="text-sm leading-relaxed text-slate-600">{children}</div>
+      <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{children}</div>
     </Modale>
   );
 }
