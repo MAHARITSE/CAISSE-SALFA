@@ -32,11 +32,24 @@ function controler(string $nom, bool $ok, string $detail): void
     }
 }
 
-echo "=== CAISSE SALFA — vérification ===\n";
+// La version de l'API vient de api/config.php, celle de l'interface de la
+// balise <meta name="salfa-version"> écrite dans index.html au moment du build.
+$versionApi = 'inconnue';
+if (is_file($site . '/api/config.php')) {
+    require_once $site . '/api/config.php';
+    $versionApi = defined('SALFA_VERSION_API') ? SALFA_VERSION_API : 'inconnue';
+}
+$page = @file_get_contents($site . '/index.html');
+$versionInterface = is_string($page) && preg_match('/<meta name="salfa-version" content="([^"]+)"/', $page, $m) ? $m[1] : null;
+
+echo "=== CAISSE SALFA — vérification (version $versionApi) ===\n";
 echo "  Dossier : $site\n\n";
 
 echo "Environnement\n";
 controler('PHP', version_compare(PHP_VERSION, '8.1', '>='), PHP_VERSION);
+controler('PHP 64 bits', PHP_INT_SIZE >= 8, PHP_INT_SIZE >= 8
+    ? 'montants jusqu\'à ' . number_format(SALFA_MONTANT_MAX, 0, ',', ' ') . ' Ar'
+    : 'PHP 32 bits : montants plafonnés à ' . number_format(SALFA_MONTANT_MAX, 0, ',', ' ') . ' Ar — installer un PHP 64 bits');
 controler('PDO MySQL', extension_loaded('pdo_mysql'), extension_loaded('pdo_mysql') ? 'disponible' : 'absent — activer php_pdo_mysql');
 controler('mbstring', extension_loaded('mbstring'), extension_loaded('mbstring') ? 'disponible' : 'absent — activer php_mbstring');
 controler('json', extension_loaded('json'), extension_loaded('json') ? 'disponible' : 'absent');
@@ -80,6 +93,21 @@ if (!is_file($configFichier)) {
         controler('connexion MySQL', false, $e->getMessage());
     }
 }
+
+echo "\nVersion du paquet\n";
+controler('API (api/config.php)', $versionApi !== 'inconnue', $versionApi);
+controler(
+    'interface (index.html)',
+    $versionInterface !== null,
+    $versionInterface ?? 'absente — reconstruisez le paquet (npm run build:wamp) puis recopiez index.html'
+);
+controler(
+    'cohérence interface / API',
+    $versionInterface !== null && $versionInterface === $versionApi,
+    $versionInterface !== null && $versionInterface === $versionApi
+        ? 'versions identiques'
+        : 'recopiez index.html, assets/ et api/ depuis le même paquet'
+);
 
 echo "\n";
 if ($erreurs > 0) {

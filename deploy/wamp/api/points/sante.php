@@ -13,7 +13,7 @@ salfa_point('sante', function (): array {
     return [
         'ok' => true,
         'application' => 'CAISSE SALFA',
-        'versionApi' => '1.1',
+        'versionApi' => SALFA_VERSION_API,
         'php' => PHP_VERSION,
         'base' => 'connectee',
         'revision' => $livre['revision'],

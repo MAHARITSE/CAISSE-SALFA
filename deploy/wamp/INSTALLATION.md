@@ -46,10 +46,16 @@ caisse-salfa\
 | Élément | Version | Vérification |
 | --- | --- | --- |
 | WAMP | 3.x | icône verte (Apache + MySQL) |
-| PHP | 8.1+ | extensions `pdo_mysql`, `mbstring`, `json` |
+| PHP | 8.1+, **64 bits** | extensions `pdo_mysql`, `mbstring`, `json` |
 | Navigateur | Chrome / Edge / Firefox | — |
 
 Dans WAMP : clic sur l'icône → **PHP → Version** → choisir 8.1 ou plus.
+
+Le PHP doit être **64 bits** (cas de WAMP 3.x x64). Sur un PHP 32 bits, un
+montant supérieur à 2 147 483 647 Ar ne tient pas dans un entier : le paquet
+plafonne alors les montants à **2 000 000 000 Ar** au lieu de
+**999 999 999 999 Ar**, et `outils\verifier.bat` le signale sur la ligne
+« PHP 64 bits ».
 
 ---
 
@@ -74,6 +80,12 @@ outils\verifier.bat
 Contrôle PHP, extensions, fichiers, connexion MySQL, tables, compte admin — ou,
 depuis le navigateur : `http://localhost/caisse-salfa/api/index.php?action=verifier`
 (réponse JSON, ligne par ligne).
+
+Le diagnostic se termine par le bloc **Version du paquet** : la version écrite
+dans `index.html` (celle de l'interface compilée) doit être identique à celle de
+`api/config.php` (celle de l'API). Si les deux diffèrent, le dossier a été
+recopié en partie : reprendre `index.html`, `assets/` et `api/` depuis le même
+paquet. L'application le signale aussi par un bandeau orange en bas de page.
 
 ---
 
@@ -177,7 +189,7 @@ L'API ne fait jamais confiance au navigateur :
 
 ---
 
-## 7. Sauvegardes
+## 8. Sauvegardes
 
 | Méthode | Commande | Contenu |
 | --- | --- | --- |
@@ -189,7 +201,7 @@ copier `data\sauvegardes\` sur un disque externe.
 
 ---
 
-## 8. Dépannage
+## 9. Dépannage
 
 | Symptôme | Cause | Solution |
 | --- | --- | --- |
@@ -203,10 +215,12 @@ copier `data\sauvegardes\` sur un disque externe.
 
 ---
 
-## 9. Après la mise en service
+## 10. Après la mise en service
 
 1. Supprimer `api/connexion-bootstrap.php` et `api/tests/` du serveur.
 2. Vérifier que `data/` renvoie **403** dans le navigateur.
 3. Créer un compte `caissier` par personne.
 4. Mettre à jour : relancer `npm run build:wamp` sur un poste de développement,
    puis `outils\installer.bat` (les tables et les données sont conservées).
+   Recopier **tout** le paquet : une page à jour avec une API ancienne (ou
+   l'inverse) déclenche l'alerte « Paquet incomplet » du pied de page.

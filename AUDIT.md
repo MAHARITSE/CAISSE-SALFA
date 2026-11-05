@@ -2,6 +2,7 @@
 
 **Date :** 3 novembre 2026  
 **Version livrée :** 1.1.0  
+**Version suivante :** 1.2.0 — audit d’interface et version du paquet, voir `INTERFACE.md`  
 **Périmètre :** application React/TypeScript/Vite existante, stockage local,
 saisie, journal, bordereaux, modèles, exports et impression. Aucun backend n’a
 été ajouté : l’application reste locale au navigateur.

@@ -38,6 +38,13 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
+La version de l’application n’est écrite qu’une fois : le champ `version` de
+`package.json`. Elle est recopiée dans `src/utils/version.ts` et dans
+`deploy/wamp/api/config.php` (`SALFA_VERSION_API`), inscrite dans `index.html`
+par `npm run build:wamp`, et `src/utils/version.test.ts` échoue si les trois
+divergent. Le pied de page affiche la version et signale un paquet serveur dont
+l’interface et l’API ne sont pas de la même version.
+
 `bun.lock` est également maintenu pour les environnements qui utilisent Bun.
 
 Installez avec `npm ci` (ou `bun install`) plutôt qu’avec `npm install`, afin de

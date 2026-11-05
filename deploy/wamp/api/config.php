@@ -11,9 +11,23 @@ if (!defined('SALFA_API')) {
     define('SALFA_API', true);
 }
 
+/**
+ * Version du paquet WAMP (interface compilée + API PHP). Elle accompagne le
+ * numéro de `package.json` : `api/sante.php` et `api/verifier.php` la renvoient,
+ * et le pied de page de l'application l'affiche pour repérer un paquet
+ * partiellement mis à jour.
+ */
+const SALFA_VERSION_API = '1.2.0';
+
 const SALFA_ANNEE_MIN = 1900;
 const SALFA_ANNEE_MAX = 9999;
-const SALFA_MONTANT_MAX = 999999999999;
+// 999 999 999 999 ne tient pas dans un entier signé 32 bits : sur un PHP
+// compilé en 32 bits (WAMP x86), le littéral devient un flottant et la
+// validation, écrite en strict_types, lève alors un TypeError sur chaque
+// écriture. On retombe sur 2 000 000 000 Ar et le diagnostic recommande un PHP 64 bits.
+if (!defined('SALFA_MONTANT_MAX')) {
+    define('SALFA_MONTANT_MAX', PHP_INT_SIZE >= 8 ? 999999999999 : 2000000000);
+}
 const SALFA_MAX_DETAILS = 200;
 const SALFA_MAX_ECRITURES = 10000;
 const SALFA_MAX_CLOTURES = 400;

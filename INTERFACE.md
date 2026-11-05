@@ -1,7 +1,7 @@
 # Audit d’interface — CAISSE SALFA
 
 **Date :** 5 novembre 2026
-**Version :** 1.1.0
+**Version :** 1.2.0
 **Périmètre :** coquille applicative, connexion, livre journal, filtres, saisie,
 analyse, exercices, données et sauvegardes, administration, modales, contrôles
 d’affichage et impression. Aucune règle de gestion ni aucun format de
@@ -80,6 +80,26 @@ et sur la façon de s’en servir.
 > (`npx playwright install` y est bloqué). Les parcours Playwright ont été mis à
 > jour et relus, mais `npm run test:e2e` doit être lancé sur un poste outillé
 > avant diffusion.
+
+## Version du paquet
+
+Le paquet livré annonçait deux versions différentes : `api/index.php?action=verifier`
+répondait `versionApi: 1.2` quand `api/index.php?action=sante` répondait `1.1`, et
+aucun écran n’indiquait la version réellement installée. Une mise à jour partielle
+de `C:\wamp64\www\caisse-salfa` (une page recopiée, pas l’API) passait donc
+inaperçue.
+
+- Une seule valeur fait foi : le champ `version` de `package.json`. Elle est
+  recopiée dans `src/utils/version.ts` (`VERSION_APPLICATION`) et dans
+  `api/config.php` (`SALFA_VERSION_API`) ; le test `src/utils/version.test.ts`
+  échoue si les trois divergent.
+- `npm run build:wamp` inscrit la version dans `index.html`
+  (`<meta name="salfa-version" content="1.2.0">`) et refuse un index sans elle.
+- Le pied de page affiche `v1.2.0`. En mode serveur, il ajoute la version
+  annoncée par l’API et affiche un bandeau orange si les deux diffèrent :
+  « Paquet incomplet ».
+- `outils\verifier.bat`, `outils\verifier-cli.php` et la réponse JSON de
+  `?action=verifier` comparent les deux versions, ligne « version du paquet ».
 
 ## Recommandations restantes
 

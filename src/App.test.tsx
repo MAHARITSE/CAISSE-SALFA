@@ -9,6 +9,7 @@ import { CLE_ECRITURES, CLE_LIVRE, sauvegarderLivre } from './utils/storage';
 import { enregistrerEcriture } from './utils/ledger';
 import { parametresTest } from './test/fixtures';
 import { aujourdHui } from './utils/format';
+import { VERSION_APPLICATION } from './utils/version';
 
 const lire = (): Sauvegarde => JSON.parse(localStorage.getItem(CLE_LIVRE)!);
 const annee = aujourdHui().slice(0, 4);
@@ -468,5 +469,17 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: 'Livre journal' })[0]);
     await ajouterRecette(user, 'Recette nouvelle année', '1500');
     expect(lire().ecritures[0]).toMatchObject({ montant: 1500, numero: `RC-${annee}-0001` });
+  });
+});
+
+describe('version affichée', () => {
+  it('inscrit la version du paquet dans le pied de page', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await ouvrirSession(user);
+    const pastille = screen.getByTitle(`Version de l’application : ${VERSION_APPLICATION}`);
+    expect(pastille).toHaveTextContent(`v${VERSION_APPLICATION}`);
+    // En mode local, aucun bandeau « Paquet incomplet » ne doit apparaître.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

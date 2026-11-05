@@ -12,7 +12,7 @@
  *
  * Aucun Node.js n'est nécessaire sur le serveur : seul ce résultat est publié.
  */
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 
@@ -44,6 +44,20 @@ for (const fichier of ['index.html', 'favicon.svg']) {
     cpSync(join(dist, fichier), join(paquet, fichier));
   }
 }
+// Version du paquet inscrite dans la page : `api/config.php` annonce la même
+// version (SALFA_VERSION_API) et `outils/verifier-cli.php` compare les deux,
+// ce qui repère un paquet recopié à moitié sur le serveur.
+const { version } = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8'));
+const pageIndex = join(paquet, 'index.html');
+const page = readFileSync(pageIndex, 'utf8').replace(/\s*<meta name="salfa-version"[^>]*>/g, '');
+const balise = `  <meta name="salfa-version" content="${version}" />\n`;
+writeFileSync(pageIndex, page.replace('</head>', `${balise}</head>`));
+if (!readFileSync(pageIndex, 'utf8').includes(`content="${version}"`)) {
+  console.error('Échec : la version du paquet n’a pas pu être inscrite dans index.html.');
+  process.exit(1);
+}
+console.log(`  Version du paquet : ${version}`);
+
 // Ancienne structure : ne doit plus exister.
 rmSync(join(paquet, 'frontend'), { recursive: true, force: true });
 

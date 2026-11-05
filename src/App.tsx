@@ -21,10 +21,11 @@ import { Administration } from './components/Administration';
 import { ChangerMotDePasse } from './components/ChangerMotDePasse';
 import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { ControlesFlottants } from './components/ControlesFlottants';
-import { MODE_API, deconnexion as deconnexionApi, mutations, session as sessionApi, type EtatSession } from './utils/api';
+import { MODE_API, deconnexion as deconnexionApi, mutations, sante as santeApi, session as sessionApi, type EtatSession } from './utils/api';
 import { enteteModifie, numeroDocument, type EnteteDocument } from './utils/entete';
 import { retenirSessionLocale } from './utils/utilisateurs';
 import { libelleRole, ongletsAutorises, peutAdministrer, peutModifierSoldeOuverture, peutSaisir, type OngletApplication, type Role } from './utils/roles';
+import { VERSION_APPLICATION } from './utils/version';
 
 type Onglet = OngletApplication;
 
@@ -44,6 +45,8 @@ export function App() {
   /** Chacun change son propre mot de passe : la modale vit au-dessus du shell. */
   const [motDePasseOuvert, setMotDePasseOuvert] = useState(false);
   const [verificationSession, setVerificationSession] = useState(MODE_API);
+  /** Version annoncée par api/sante.php, affichée en mode serveur. */
+  const [versionApi, setVersionApi] = useState<string | null>(null);
 
   // Au démarrage en mode serveur : vérifier la session puis charger le livre MySQL.
   useEffect(() => {
@@ -59,6 +62,15 @@ export function App() {
       .finally(() => { if (actif) setVerificationSession(false); });
     return () => { actif = false; };
   }, [rechargerApi]);
+  useEffect(() => {
+    if (!MODE_API || !session?.connecte) return;
+    let actif = true;
+    santeApi()
+      .then(etat => { if (actif) setVersionApi(etat.versionApi); })
+      .catch(() => { /* le diagnostic du livre suffit à signaler un serveur muet */ });
+    return () => { actif = false; };
+  }, [session]);
+
   const [onglet, setOnglet] = useState<Onglet>('journal');
   const [mois, setMois] = useState(() => {
     const es = livre.ecritures;
@@ -353,7 +365,23 @@ export function App() {
             compteCourant={session?.utilisateur ? { identifiant: session.utilisateur.identifiant } : null}
           />
           : <section className="card p-8 text-center text-sm text-slate-500 dark:text-slate-400"><ShieldCheck size={30} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Cette page est réservée à l’administrateur.</section>)}
-        <footer className="no-print flex flex-wrap items-center justify-between gap-2 pb-2 pt-2 text-xs text-slate-500 dark:text-slate-400"><p>CAISSE SALFA · Montants en ariary (MGA) · Exercice {exercice}</p><p className="flex items-center gap-1.5"><ShieldCheck size={14} />{MODE_API ? 'Données MySQL sur le serveur WAMP — sauvegarde hebdomadaire conseillée.' : 'Données locales — pensez à sauvegarder après chaque session.'}</p></footer>
+        <footer className="no-print flex flex-wrap items-center justify-between gap-2 pb-2 pt-2 text-xs text-slate-500 dark:text-slate-400">
+          <p className="flex flex-wrap items-center gap-1.5">
+            CAISSE SALFA
+            <span className="badge badge-neutral !px-1.5 !py-0 font-mono text-[10px] tabular-nums" title={`Version de l’application : ${VERSION_APPLICATION}`}>v{VERSION_APPLICATION}</span>
+            · Montants en ariary (MGA) · Exercice {exercice}
+          </p>
+          <p className="flex items-center gap-1.5">
+            <ShieldCheck size={14} />
+            {MODE_API
+              ? `Données MySQL sur le serveur WAMP${versionApi ? ` · API ${versionApi}` : ''} — sauvegarde hebdomadaire conseillée.`
+              : 'Données locales — pensez à sauvegarder après chaque session.'}
+          </p>
+          {MODE_API && versionApi && versionApi !== VERSION_APPLICATION && <p role="alert" className="flex w-full items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-200">
+            <AlertTriangle size={13} className="shrink-0" />
+            Paquet incomplet : l’API {versionApi} ne correspond pas à l’interface {VERSION_APPLICATION}. Recopiez index.html, assets/ et api/ depuis le même paquet.
+          </p>}
+        </footer>
       </main>
     </div>
 
