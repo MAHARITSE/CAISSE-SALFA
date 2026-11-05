@@ -20,6 +20,9 @@ salfa_point('verifier', function (): array {
     };
 
     $ajouter('PHP', version_compare(PHP_VERSION, '8.1', '>='), PHP_VERSION . (version_compare(PHP_VERSION, '8.1', '>=') ? '' : ' — PHP 8.1 ou plus est requis'));
+    $ajouter('PHP 64 bits', PHP_INT_SIZE >= 8, PHP_INT_SIZE >= 8
+        ? 'oui, montants jusqu’à ' . number_format(SALFA_MONTANT_MAX, 0, ',', ' ') . ' Ar'
+        : 'non : PHP 32 bits, montants plafonnés à ' . number_format(SALFA_MONTANT_MAX, 0, ',', ' ') . ' Ar — installer un PHP 64 bits');
     $ajouter('PDO MySQL', extension_loaded('pdo_mysql'), extension_loaded('pdo_mysql') ? 'disponible' : 'absent : activer php_pdo_mysql dans WAMP');
     $ajouter('mbstring', extension_loaded('mbstring'), extension_loaded('mbstring') ? 'disponible' : 'absent : activer php_mbstring dans WAMP');
     $ajouter('json', extension_loaded('json'), extension_loaded('json') ? 'disponible' : 'absent');
@@ -55,11 +58,20 @@ salfa_point('verifier', function (): array {
         }
     }
 
+    // L'interface compilée annonce sa version dans une balise <meta> : si elle
+    // diffère de SALFA_VERSION_API, le paquet a été recopié en partie seulement.
+    $page = @file_get_contents(__DIR__ . '/../../index.html');
+    $versionInterface = is_string($page) && preg_match('/<meta name="salfa-version" content="([^"]+)"/', $page, $m) ? $m[1] : null;
+    $ajouter('version du paquet', $versionInterface === SALFA_VERSION_API, $versionInterface === null
+        ? 'interface compilée sans numéro de version : recopiez index.html du paquet ' . SALFA_VERSION_API
+        : 'interface ' . $versionInterface . ' / API ' . SALFA_VERSION_API);
+
     $echecs = count(array_filter($controles, fn (array $c): bool => !$c['ok']));
     return [
         'ok' => $echecs === 0,
         'application' => 'CAISSE SALFA',
-        'versionApi' => '1.2',
+        'versionApi' => SALFA_VERSION_API,
+        'versionInterface' => $versionInterface,
         'php' => PHP_VERSION,
         'base' => $base,
         'tables' => count($tables),

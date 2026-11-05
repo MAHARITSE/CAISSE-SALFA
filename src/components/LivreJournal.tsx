@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, BookOpen, ChevronLeft, ChevronRight, FileText, Pencil, Printer, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, BookOpen, ChevronLeft, ChevronRight, FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import type { Categories, Ecriture, LigneJournal, Sens } from '../types';
 import { dateFr, formatAr } from '../utils/format';
 import { entetesParDefaut, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
@@ -23,6 +23,8 @@ interface LivreJournalProps {
   entetes?: EntetesDocuments;
   /** L'en-tête est commun : un seul enregistrement vaut pour les deux documents. */
   onEnregistrerEntete?: (entete: EnteteDocument) => void;
+  /** Ouvre la saisie depuis l'état vide ; absent pour un rôle en lecture seule. */
+  onNouvelleEcriture?: (sens: Sens) => void;
   /** Catégories de saisie, séparées pour les recettes et les dépenses. */
   categories?: Categories;
   onEnregistrerCategories?: (sens: Sens, liste: string[]) => Promise<boolean>;
@@ -44,7 +46,7 @@ const PAR_PAGE = 50;
  * depuis l'extérieur, juste après son enregistrement.
  */
 export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(function LivreJournal(
-  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, categories, onEnregistrerCategories },
+  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, onNouvelleEcriture, categories, onEnregistrerCategories },
   ref,
 ) {
   /** Ligne active / sélectionnée dans le tableau */
@@ -219,7 +221,11 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
   function ThTriable({ col, label, align = 'left' }: { col: SortColumn; label: string; align?: 'left' | 'right' }) {
     const actif = sortCol === col;
     return (
-      <th className={`px-3 py-2 font-semibold ${align === 'right' ? 'text-right' : 'text-left'}`}>
+      <th
+        scope="col"
+        aria-sort={actif ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        className={`px-3 py-2 font-semibold ${align === 'right' ? 'text-right' : 'text-left'}`}
+      >
         <button
           type="button"
           className={`inline-flex items-center gap-1 transition-colors hover:text-brand-800 dark:hover:text-brand-300 ${actif ? 'font-bold text-brand-800 dark:text-brand-300' : 'text-slate-600 dark:text-slate-300'}`}
@@ -255,7 +261,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                 </button>
               )}
             </div>
-            <p className="mt-0.5 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+            <p aria-live="polite" className="mt-0.5 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
               {periode} · {lignes.length} écriture{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affichée(s) sur la sélection' : ''}
             </p>
           </div>
@@ -267,6 +273,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
       {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-xs text-amber-900 sm:text-sm dark:border-amber-950/60 dark:bg-amber-950/40 dark:text-amber-200">Vue filtrée : les totaux portent sur la sélection. Les soldes restent calculés sur le livre complet, dans l’ordre chronologique.</p>}
       <div className="relative overflow-x-auto">
         <table className="journal-table w-full min-w-[960px] text-sm">
+          <caption className="sr-only">Écritures de la caisse, classées par date : pièce, libellé, catégorie, recette, dépense et solde cumulé.</caption>
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 text-left text-xs uppercase tracking-wider text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
               <ThTriable col="date" label="Date" />
@@ -276,14 +283,14 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
               <ThTriable col="recette" label="Recette" align="right" />
               <ThTriable col="depense" label="Dépense" align="right" />
               <ThTriable col="solde" label="Solde cumulé" align="right" />
-              <th className="no-print px-3 py-2 text-center font-semibold">Action</th>
+              <th scope="col" className="no-print sticky right-0 bg-slate-50 px-3 py-2 text-center font-semibold dark:bg-slate-800">Action</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-slate-200 bg-slate-50/40 dark:border-slate-800 dark:bg-slate-850/40">
+            <tr className="border-b border-slate-200 bg-slate-50/40 dark:border-slate-800 dark:bg-slate-800/40">
               <td colSpan={6} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400">Report à nouveau {filtreActif ? '— période complète' : ''}</td>
               <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800 dark:text-slate-200">{formatAr(soldeOuverture)}</td>
-              <td className="no-print" />
+              <td className="no-print sticky right-0 bg-slate-50/95 dark:bg-slate-800/95" />
             </tr>
             {!lignesTriees.length && (
               <tr>
@@ -295,7 +302,12 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {filtreActif ? 'Essayez une autre recherche ou réinitialisez les filtres.' : 'Ajoutez une recette ou une dépense pour commencer.'}
                   </p>
-                  {filtreActif && <button className="btn-secondary mt-3" onClick={onReinitialiser}>Réinitialiser les filtres</button>}
+                  {filtreActif
+                    ? <button className="btn-secondary mt-3" onClick={onReinitialiser}>Réinitialiser les filtres</button>
+                    : onNouvelleEcriture && <div className="mt-4 flex flex-wrap justify-center gap-2">
+                      <button className="btn-primary" onClick={() => onNouvelleEcriture('RECETTE')}><Plus size={16} />Saisir une recette</button>
+                      <button className="btn-danger" onClick={() => onNouvelleEcriture('DEPENSE')}><Plus size={16} />Saisir une dépense</button>
+                    </div>}
                 </td>
               </tr>
             )}
@@ -340,7 +352,12 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                   <td className={`whitespace-nowrap px-3 py-2 text-right align-middle font-semibold tabular-nums ${ligne.solde < 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
                     {formatAr(ligne.solde)}
                   </td>
-                  <td className="no-print px-2 py-1.5 align-middle" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    onClick={(e) => e.stopPropagation()}
+                    className={`no-print sticky right-0 px-2 py-1.5 align-middle ${
+                      estActive ? 'bg-emerald-50/95 dark:bg-emerald-950' : estEdition ? 'bg-amber-50/95 dark:bg-amber-950' : 'bg-white dark:bg-slate-900'
+                    }`}
+                  >
                     <div className="flex justify-center gap-0.5 print:hidden">
                       <button
                         type="button"
@@ -383,8 +400,8 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
               <td colSpan={4} className="px-4 py-2.5">{filtreActif ? 'Totaux de la sélection' : 'Totaux de la période'}</td>
               <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{formatAr(recettes)}</td>
               <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-400">{formatAr(depenses)}</td>
-              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title="Solde de clôture de la période complète, hors filtres">{formatAr(soldeFin)}</td>
-              <td className="no-print" />
+              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title="Solde en fin de période, calculé sur toute la période même filtrée">{formatAr(soldeFin)}</td>
+              <td className="no-print sticky right-0 bg-slate-50 dark:bg-slate-800/80" />
             </tr>
           </tfoot>
         </table>
@@ -392,15 +409,15 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
       <div className="no-print flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500 sm:text-sm dark:border-slate-800 dark:text-slate-400">
         <p>Le solde de clôture tient compte de toute la période, même lorsqu’elle est filtrée.</p>
         {pages > 1 && (
-          <div className="flex items-center gap-2">
+          <nav className="flex items-center gap-2" aria-label="Pagination du journal">
             <button className="icon-button" disabled={pageActuelle === 1} aria-label="Page précédente" onClick={() => setPage(pageActuelle - 1)}>
               <ChevronLeft size={16} />
             </button>
-            <span>Page {pageActuelle} / {pages}</span>
+            <span className="tabular-nums">Page {pageActuelle} sur {pages}</span>
             <button className="icon-button" disabled={pageActuelle === pages} aria-label="Page suivante" onClick={() => setPage(pageActuelle + 1)}>
               <ChevronRight size={16} />
             </button>
-          </div>
+          </nav>
         )}
       </div>
       {pages > 1 && <p className="print-only px-4 py-2 text-xs">L’impression inclut toutes les pages de la sélection.</p>}

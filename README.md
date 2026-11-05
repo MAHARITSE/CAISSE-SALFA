@@ -38,6 +38,13 @@ npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
+La version de l’application n’est écrite qu’une fois : le champ `version` de
+`package.json`. Elle est recopiée dans `src/utils/version.ts` et dans
+`deploy/wamp/api/config.php` (`SALFA_VERSION_API`), inscrite dans `index.html`
+par `npm run build:wamp`, et `src/utils/version.test.ts` échoue si les trois
+divergent. Le pied de page affiche la version et signale un paquet serveur dont
+l’interface et l’API ne sont pas de la même version.
+
 `bun.lock` est également maintenu pour les environnements qui utilisent Bun.
 
 Installez avec `npm ci` (ou `bun install`) plutôt qu’avec `npm install`, afin de
@@ -130,9 +137,18 @@ garder les versions verrouillées par `package-lock.json`.
 - **Robustesse** : sauvegarde atomique, erreurs de stockage visibles, contrôle de
   révision entre onglets, migration des anciennes données, garde-fou en cas de
   stockage corrompu, boîtes de dialogue accessibles et interface responsive.
-- **Navigation** : une seule barre d’en-tête (journal, analyse, données,
-  modèles), sans panneau latéral ; libellés abrégés et entièrement visibles sur
-  téléphone.
+- **Navigation** : une seule barre d’en-tête (journal, analyse, exercices,
+  données, administration — chacun selon son rôle), sans panneau latéral ;
+  libellés abrégés et entièrement visibles sur téléphone. La barre de filtres
+  s’accroche sous l’en-tête quelle que soit sa hauteur réelle, mesurée à
+  l’affichage, y compris après un changement de taille de police.
+- **Interface** : thème clair et thème sombre complets (aucune page ne reste en
+  texte foncé sur fond foncé), colonne d’actions du journal toujours atteignable
+  quand le tableau défile, états vides qui proposent directement la saisie,
+  lien d’évitement « Aller au contenu », tri des colonnes annoncé aux lecteurs
+  d’écran, messages d’erreur amenés sous les yeux, et titre de l’onglet du
+  navigateur qui suit la page ouverte. Le détail se lit dans
+  [`INTERFACE.md`](./INTERFACE.md).
 
 ## Règles de gestion
 
@@ -246,4 +262,6 @@ src/
 tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 ```
 
-Voir aussi [`AUDIT.md`](./AUDIT.md) pour le détail des corrections effectuées.
+Voir aussi [`AUDIT.md`](./AUDIT.md) pour le détail des corrections métier et
+[`INTERFACE.md`](./INTERFACE.md) pour l’audit d’interface (thème sombre,
+accessibilité, ergonomie) et ses vérifications.

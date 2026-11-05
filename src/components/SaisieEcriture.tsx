@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, ListPlus } from 'lucide-react';
 import type { Categories, Ecriture, MasqueSaisie, Sens } from '../types';
 import { MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
@@ -56,7 +56,15 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [enregistrement, setEnregistrement] = useState(false);
   const soumission = useRef(false);
   const libelleRef = useRef<HTMLInputElement>(null);
+  const erreurRef = useRef<HTMLDivElement>(null);
   const masquesPourSens = masques.filter(m => m.sens === sens);
+
+  // Un message d'erreur vit en bas d'un formulaire long : on l'amène sous les yeux.
+  useEffect(() => {
+    const bloc = erreurRef.current;
+    if (!erreur || !bloc || typeof bloc.scrollIntoView !== 'function') return;
+    bloc.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [erreur]);
 
   // Positionne immédiatement le curseur à la fin du champ libellé pour continuer la saisie sans clic.
   function positionnerCurseurFinLibelle(texte?: string) {
@@ -157,9 +165,9 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     <>
       <Modale titre={edition ? `Modifier ${edition.numero}` : estRecette ? 'Nouvelle recette' : 'Nouvelle dépense'}
         sousTitre={`${numero} · ${estRecette ? 'Encaissement' : 'Décaissement'} en ariary (MGA)`}
-        icone={estRecette ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} className="text-rose-600" />}
+        icone={estRecette ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} className="text-rose-600 dark:text-rose-400" />}
         enteteClass={estRecette ? 'bg-emerald-50/70' : 'bg-rose-50/70'} onFermer={demanderFermeture}
-        pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700' : 'text-rose-700'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'} disabled={enregistrement}><Check size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button></div></div>}>
+        pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p aria-live="polite" className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'} disabled={enregistrement}><Check size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button></div></div>}>
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}>
           {/* Choix de modèle en haut du formulaire avec reprise de saisie directe */}
           {masquesPourSens.length > 0 && (
@@ -216,37 +224,37 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
           </div>
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label" htmlFor={`${formId}-reference`}>Référence de la pièce</label><input id={`${formId}-reference`} className="field" maxLength={200} value={reference} onChange={e => setReference(e.target.value)} placeholder="Facture, chèque, bordereau…" /></div>
             <div><label className="label" htmlFor={`${formId}-observation`}>Observation</label><input id={`${formId}-observation`} className="field" maxLength={2000} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Information complémentaire (facultatif)" /></div>
           </div>
-          <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4" aria-label="Montants de l’écriture">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 p-4 space-y-4" aria-label="Montants de l’écriture">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-base font-semibold">Montant de l’opération</h3>
               <div className="segmented" aria-label="Mode de saisie du montant"><button type="button" aria-pressed={!detaille} onClick={() => { setDetaille(false); changer(); }}>Montant unique</button><button type="button" aria-pressed={detaille} onClick={() => { setDetaille(true); changer(); }}>Détail par postes</button></div>
             </div>
             {!detaille ? <div><ChampMontant id={`${formId}-montant`} label="Montant total (Ar) *" className="text-xl font-bold" valeur={montantSimple} onChange={setMontantSimple} placeholder="0" obligatoire aide={`Montant entier en ariary, séparé par milliers. Maximum : ${formatAr(MONTANT_MAX)}.`} /></div> : <>
-              <div className="flex flex-wrap items-end gap-2"><div className="min-w-40 flex-1"><label className="label" htmlFor={`${formId}-modele`}>Modèle de bordereau</label><select id={`${formId}-modele`} className="field" value="" onChange={e => choisirMasque(e.target.value)}><option value="">Choisir un modèle…</option>{masques.filter(m => m.sens === sens).map(m => <option key={m.id} value={m.id}>{m.nom} ({m.lignes.length} postes)</option>)}</select></div><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button></div>
-              <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[1fr_150px_auto]">
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Un modèle de saisie, choisi en haut du formulaire, remplit les postes d’un seul geste.</p><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button></div>
+              <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:grid-cols-[1fr_150px_auto]">
                 <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(masqueMajuscules(e.target.value))} onKeyDown={toucheAjout} placeholder="Consultation…" /></div>
                 <div><ChampMontant id={`${formId}-mnt-poste`} label="Montant (Ar)" valeur={nouveauMontant} onChange={setNouveauMontant} placeholder="0" /></div>
                 <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
-              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
-                  {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-sm text-slate-500"><ListPlus className="mx-auto mb-2 text-slate-300" size={26} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
-                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: masqueMajuscules(e.target.value) } : x)); changer(); }} /></td><td className="p-1.5"><ChampMontant label="" etiquetteSeule={`Montant du poste ${i + 1}`} id={`${formId}-mnt-${l.id}`} className="w-32" valeur={l.montant} placeholder="0" onChange={valeur => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: valeur } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" tabIndex={-1} className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} title={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={16} /></button></td></tr>)}
+              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 dark:bg-slate-800/40 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
+                  {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400"><ListPlus className="mx-auto mb-2 text-slate-300 dark:text-slate-600" size={26} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
+                  {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: masqueMajuscules(e.target.value) } : x)); changer(); }} /></td><td className="p-1.5"><ChampMontant label="" etiquetteSeule={`Montant du poste ${i + 1}`} id={`${formId}-mnt-${l.id}`} className="w-32" valeur={l.montant} placeholder="0" onChange={valeur => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: valeur } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" tabIndex={-1} className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} title={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={16} /></button></td></tr>)}
                 </tbody></table>
               </div>
-              <p className="text-xs text-slate-500 sm:text-sm">Le total est calculé automatiquement sur les postes complétés. Un seul poste suffit pour enregistrer ; les lignes laissées vides sont ignorées.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">Le total est calculé automatiquement sur les postes complétés. Un seul poste suffit pour enregistrer ; les lignes laissées vides sont ignorées.</p>
             </>}
           </section>
-          {Number(date.slice(0, 4)) !== exercice && <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900"><AlertCircle size={17} className="shrink-0" /><p>Cette date n’appartient pas à l’exercice {exercice} ouvert. Les écritures doivent toutes être rattachées à l’année en cours de clôture.</p></div>}
-          {(erreur || erreurExterne) && <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-800"><AlertCircle size={17} className="shrink-0" /><div>{erreur && <p>{erreur}</p>}{erreurExterne && <p className="mt-1">{erreurExterne}</p>}</div></div>}
-          <p className="text-[11px] text-slate-500">* Champs obligatoires. {edition ? 'Le numéro et la date de création d’origine sont conservés.' : 'Le numéro définitif est attribué au moment de l’enregistrement.'}</p>
+          {Number(date.slice(0, 4)) !== exercice && <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200"><AlertCircle size={17} className="shrink-0" /><p>Cette date n’appartient pas à l’exercice {exercice} ouvert. Les écritures doivent toutes être rattachées à l’année en cours de clôture.</p></div>}
+          {(erreur || erreurExterne) && <div ref={erreurRef} role="alert" className="flex items-start gap-2 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/50 p-3 text-xs leading-relaxed text-rose-800 dark:text-rose-300"><AlertCircle size={17} className="shrink-0" /><div>{erreur && <p>{erreur}</p>}{erreurExterne && <p className="mt-1">{erreurExterne}</p>}</div></div>}
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">* Champs obligatoires. {edition ? 'Le numéro et la date de création d’origine sont conservés.' : 'Le numéro définitif est attribué au moment de l’enregistrement.'}</p>
         </form>
       </Modale>
       {confirmerFermeture && <Confirmation titre="Abandonner la saisie ?" onAnnuler={() => setConfirmerFermeture(false)} onConfirmer={onFermer} libelleConfirmer="Abandonner les modifications"><p>Les modifications de ce formulaire ne sont pas encore enregistrées. Voulez-vous les abandonner ?</p></Confirmation>}
