@@ -17,7 +17,7 @@ const masquesTest: MasqueSaisie[] = [
     description: 'Postes médicaux standards',
     libelle: 'RECETTES JOURNALIERES DU SERVICE',
     lignes: [
-      { description: 'CONSULTATION', montantDefaut: 5000 },
+      { description: 'Consultation', montantDefaut: 5000 },
       { description: 'PHARMACIE', montantDefaut: 12000 },
     ],
   },
@@ -92,6 +92,8 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
     await user.type(champLibelle, ' - MATIN');
     expect(champLibelle.value).toBe('RECETTES JOURNALIERES DU SERVICE - MATIN');
 
+    // Les anciens modèles mixtes sont aussi convertis dans les champs de saisie.
+    expect(screen.getByLabelText('Libellé du poste 1')).toHaveValue('CONSULTATION');
     // Les postes du modèle sont également appliqués
     expect(screen.getByLabelText('Montant du poste 1')).toHaveValue('5000');
     expect(screen.getByLabelText('Montant du poste 2')).toHaveValue('12000');

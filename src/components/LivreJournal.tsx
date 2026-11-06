@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, BookOpen, ChevronLeft, ChevronRight, FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import type { Categories, Ecriture, LigneJournal, Sens } from '../types';
-import { dateFr, formatAr } from '../utils/format';
+import { dateFr, montantAffiche } from '../utils/format';
 import { entetesParDefaut, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
 import { ModaleBordereau } from './Bordereau';
 import { EnteteBordereauModal } from './EnteteBordereauModal';
@@ -272,6 +272,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
       </div>
       {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-xs text-amber-900 sm:text-sm dark:border-amber-950/60 dark:bg-amber-950/40 dark:text-amber-200">Vue filtrée : les totaux portent sur la sélection. Les soldes restent calculés sur le livre complet, dans l’ordre chronologique.</p>}
       <div className="relative overflow-x-auto">
+        <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">Montants en ariary</p>
         <table className="journal-table w-full min-w-[960px] text-sm">
           <caption className="sr-only">Écritures de la caisse, classées par date : pièce, libellé, catégorie, recette, dépense et solde cumulé.</caption>
           <thead>
@@ -289,7 +290,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
           <tbody>
             <tr className="border-b border-slate-200 bg-slate-50/40 dark:border-slate-800 dark:bg-slate-800/40">
               <td colSpan={6} className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400">Report à nouveau {filtreActif ? '— période complète' : ''}</td>
-              <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800 dark:text-slate-200">{formatAr(soldeOuverture)}</td>
+              <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800 dark:text-slate-200">{montantAffiche(soldeOuverture)}</td>
               <td className="no-print sticky right-0 bg-slate-50/95 dark:bg-slate-800/95" />
             </tr>
             {!lignesTriees.length && (
@@ -344,13 +345,13 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                   </td>
                   <td className="max-w-40 px-3 py-2 align-middle text-slate-700 dark:text-slate-300 truncate">{ligne.categorie}</td>
                   <td className="whitespace-nowrap px-3 py-2 text-right align-middle font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                    {ligne.sens === 'RECETTE' ? formatAr(ligne.montant) : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                    {ligne.sens === 'RECETTE' ? montantAffiche(ligne.montant) : <span className="text-slate-300 dark:text-slate-700">—</span>}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right align-middle font-semibold tabular-nums text-rose-700 dark:text-rose-400">
-                    {ligne.sens === 'DEPENSE' ? formatAr(ligne.montant) : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                    {ligne.sens === 'DEPENSE' ? montantAffiche(ligne.montant) : <span className="text-slate-300 dark:text-slate-700">—</span>}
                   </td>
                   <td className={`whitespace-nowrap px-3 py-2 text-right align-middle font-semibold tabular-nums ${ligne.solde < 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                    {formatAr(ligne.solde)}
+                    {montantAffiche(ligne.solde)}
                   </td>
                   <td
                     onClick={(e) => e.stopPropagation()}
@@ -398,9 +399,9 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
           <tfoot>
             <tr className="border-t border-slate-200 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100">
               <td colSpan={4} className="px-4 py-2.5">{filtreActif ? 'Totaux de la sélection' : 'Totaux de la période'}</td>
-              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{formatAr(recettes)}</td>
-              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-400">{formatAr(depenses)}</td>
-              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title="Solde en fin de période, calculé sur toute la période même filtrée">{formatAr(soldeFin)}</td>
+              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{montantAffiche(recettes)}</td>
+              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-400">{montantAffiche(depenses)}</td>
+              <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums" title="Solde en fin de période, calculé sur toute la période même filtrée">{montantAffiche(soldeFin)}</td>
               <td className="no-print sticky right-0 bg-slate-50 dark:bg-slate-800/80" />
             </tr>
           </tfoot>

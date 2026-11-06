@@ -114,6 +114,8 @@ export function App() {
   const [derniereSupprimee, setDerniereSupprimee] = useState<Ecriture | null>(null);
   const [notification, setNotification] = useState('');
   const [clotureOuverte, setClotureOuverte] = useState(false);
+  /** Exercice clôturé consulté par l'administrateur (null = exercice en cours). */
+  const [anneeArchiveActive, setAnneeArchiveActive] = useState<number | null>(null);
 
   useEffect(() => {
     const entete = enteteRef.current;
@@ -151,13 +153,33 @@ export function App() {
     };
   }, [session?.connecte]);
 
+  // Le rôle décide de tout ce qui s'ouvre : pages, réglages et saisie.
+  const role: Role = (session?.utilisateur?.role ?? 'admin') as Role;
+  const autorises = ongletsAutorises(role);
+  const saisieOuverte = peutSaisir(role);
+  const administre = peutAdministrer(role);
+  const soldeModifiable = peutModifierSoldeOuverture(role);
+
   // Un livre ancien peut n'avoir aucun exercice tant que la normalisation n'a pas été enregistrée.
   const exercice = livre.parametres.exercice ?? anneeCourante();
+  const exercicesDisponibles = useMemo(() => [
+    { annee: exercice, cloture: false },
+    ...[...livre.exercicesClotures].sort((a, b) => b.annee - a.annee).map(c => ({ annee: c.annee, cloture: true })),
+  ], [exercice, livre.exercicesClotures]);
+
   const anneeMois = Number(mois.slice(0, 4));
-  const archiveConsultee = useMemo(
-    () => !toutAfficher && anneeMois !== exercice ? livre.exercicesClotures.find(c => c.annee === anneeMois) ?? null : null,
-    [toutAfficher, anneeMois, exercice, livre.exercicesClotures],
-  );
+  const archiveConsultee = useMemo(() => {
+    if (!administre) return null;
+    if (anneeArchiveActive !== null && anneeArchiveActive !== exercice) {
+      return livre.exercicesClotures.find(c => c.annee === anneeArchiveActive) ?? null;
+    }
+    if (!toutAfficher && anneeMois !== exercice) {
+      return livre.exercicesClotures.find(c => c.annee === anneeMois) ?? null;
+    }
+    return null;
+  }, [administre, anneeArchiveActive, toutAfficher, anneeMois, exercice, livre.exercicesClotures]);
+
+  const exerciceAffiche = archiveConsultee ? archiveConsultee.annee : exercice;
   const journalCourant = useMemo(() => calculerJournal(livre), [livre]);
   const journal = useMemo(
     () => archiveConsultee
@@ -172,7 +194,7 @@ export function App() {
   const totauxPeriode = totaliser(duMois);
   const totauxSelection = totaliser(lignes);
   const soldeFin = duMois.length ? duMois[duMois.length - 1].solde : ouverture;
-  const periode = toutAfficher ? 'Toutes périodes' : libelleMois(mois);
+  const periode = toutAfficher ? (archiveConsultee ? `Exercice ${archiveConsultee.annee}` : 'Toutes périodes') : libelleMois(mois);
   const soldeFinExercice = useMemo(() => soldeCloture(livre), [livre]);
   const cloturePossible = clotureAutorisee(exercice);
   const aCloturer = cloturePossible && anneeCourante() > exercice;
@@ -183,10 +205,46 @@ export function App() {
   const categories = [...new Set([
     ...(livre.categories?.recette ?? []),
     ...(livre.categories?.depense ?? []),
-    ...livre.ecritures.map(e => e.categorie),
+    ...journal.map(e => e.categorie),
   ])];
   const modifierFiltre = (champ: keyof typeof filtres, valeur: string) => setFiltres(f => ({ ...f, [champ]: valeur }));
   const reinitialiser = () => setFiltres({ sens: 'TOUS', categorie: '', recherche: '' });
+
+  function changerMois(nouveauMois: string) {
+    if (!nouveauMois) return;
+    setMois(nouveauMois);
+    setToutAfficher(false);
+    if (administre) {
+      const anneeCible = Number(nouveauMois.slice(0, 4));
+      if (anneeCible === exercice) setAnneeArchiveActive(null);
+      else if (livre.exercicesClotures.some(c => c.annee === anneeCible)) setAnneeArchiveActive(anneeCible);
+    }
+  }
+
+  function changerExerciceConsulte(anneeCible: number) {
+    if (!administre) return;
+    reinitialiser();
+    if (anneeCible === exercice) {
+      setAnneeArchiveActive(null);
+      const es = livre.ecritures;
+      const dernierMois = es.length
+        ? [...es].sort((a, b) => a.date.localeCompare(b.date))[es.length - 1].date.slice(0, 7)
+        : `${exercice}-${moisCourant().slice(5, 7)}`;
+      setMois(dernierMois);
+      setToutAfficher(false);
+      return;
+    }
+    const archive = livre.exercicesClotures.find(c => c.annee === anneeCible);
+    if (!archive) return;
+    setAnneeArchiveActive(anneeCible);
+    const es = archive.ecritures;
+    const dernierMois = es.length
+      ? [...es].sort((a, b) => a.date.localeCompare(b.date))[es.length - 1].date.slice(0, 7)
+      : `${anneeCible}-12`;
+    setMois(dernierMois);
+    setToutAfficher(true);
+    if (onglet !== 'journal' && onglet !== 'analyse') setOnglet('journal');
+  }
 
   async function enregistrer(ecriture: Ecriture) {
     const edition = livre.ecritures.some(e => e.id === ecriture.id);
@@ -313,12 +371,6 @@ export function App() {
     if (recharger()) { setDerniereSupprimee(null); setNotification(MODE_API ? 'Livre rechargé depuis le serveur.' : 'Livre rechargé depuis le stockage local.'); }
   }
 
-  // Le rôle décide de tout ce qui s'ouvre : pages, réglages et saisie.
-  const role: Role = (session?.utilisateur?.role ?? 'admin') as Role;
-  const autorises = ongletsAutorises(role);
-  const saisieOuverte = peutSaisir(role);
-  const administre = peutAdministrer(role);
-  const soldeModifiable = peutModifierSoldeOuverture(role);
   const navigation = [
     { id: 'journal' as const, label: 'Livre journal', labelCourt: 'Journal', icone: BookOpen },
     { id: 'analyse' as const, label: 'Analyse de la caisse', labelCourt: 'Analyse', icone: ChartNoAxesCombined },
@@ -378,7 +430,19 @@ export function App() {
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm"><HeartPulse size={24} strokeWidth={2} /></span>
             <div><p className="text-xl font-extrabold tracking-tight text-brand-950 dark:text-brand-300">SALFA</p><p className="text-xs tracking-[0.14em] text-slate-400 dark:text-slate-500">GESTION DE CAISSE</p></div>
-            <div className="ml-2 hidden border-l border-slate-200 pl-4 sm:block dark:border-slate-800"><p className="text-xs text-slate-400 dark:text-slate-500">Caisse principale</p><p className="mt-0.5 text-sm font-semibold text-slate-700 dark:text-slate-200">Exercice {exercice}</p></div>
+            <div className="ml-2 border-l border-slate-200 pl-3 sm:pl-4 dark:border-slate-800">
+              <p className="hidden text-xs text-slate-400 sm:block dark:text-slate-500">Caisse principale</p>
+              {administre && exercicesDisponibles.length > 1
+                ? <select
+                    aria-label="Changer d’exercice"
+                    value={exerciceAffiche}
+                    onChange={e => changerExerciceConsulte(Number(e.target.value))}
+                    className="mt-0.5 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-800 transition-colors hover:border-brand-400 focus:border-brand-600 focus:outline-none sm:text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    {exercicesDisponibles.map(ex => <option key={ex.annee} value={ex.annee}>Exercice {ex.annee}{ex.cloture ? ' (clôturé)' : ''}</option>)}
+                  </select>
+                : <p className="mt-0.5 text-sm font-semibold text-slate-700 dark:text-slate-200">Exercice {exercice}</p>}
+            </div>
           </div>
           <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}><span className={`size-2 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? (MODE_API ? 'Serveur à vérifier' : 'Stockage à vérifier') : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-xs text-slate-500 dark:text-slate-400 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{session.utilisateur.nomComplet}</p><p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={16} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={16} /></button></div> : <span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title="Caisse SALFA">CS</span>}</div>
         </div>
@@ -391,17 +455,31 @@ export function App() {
         {messageSync && !erreur && <div role="status" className="no-print flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200"><RefreshCw size={18} className="shrink-0" />{messageSync}</div>}
         {aCloturer && !erreur && onglet !== 'exercices' && <div role="alert" className="no-print flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800/80 dark:bg-amber-950/40"><div className="flex items-start gap-2 text-sm leading-relaxed text-amber-900 dark:text-amber-200"><CalendarClock size={20} className="mt-0.5 shrink-0" /><div><p className="font-semibold">L’exercice {exercice} doit être clôturé.</p><p className="mt-1">La nouvelle année a commencé : les saisies restent bloquées sur l’exercice {exercice}. Clôturez-le pour ouvrir {exercice + 1} avec le solde reporté de {formatAr(soldeFinExercice)}.</p></div></div><button className="btn-primary" onClick={ouvrirCloture}><CalendarCheck size={16} />Clôturer l’exercice {exercice}</button></div>}
 
+        {archiveConsultee && !erreur && (onglet === 'journal' || onglet === 'analyse') && (
+          <div role="status" className="no-print flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/80 px-4 py-3 text-sm text-brand-950 dark:border-brand-800/80 dark:bg-brand-950/50 dark:text-brand-200">
+            <div className="flex items-center gap-2.5">
+              <CalendarCheck size={18} className="shrink-0 text-brand-700 dark:text-brand-400" />
+              <span>
+                Consultation de l’<strong>exercice {archiveConsultee.annee} clôturé</strong> ({archiveConsultee.ecritures.length} écriture(s) · solde de clôture {formatAr(archiveConsultee.soldeCloture)}).
+              </span>
+            </div>
+            <button type="button" className="btn-secondary !py-1.5 !text-xs" onClick={() => changerExerciceConsulte(exercice)}>
+              <RotateCcw size={14} />Revenir à l’exercice {exercice}
+            </button>
+          </div>
+        )}
+
         {onglet === 'journal' && <>
-          {!erreur && afficherSynthese && <Synthese soldeInitial={livre.parametres.soldeInitial} exercice={exercice} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} />}
-          <div className="no-print z-10 py-1 bg-slate-100/80 backdrop-blur-md dark:bg-slate-950/80 sm:sticky" style={{ top: hauteurEntete }}><section className="card space-y-3 p-4 border border-slate-200 shadow-sm dark:border-slate-800 bg-white dark:bg-slate-900" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois affiché" value={mois} min="1900-01" max="9999-12" onChange={e => { if (e.target.value) { setMois(e.target.value); setToutAfficher(false); } }} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={15} />Annuler la suppression</button>}</div>{saisieOuverte
+          {!erreur && afficherSynthese && <Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} />}
+          <div className="no-print z-10 py-1 bg-slate-100/80 backdrop-blur-md dark:bg-slate-950/80 sm:sticky" style={{ top: hauteurEntete }}><section className="card space-y-3 p-4 border border-slate-200 shadow-sm dark:border-slate-800 bg-white dark:bg-slate-900" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois affiché" value={mois} min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && !archiveConsultee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={15} />Annuler la suppression</button>}</div>{saisieOuverte && !archiveConsultee
               ? <div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'RECETTE', edition: null })}><Plus size={16} />Nouvelle recette</button><button className="btn-danger" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'DEPENSE', edition: null })}><Plus size={16} />Nouvelle dépense</button></div>
-              : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">Consultation seule : votre rôle ne saisit pas d’écriture.</p>}</div>
+              : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{archiveConsultee ? `Exercice ${archiveConsultee.annee} clôturé : consultation en lecture seule.` : 'Consultation seule : votre rôle ne saisit pas d’écriture.'}</p>}</div>
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><div className="segmented" aria-label="Filtrer par type">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(s => <button key={s} aria-pressed={filtres.sens === s} onClick={() => modifierFiltre('sens', s)}>{s === 'TOUS' ? 'Tous' : s === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par catégorie" value={filtres.categorie} onChange={e => modifierFiltre('categorie', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option key={c}>{c}</option>)}</select><div className="relative min-w-44 flex-1"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" className="field !py-2 !pl-9 !text-sm" aria-label="Rechercher dans le journal" placeholder="Rechercher une pièce, un libellé, un tiers…" value={filtres.recherche} onChange={e => modifierFiltre('recherche', e.target.value)} /></div>{filtreActif && <button className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}<span className="hidden items-center gap-1 text-xs text-slate-400 dark:text-slate-500 xl:flex"><SlidersHorizontal size={14} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span></div>
           </section></div>
-          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte ? sens => setSaisie({ sens, edition: null }) : undefined} ref={journalRef} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
+          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} ref={journalRef} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
-        {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min="1900-01" max="9999-12" value={mois} onChange={e => { if (e.target.value) { setMois(e.target.value); setToutAfficher(false); } }} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => setMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={livre.parametres.soldeInitial} exercice={exercice} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} /></>)}
-        {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} />)}
+        {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} value={mois} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} /></>)}
+        {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} administrateur={administre} exerciceActif={exerciceAffiche} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} onOuvrirExercice={changerExerciceConsulte} />)}
         {onglet === 'donnees' && <DonneesSauvegardes livre={livre} administrateur={administre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}
         {onglet === 'administration' && (administre
           ? <Administration

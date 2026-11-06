@@ -93,7 +93,10 @@ garder les versions verrouillées par `package-lock.json`.
   portrait. Les montants portent deux décimales (2 657 400,00).
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
-  majuscules.
+  majuscules, comme les catégories nouvellement saisies ou renommées. Les données
+  historiques ne sont pas converties automatiquement. Les montants affichés ont
+  deux décimales et des séparateurs de milliers ; la saisie reste en ariary
+  entiers. La devise n’est pas répétée dans les tableaux.
 - **Catégories gérées par sens** : les recettes et les dépenses ont chacune
   leur liste de catégories, modifiable depuis le bouton « Gérer » du formulaire
   de saisie (ajout, renommage, ordre, suppression, restauration des listes

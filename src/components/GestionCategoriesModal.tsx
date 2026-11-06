@@ -129,7 +129,7 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
             className="field"
             maxLength={MAX_LONGUEUR_CATEGORIE}
             value={nouvelle}
-            onChange={e => { setNouvelle(e.target.value); setErreur(''); }}
+            onChange={e => { setNouvelle(masqueMajuscules(e.target.value)); setErreur(''); }}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouter(); } }}
             placeholder="Ex. Imagerie médicale"
           />

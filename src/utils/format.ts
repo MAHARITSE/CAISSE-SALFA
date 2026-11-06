@@ -2,7 +2,10 @@ import { MONTANT_MAX } from './constants';
 
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 export const nombre = (montant: number): string => nf.format(montant);
-export const formatAr = (montant: number): string => `${nombre(montant)} Ar`;
+// Les compteurs restent entiers ; seuls les montants ont deux décimales à l’affichage.
+const formatMonetaire = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const montantAffiche = (montant: number): string => formatMonetaire.format(montant);
+export const formatAr = (montant: number): string => `${montantAffiche(montant)} Ar`;
 
 /** Ne pas utiliser toISOString() : cela peut changer le jour près de minuit. */
 export const aujourdHui = (date = new Date()): string =>
