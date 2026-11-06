@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formaterSaisieMontant } from '../components/ChampMontant';
-import { masqueMajuscules, parserMontant } from './format';
+import { formatAr, montantAffiche, nombre, masqueMajuscules, parserMontant } from './format';
 
 /** Espace insécable étroite utilisée comme séparateur de milliers. */
 const SEP = '\u202f';
@@ -40,5 +40,14 @@ describe('masque des libellés', () => {
     expect(masqueMajuscules('Déjà Mixte')).toBe('DÉJÀ MIXTE');
     expect(masqueMajuscules('à conserver')).toHaveLength('à conserver'.length);
     expect(masqueMajuscules('')).toBe('');
+  });
+});
+
+describe('affichage des montants', () => {
+  it('sépare les milliers et affiche toujours deux décimales sans devise dans les tableaux', () => {
+    expect(montantAffiche(116656000)).toBe(`116${SEP}656${SEP}000,00`);
+    expect(montantAffiche(-1234.5)).toBe(`-1${SEP}234,50`);
+    expect(formatAr(4626500)).toBe(`4${SEP}626${SEP}500,00 Ar`);
+    expect(nombre(1234)).toBe(`1${SEP}234`);
   });
 });

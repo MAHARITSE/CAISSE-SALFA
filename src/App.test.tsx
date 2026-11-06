@@ -79,6 +79,10 @@ describe('parcours de caisse', () => {
     expect(window.print).toHaveBeenCalledTimes(1);
     await user.click(within(bordereau).getByRole('button', { name: 'Fermer' }));
     expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
+    const journal = screen.getByRole('table', { name: /Écritures de la caisse/ });
+    expect(journal).toHaveTextContent('15 000,00');
+    expect(journal).toHaveTextContent('5 000,00');
+    expect(journal).not.toHaveTextContent(/\bAr\b/);
 
     await user.click(screen.getByRole('button', { name: `Modifier RC-${annee}-0001` }));
     const edition = screen.getByRole('dialog', { name: `Modifier RC-${annee}-0001` });
@@ -229,25 +233,26 @@ describe('parcours de caisse', () => {
     const gestion = screen.getByRole('dialog', { name: 'Catégories de saisie' });
     await user.click(within(gestion).getByRole('tab', { name: /Dépenses/ }));
     await user.type(within(gestion).getByLabelText('Nouvelle catégorie'), 'Entretien du groupe');
+    expect(within(gestion).getByLabelText('Nouvelle catégorie')).toHaveValue('ENTRETIEN DU GROUPE');
     await user.click(within(gestion).getByRole('button', { name: 'Ajouter' }));
     await user.click(within(gestion).getByRole('button', { name: 'Enregistrer' }));
 
     // Seules les catégories de dépenses ont changé.
     const livre = lire();
-    expect(livre.categories.depense).toContain('Entretien du groupe');
-    expect(livre.categories.recette).not.toContain('Entretien du groupe');
+    expect(livre.categories.depense).toContain('ENTRETIEN DU GROUPE');
+    expect(livre.categories.recette).not.toContain('ENTRETIEN DU GROUPE');
     expect(livre.categories.recette).toContain('Consultations');
 
     // La nouvelle catégorie est proposée dans le formulaire de dépense…
     const apres = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     expect(within(apres).getByLabelText('Catégorie *')).toHaveValue(livre.categories.depense[0]);
-    await user.selectOptions(within(apres).getByLabelText('Catégorie *'), 'Entretien du groupe');
-    expect(within(apres).getByLabelText('Catégorie *')).toHaveValue('Entretien du groupe');
+    await user.selectOptions(within(apres).getByLabelText('Catégorie *'), 'ENTRETIEN DU GROUPE');
+    expect(within(apres).getByLabelText('Catégorie *')).toHaveValue('ENTRETIEN DU GROUPE');
     await user.click(within(apres).getByRole('button', { name: 'Annuler' }));
     // …et absente de celui des recettes.
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const recette = screen.getByRole('dialog', { name: 'Nouvelle recette' });
-    expect(within(recette).queryByRole('option', { name: 'Entretien du groupe' })).not.toBeInTheDocument();
+    expect(within(recette).queryByRole('option', { name: 'ENTRETIEN DU GROUPE' })).not.toBeInTheDocument();
   });
 
   it('conserve la saisie et affiche une erreur explicite quand le stockage est plein', async () => {
@@ -450,7 +455,7 @@ describe('parcours de caisse', () => {
     expect(screen.getByText(`L’exercice ${annee - 1} doit être clôturé.`)).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: `Clôturer l’exercice ${annee - 1}` })[0]);
     const dialogue = screen.getByRole('dialog', { name: `Clôturer l’exercice ${annee - 1} ?` });
-    expect(within(dialogue).getByText('4 000 Ar')).toBeInTheDocument();
+    expect(within(dialogue).getByText('4 000,00 Ar')).toBeInTheDocument();
     await user.click(within(dialogue).getByRole('button', { name: new RegExp(`Clôturer ${annee - 1} et ouvrir ${annee}`) }));
 
     const stocke = lire();
@@ -465,6 +470,12 @@ describe('parcours de caisse', () => {
     expect(screen.getByRole('heading', { name: `Exercice en cours · ${annee}` })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Exercices clôturés' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Télécharger l’archive ${annee - 1}` })).toBeInTheDocument();
+
+    // L'administrateur peut basculer sur l'exercice clôturé puis revenir à l'exercice en cours.
+    await user.selectOptions(screen.getByLabelText('Changer d’exercice'), String(annee - 1));
+    expect(screen.getByText(/Consultation de l’/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: new RegExp(`Revenir à l’exercice ${annee}`) }));
+
     // La saisie est de nouveau possible, sur le nouvel exercice.
     await user.click(screen.getAllByRole('button', { name: 'Livre journal' })[0]);
     await ajouterRecette(user, 'Recette nouvelle année', '1500');

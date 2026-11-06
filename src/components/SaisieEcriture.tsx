@@ -104,7 +104,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   }
 
   function appliquerMasque(m: MasqueSaisie) {
-    setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: l.description, montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
+    setLignes(m.lignes.map(l => ({ id: identifiant('d'), description: masqueMajuscules(l.description), montant: l.montantDefaut ? String(l.montantDefaut) : '' })));
     setDetaille(true);
     setErreur('');
     changer();
@@ -243,8 +243,9 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
                 <div><ChampMontant id={`${formId}-mnt-poste`} label="Montant (Ar)" valeur={nouveauMontant} onChange={setNouveauMontant} placeholder="0" /></div>
                 <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Montants en ariary</p>
               <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 dark:bg-slate-800/40 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant (Ar) *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
+                <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 dark:bg-slate-800/40 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
                   {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400"><ListPlus className="mx-auto mb-2 text-slate-300 dark:text-slate-600" size={26} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
                   {lignes.map((l, i) => <tr key={l.id} className="border-t border-slate-100 dark:border-slate-800"><td className="p-1.5"><input className="field min-w-36" aria-label={`Libellé du poste ${i + 1}`} maxLength={200} value={l.description} onChange={e => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, description: masqueMajuscules(e.target.value) } : x)); changer(); }} /></td><td className="p-1.5"><ChampMontant label="" etiquetteSeule={`Montant du poste ${i + 1}`} id={`${formId}-mnt-${l.id}`} className="w-32" valeur={l.montant} placeholder="0" onChange={valeur => { setLignes(prev => prev.map(x => x.id === l.id ? { ...x, montant: valeur } : x)); changer(); }} /></td><td className="p-1.5"><button type="button" tabIndex={-1} className="icon-button hover:text-rose-600" aria-label={`Supprimer le poste ${i + 1}`} title={`Supprimer le poste ${i + 1}`} onClick={() => { setLignes(prev => prev.filter(x => x.id !== l.id)); changer(); }}><Trash2 size={16} /></button></td></tr>)}
                 </tbody></table>
