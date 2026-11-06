@@ -10,12 +10,16 @@
  *
  * La racine ne contient que cela : le dossier se copie tel quel dans `www`.
  *
+ * Un archivage `deploy/wamp/caisse-salfa.zip` est produit en complément : il se
+ * décompresse directement dans `C:\\wamp64\\www\\` et contient un dossier
+ * `caisse-salfa\\` déjà nommé, comme le ZIP du modèle SALAIRE-SALFA.
+ *
  * Aucun Node.js n'est nécessaire sur le serveur, et **aucune installation** :
  * le dossier se copie dans `www`, le premier appel crée la base, les tables et
  * les comptes de départ.
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const racine = resolve(import.meta.dirname, '..');
@@ -97,6 +101,32 @@ if (intrus.length) {
   process.exit(1);
 }
 
+/**
+ * Crée l'archive du paquet.
+ *
+ * `zip` est utilisé quand il est disponible (Linux, macOS, Git Bash) ; sinon on
+ * retombe sur PowerShell, présent partout sous Windows ou` WampServer est
+ * installé. Aucune dépendance npm n'est ajoutée pour cela.
+ */
+function archiver(dossier, cible) {
+  const parent = join(dossier, '..');
+  try {
+    execSync(`zip -qr "${cible}" "${basename(dossier)}"`, { cwd: parent, stdio: 'ignore' });
+    return;
+  } catch {
+    // Pas de `zip` : on tente PowerShell (Compress-Archive), puis on avertit.
+  }
+  try {
+    execSync(
+      `powershell -NoProfile -Command "Compress-Archive -Path '${dossier}' -DestinationPath '${cible}' -Force"`,
+      { stdio: 'ignore' },
+    );
+    return;
+  } catch {
+    console.warn('  (archive ignorée : ni zip ni PowerShell disponibles)');
+  }
+}
+
 const compter = (d) => readdirSync(d).reduce((n, f) => {
   const p = join(d, f);
   return n + (statSync(p).isDirectory() ? compter(p) : 1);
@@ -111,4 +141,12 @@ if (interdits.length) {
   process.exit(1);
 }
 console.log(`✓ Paquet WAMP prêt : ${compter(paquet)} fichiers dans deploy/wamp/caisse-salfa/`);
-console.log('  Copiez ce dossier dans C:\\wamp64\\www\\ — rien d’autre à installer.');
+
+// Archive équivalente : à décompresser directement dans C:\\wamp64\\www\\.
+// Le dossier `caisse-salfa\\` est inclus dans l'archive, donc pas de risque de
+// déverser les fichiers à la racine de `www`.
+const archive = join(wamp, 'caisse-salfa.zip');
+rmSync(archive, { force: true });
+archiver(paquet, archive);
+console.log(`✓ Archive prête : deploy/wamp/caisse-salfa.zip (${Math.round(statSync(archive).size / 1024)} Ko)`);
+console.log('  Copiez le dossier (ou décompressez le ZIP) dans C:\\wamp64\\www\\ — rien d’autre à installer.');

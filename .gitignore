@@ -16,9 +16,9 @@ blob-report/
 # Aperçu de contrôle (capture jetable)
 apercu-bordereau.png
 
-# Paquet WAMP compilé (produit par `npm run build:wamp`) et configuration serveur
-deploy/wamp/caisse-salfa/
-deploy/wamp/salfa-config.php
-deploy/wamp/api/salfa-config.php
-deploy/wamp/caisse-salfa.zip
+# Configuration serveur : jamais versionnée (mot de passe MySQL).
+# Le paquet compilé `deploy/wamp/` (dossier + ZIP prêts à copier dans www) est
+# lui aussi livré : il fait partie de la distribution, comme les .bat du modèle.
 salfa-config.php
+deploy/wamp/api/data/salfa-config.php
+deploy/wamp/salfa-config.php
