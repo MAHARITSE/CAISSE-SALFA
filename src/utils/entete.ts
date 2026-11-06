@@ -263,12 +263,17 @@ export function normaliserEntete(valeur: unknown, document: DocumentEntete = 'de
  * identifiants des images posées : dès qu'elles diffèrent, l'en-tête a été
  * personnalisé et l'écran doit le savoir.
  */
-export function enteteModifie(entete: EnteteDocument): boolean {
+export function enteteModifie(entete: EnteteDocument | null | undefined): boolean {
   const defaut = enteteParDefaut();
-  if (entete.lignes.length !== defaut.lignes.length) return true;
-  if (entete.lignes.some((ligne, i) => ligne.texte !== defaut.lignes[i].texte)) return true;
-  if (entete.images.length !== defaut.images.length) return true;
-  return entete.images.some((image, i) => image.id !== defaut.images[i].id);
+  // Un en-tête absent ou incomplet (livre reçu partiel, base fraîchement créée)
+  // ne doit jamais interrompre l'affichage : il est simplement « non modifié ».
+  const lignes = Array.isArray(entete?.lignes) ? entete.lignes : null;
+  const images = Array.isArray(entete?.images) ? entete.images : null;
+  if (!lignes || !images) return false;
+  if (lignes.length !== defaut.lignes.length) return true;
+  if (lignes.some((ligne, i) => ligne.texte !== defaut.lignes[i].texte)) return true;
+  if (images.length !== defaut.images.length) return true;
+  return images.some((image, i) => image.id !== defaut.images[i].id);
 }
 
 export function normaliserEntetes(valeur: unknown): EntetesDocuments {

@@ -82,6 +82,15 @@ et sur la façon de s’en servir.
 > jour et relus, mais `npm run test:e2e` doit être lancé sur un poste outillé
 > avant diffusion.
 
+## Écran de secours
+
+Si un écran lève malgré tout une erreur, l'application affiche « L'affichage a
+rencontré un problème » avec le **détail technique**, un bouton **Recharger** et,
+en version serveur, le lien vers le **diagnostic du serveur**. En mode MySQL, le
+texte rappelle que les écritures sont dans la base : recharger ne supprime rien.
+Le livre reçu du serveur est par ailleurs normalisé (en-tête et catégories
+complétés s'ils manquent), donc une base fraîche ne casse plus l'affichage.
+
 ## Déploiement serveur : aucune installation
 
 La version serveur se résume à **copier un dossier** dans `C:\wamp64\www\caisse-salfa`.

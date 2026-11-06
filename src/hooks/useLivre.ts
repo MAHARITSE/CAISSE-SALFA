@@ -3,7 +3,7 @@ import type { ChargementLivre, DonneesCaisse, Sauvegarde } from '../types';
 import { CLE_LIVRE, chargerLivre, sauvegarderLivre } from '../utils/storage';
 import { migrerExercicesLegacy } from '../utils/ledger';
 import { validerDonnees } from '../utils/validation';
-import { MODE_API, chargerLivreApi, mutations } from '../utils/api';
+import { MODE_API, chargerLivreApi, mutations, normaliserLivreServeur } from '../utils/api';
 import { entetesParDefaut } from '../utils/entete';
 import { categoriesParDefaut } from '../utils/constants';
 
@@ -94,7 +94,9 @@ export function useLivre() {
   const rechargerApi = useCallback(() => { void chargerDepuisApi(); }, [chargerDepuisApi]);
 
   const appliquer = useCallback((livre: Sauvegarde) => {
-    setEtat({ livre, erreur: null, avertissement: null, migration: false, normalisation: false });
+    // Le livre vient du serveur (ou d'une restauration) : on le ramène toujours
+    // à une forme complète, sinon un champ absent casse le rendu.
+    setEtat({ livre: MODE_API ? normaliserLivreServeur(livre) : livre, erreur: null, avertissement: null, migration: false, normalisation: false });
     setMessageSync('');
   }, []);
 
