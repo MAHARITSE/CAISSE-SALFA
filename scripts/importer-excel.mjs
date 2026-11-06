@@ -6,8 +6,8 @@
  * Génère :
  *   1. `sauvegarde_caisse_salfa.sql` : sauvegarde SQL complète prête à importer
  *      dans MySQL / MariaDB / phpMyAdmin (`caisse_salfa`).
- *   2. `sauvegarde_caisse_salfa.json` : sauvegarde JSON complète prête à restaurer
- *      depuis l'écran « Données & sauvegardes » de l'application.
+ *   2. `sauvegarde_caisse_salfa.json` : copie structurée de contrôle des données.
+ *      La sauvegarde SQL contient aussi cet instantané pour la restauration contrôlée.
  *   3. `deploy/wamp/api/installation/salfa_install.sql` : schéma + données migrées
  *      pour que l'installation automatique WAMP et `caisse-salfa.sql` embarquent
  *      directement l'historique complet 2024–2026.
@@ -505,9 +505,27 @@ for (const e of ecrituresBrutes) {
   e.createdAtIso = `${e.date}T${hh}:${mm}:${ss}.000Z`;
 }
 
+// Correction demandée : déplacer l'unique report du 31/12/2024 au 01/01/2025.
+// Les numéros des autres pièces ne changent pas : le report reçoit le prochain
+// numéro disponible de 2025. La date de création reste celle de la source.
+const report2024 = ecrituresBrutes.filter(e => e.annee === 2024);
+if (report2024.length !== 1 || report2024[0].id !== '8077' || report2024[0].date !== '2024-12-31'
+    || report2024[0].sens !== 'RECETTE' || report2024[0].montant !== 12596600
+    || report2024[0].libelle !== 'RAPPORT A NOUVEAU') {
+  throw new Error('Le report 2024 attendu ne correspond pas à la source : aucune conversion appliquée.');
+}
+const report = report2024[0];
+const ancienNumero = report.numero;
+report.date = '2025-01-01';
+report.annee = 2025;
+compteurs['RC-2025'] = (compteurs['RC-2025'] || 0) + 1;
+report.numero = `RC-2025-${String(compteurs['RC-2025']).padStart(4, '0')}`;
+report.observation = [report.observation, `Report déplacé du 31/12/2024 au 01/01/2025 (ancienne pièce ${ancienNumero}).`].filter(Boolean).join(' ');
+ecrituresBrutes.sort((a, b) => a.date.localeCompare(b.date) || a.idNum - b.idNum);
+
 // Séparation par exercice :
-// - 2024 : exercice clôturé (1 écriture, solde d'ouverture 0 -> solde de clôture 12 596 600 Ar)
-// - 2025 : exercice clôturé (3 580 écritures, solde d'ouverture 12 596 600 Ar -> solde de clôture 4 626 500 Ar)
+// - 2024 : exercice clôturé vide, solde de clôture 0 Ar
+// - 2025 : 3 581 écritures, dont le report transféré, solde de clôture 4 626 500 Ar
 // - 2026 : exercice ouvert en cours (3 761 écritures, solde d'ouverture reporté 4 626 500 Ar -> solde actuel 17 097 930 Ar)
 const parAnnee = new Map();
 for (const e of ecrituresBrutes) {
@@ -598,7 +616,7 @@ function construireBlocsDonneesSql({ modeRemplacement = false } = {}) {
   lignesSql.push('');
 
   // Écritures de caisse par lots de 250
-  lignesSql.push(`-- Écritures de caisse (${ecrituresBrutes.length} pièces : 2024, 2025 et 2026)`);
+  lignesSql.push(`-- Écritures de caisse (${ecrituresBrutes.length} pièces : 2025 et 2026)`);
   const TAILLE_LOT_ECRITURES = 250;
   for (let i = 0; i < ecrituresBrutes.length; i += TAILLE_LOT_ECRITURES) {
     const lot = ecrituresBrutes.slice(i, i + TAILLE_LOT_ECRITURES);
@@ -734,8 +752,9 @@ const sqlSauvegardeRacine = `-- ================================================
 --   - salfa_ecritures.id = IDCAISSE_SALFA (7 342 écritures de caisse)
 --   - salfa_details.id   = IDLIGNE_CAISSE (19 231 sous-lignes liées via ecriture_id)
 -- Exercices :
---   - 2024 (clôturé) :   1 écriture  | Solde clôture :  12 596 600 Ar
---   - 2025 (clôturé) : 3 580 écritures | Solde clôture :   4 626 500 Ar
+--   - 2024 (clôturé) :   aucune écriture | Solde clôture : 0 Ar
+--   - 2025 (clôturé) : 3 581 écritures | Solde clôture : 4 626 500 Ar
+--   - Report de 12 596 600 Ar déplacé du 31/12/2024 au 01/01/2025.
 --   - 2026 (ouvert)  : 3 761 écritures | Solde actuel  :  17 097 930 Ar
 -- ============================================================================
 
@@ -756,7 +775,7 @@ ON DUPLICATE KEY UPDATE
   nom_complet = VALUES(nom_complet),
   actif = 1;
 `;
-writeFileSync(join(racine, 'sauvegarde_caisse_salfa.sql'), sqlSauvegardeRacine, 'utf8');
+
 
 // ---------------------------------------------------------------------------
 // 5. Génération de `sauvegarde_caisse_salfa.json` (format CAISSE-SALFA v1)
@@ -888,6 +907,10 @@ writeFileSync(
   JSON.stringify(sauvegardeJson),
   'utf8',
 );
+
+// Instantané pour le bouton de restauration SQL : aucun SQL n'est exécuté par l'application.
+const instantane = Buffer.from(JSON.stringify(sauvegardeJson), 'utf8').toString('base64');
+writeFileSync(join(racine, 'sauvegarde_caisse_salfa.sql'), `${sqlSauvegardeRacine}\n-- SALFA-LIVRE-V1:${instantane}\n`, 'utf8');
 
 // Affichage du récapitulatif
 const statsCategories = {};

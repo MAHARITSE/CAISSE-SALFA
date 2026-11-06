@@ -413,6 +413,61 @@ INSERT INTO salfa_masque_lignes (masque_id, description, montant_defaut, ordre) 
   ('masque-depenses-courantes', 'EAU & ELECTRICITE', NULL, 3),
   ('masque-depenses-courantes', 'ENTRETIEN & REPARATIONS', NULL, 4);
 
+-- Catégories de saisie par défaut, séparées par sens (modifiables depuis l'application)
+INSERT INTO salfa_categories (sens, nom, ordre) VALUES
+  ('RECETTE', 'Recettes journalières', 0),
+  ('RECETTE', 'Consultations', 1),
+  ('RECETTE', 'Pharmacie', 2),
+  ('RECETTE', 'Laboratoire', 3),
+  ('RECETTE', 'Hospitalisation', 4),
+  ('RECETTE', 'Maternité', 5),
+  ('RECETTE', 'Imagerie', 6),
+  ('RECETTE', 'Subventions & dons', 7),
+  ('RECETTE', 'Remboursements', 8),
+  ('RECETTE', 'Autres recettes', 9),
+  ('DEPENSE', 'Achats médicaments', 0),
+  ('DEPENSE', 'Consommables médicaux', 1),
+  ('DEPENSE', 'Fournitures de bureau', 2),
+  ('DEPENSE', 'Carburant & transport', 3),
+  ('DEPENSE', 'Maintenance & équipements', 4),
+  ('DEPENSE', 'Salaires & primes', 5),
+  ('DEPENSE', 'Frais de mission', 6),
+  ('DEPENSE', 'Honoraires', 7),
+  ('DEPENSE', 'Eau & électricité', 8),
+  ('DEPENSE', 'Téléphone & internet', 9),
+  ('DEPENSE', 'Remboursements & rétrocessions', 10),
+  ('DEPENSE', 'Versements bancaires', 11),
+  ('DEPENSE', 'Divers', 12)
+  ON DUPLICATE KEY UPDATE nom = nom;
+
+-- Modèles de saisie par défaut (facultatifs, supprimables depuis l'application)
+INSERT INTO salfa_masques (id, nom, sens, description, ordre) VALUES
+  ('masque-recettes-hopital', 'Bordereau recettes hôpital', 'RECETTE', 'Les 12 postes du carnet de caisse hospitalier.', 0),
+  ('masque-depenses-courantes', 'Charges courantes & fonctionnement', 'DEPENSE', 'Dépenses périodiques d’exploitation.', 1)
+  ON DUPLICATE KEY UPDATE nom = VALUES(nom);
+
+-- Réexécutable : les postes des deux modèles livrés sont remplacés, pas dupliqués.
+DELETE FROM salfa_masque_lignes WHERE masque_id IN ('masque-recettes-hopital', 'masque-depenses-courantes');
+
+INSERT INTO salfa_masque_lignes (masque_id, description, montant_defaut, ordre) VALUES
+  ('masque-recettes-hopital', 'CONSULTATION', NULL, 0),
+  ('masque-recettes-hopital', 'ECHOGRAPHIE', NULL, 1),
+  ('masque-recettes-hopital', 'CHAMBRE', NULL, 2),
+  ('masque-recettes-hopital', 'LABORATOIRE', NULL, 3),
+  ('masque-recettes-hopital', 'MATERNITE', NULL, 4),
+  ('masque-recettes-hopital', 'MEDICAMENT', NULL, 5),
+  ('masque-recettes-hopital', 'SOINS', NULL, 6),
+  ('masque-recettes-hopital', 'HOSPITALISATION', NULL, 7),
+  ('masque-recettes-hopital', 'DENTISTERIE', NULL, 8),
+  ('masque-recettes-hopital', 'BLOC', NULL, 9),
+  ('masque-recettes-hopital', 'DIVERS', NULL, 10),
+  ('masque-recettes-hopital', 'VACCIN', NULL, 11),
+  ('masque-depenses-courantes', 'ACHATS MEDICAMENTS', NULL, 0),
+  ('masque-depenses-courantes', 'FOURNITURES MEDICALES', NULL, 1),
+  ('masque-depenses-courantes', 'CARBURANT', NULL, 2),
+  ('masque-depenses-courantes', 'EAU & ELECTRICITE', NULL, 3),
+  ('masque-depenses-courantes', 'ENTRETIEN & REPARATIONS', NULL, 4);
+
 -- Livre unique et paramètres de l'exercice 2026 ouvert (report 2025 : 4 626 500 Ar)
 INSERT INTO salfa_livre (id, revision) VALUES (1, 1)
   ON DUPLICATE KEY UPDATE revision = GREATEST(revision, VALUES(revision));
@@ -421,8 +476,8 @@ INSERT INTO salfa_parametres (id, solde_initial, exercice, report_annee, report_
 
 -- Exercices clôturés (2024 et 2025)
 INSERT INTO salfa_clotures (annee, cloture_le, solde_ouverture, recettes, depenses, solde_cloture) VALUES
-  (2024, '2024-12-31 23:59:59.000', 0, 12596600, 0, 12596600),
-  (2025, '2025-12-31 23:59:59.000', 12596600, 1006338200, 1014308300, 4626500)
+  (2024, '2024-12-31 23:59:59.000', 0, 0, 0, 0),
+  (2025, '2025-12-31 23:59:59.000', 0, 1018934800, 1014308300, 4626500)
   ON DUPLICATE KEY UPDATE cloture_le = VALUES(cloture_le), solde_ouverture = VALUES(solde_ouverture), recettes = VALUES(recettes), depenses = VALUES(depenses), solde_cloture = VALUES(solde_cloture);
 
 -- Compteurs de pièces par exercice
@@ -430,13 +485,13 @@ INSERT INTO salfa_compteurs (cle, valeur) VALUES
   ('DP-2025', 2654),
   ('DP-2026', 2751),
   ('RC-2024', 1),
-  ('RC-2025', 926),
+  ('RC-2025', 927),
   ('RC-2026', 1010)
   ON DUPLICATE KEY UPDATE valeur = VALUES(valeur);
 
--- Écritures de caisse (7342 pièces : 2024, 2025 et 2026)
+-- Écritures de caisse (7342 pièces : 2025 et 2026)
 INSERT INTO salfa_ecritures (id, numero, date, sens, libelle, categorie, tiers, reference, observation, montant, annee_archive, cree_le, modifie_le) VALUES
-  ('8077', 'RC-2024-0001', '2024-12-31', 'RECETTE', 'RAPPORT A NOUVEAU', 'Autres recettes', NULL, NULL, NULL, 12596600, 2024, '2024-12-31 08:00:00.000', NULL),
+  ('8077', 'RC-2025-0927', '2025-01-01', 'RECETTE', 'RAPPORT A NOUVEAU', 'Autres recettes', NULL, NULL, 'Report déplacé du 31/12/2024 au 01/01/2025 (ancienne pièce RC-2024-0001).', 12596600, 2025, '2024-12-31 08:00:00.000', NULL),
   ('3051', 'RC-2025-0001', '2025-01-02', 'RECETTE', 'RECETTE DU JOURS', 'Recettes journalières', NULL, NULL, NULL, 1125200, 2025, '2025-01-02 08:00:00.000', NULL),
   ('3052', 'RC-2025-0002', '2025-01-02', 'RECETTE', 'RECETTE DU JOURS', 'Recettes journalières', NULL, NULL, NULL, 1000400, 2025, '2025-01-02 08:00:01.000', NULL),
   ('3054', 'RC-2025-0003', '2025-01-02', 'RECETTE', 'REGLEMENT FRAIS DENTISTE', 'Consultations', NULL, NULL, NULL, 5000, 2025, '2025-01-02 08:00:02.000', NULL),
