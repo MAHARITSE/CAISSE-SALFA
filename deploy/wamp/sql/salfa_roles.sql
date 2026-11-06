@@ -35,7 +35,7 @@ ALTER TABLE salfa_utilisateurs
 SELECT
   CASE
     WHEN COUNT(*) > 0 THEN CONCAT('OK — ', COUNT(*), ' administrateur(s) actif(s)')
-    ELSE 'ATTENTION — aucun administrateur actif : lancez outils\\creer-admin.bat'
+    ELSE 'ATTENTION — aucun administrateur actif : relancez installer.php pour en recréer un'
   END AS controle_administrateur
 FROM salfa_utilisateurs
 WHERE role = 'admin' AND actif = 1;

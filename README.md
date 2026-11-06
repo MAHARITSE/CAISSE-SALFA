@@ -11,7 +11,7 @@ Deux modes, un seul code source :
 | **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
 
 Le mode serveur est produit par `npm run build:wamp` : `index.html` compilé à la
-racine du paquet, API PHP/MySQL, dossier `data/` privé et scripts `.bat` —
+racine du paquet, API PHP/MySQL, dossier `data/` privé et installateur dans le navigateur —
 **sans aucun Node.js sur le serveur**. Voir `deploy/wamp/INSTALLATION.md`.
 
 ## Démarrer
@@ -25,7 +25,7 @@ npm test           # tests unitaires et intégration (Vitest / Testing Library)
 npm run check      # lint + tests + build
 ```
 
-Paquet de déploiement Windows/WAMP (frontend compilé + API PHP + scripts `.bat`) :
+Paquet de déploiement Windows/WAMP (frontend compilé + API PHP + installateur `installer.php`) :
 
 ```bash
 npm run build:wamp     # compile en mode API et remplit deploy/wamp (index.html racine)

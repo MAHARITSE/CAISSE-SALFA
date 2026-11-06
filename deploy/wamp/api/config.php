@@ -1,7 +1,7 @@
 <?php
 /**
  * CAISSE SALFA — API REST PHP/MySQL
- * Configuration lue depuis api/salfa-config.php (créé par outils/installer.bat).
+ * Configuration lue depuis data/salfa-config.php (écrite par installer.php).
  * Aucune dépendance externe : PDO + extensions standard de WAMP.
  */
 
@@ -17,7 +17,7 @@ if (!defined('SALFA_API')) {
  * et le pied de page de l'application l'affiche pour repérer un paquet
  * partiellement mis à jour.
  */
-const SALFA_VERSION_API = '1.2.0';
+const SALFA_VERSION_API = '1.3.0';
 
 const SALFA_ANNEE_MIN = 1900;
 const SALFA_ANNEE_MAX = 9999;

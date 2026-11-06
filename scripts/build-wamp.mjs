@@ -5,7 +5,6 @@
  *   assets/           JS, CSS, images
  *   api/              API PHP/MySQL (index.php + points/)
  *   data/             configuration et sauvegardes (hors web)
- *   outils/           scripts .bat + assistants PHP
  *   sql/              schéma MySQL
  *   .htaccess         configuration Apache
  *   INSTALLATION.md   mode d'emploi
@@ -45,7 +44,7 @@ for (const fichier of ['index.html', 'favicon.svg']) {
   }
 }
 // Version du paquet inscrite dans la page : `api/config.php` annonce la même
-// version (SALFA_VERSION_API) et `outils/verifier-cli.php` compare les deux,
+// version (SALFA_VERSION_API) et `api/points/verifier.php` compare les deux,
 // ce qui repère un paquet recopié à moitié sur le serveur.
 const { version } = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8'));
 const pageIndex = join(paquet, 'index.html');
@@ -75,19 +74,15 @@ const obligatoires = [
   'api/points/sante.php',
   'api/points/cloture.php',
   'api/points/verifier.php',
-  'api/points/installer.php',
   'api/config.php',
+  'api/lib/installation.php',
+  'installer.php',
   'data/.htaccess',
+  'data/README.txt',
   'sql/salfa_install.sql',
-  'outils/installer.bat',
-  'outils/verifier.bat',
-  'outils/creer-admin.bat',
-  'outils/sauvegarder.bat',
-  'outils/install-cli.php',
-  'outils/verifier-cli.php',
 ];
 const manquants = obligatoires.filter(f => !existsSync(join(paquet, f)));
-const interdits = ['frontend', 'install.php', 'api/salfa-config.php', 'data/salfa-config.php'].filter(f => existsSync(join(paquet, f)));
+const interdits = ['frontend', 'outils', 'api/installation.php', 'api/salfa-config.php', 'data/salfa-config.php'].filter(f => existsSync(join(paquet, f)));
 
 const compter = (d) => readdirSync(d).reduce((n, f) => {
   const p = join(d, f);

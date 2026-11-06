@@ -5,7 +5,7 @@
  * api/index.php?action=livre
  *
  * Chaque action est aussi disponible en appel direct :
- *   api/livre.php   api/cloture.php   api/verifier.php   api/installer.php …
+ *   api/livre.php   api/cloture.php   api/verifier.php   api/sante.php …
  *
  * Toutes les réponses sont du JSON. Chaque mutation renvoie le livre complet,
  * afin que le navigateur n'ait jamais à recalculer un état partiel.
@@ -39,7 +39,6 @@ salfa_point('index', function (): void {
         'restauration' => 'restauration',
         'sauvegarde' => 'sauvegarde',
         'verifier' => 'verifier',
-        'installer' => 'installer',
         'utilisateurs' => 'utilisateurs',
         'utilisateurs-creer' => 'utilisateurs',
         'utilisateurs-modifier' => 'utilisateurs',

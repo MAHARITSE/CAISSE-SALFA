@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
-import { AlertTriangle, BookOpen, Eye, EyeOff, HeartPulse, KeyRound, Loader2, LogIn } from 'lucide-react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { AlertTriangle, BookOpen, Eye, EyeOff, HeartPulse, KeyRound, Loader2, LogIn, RefreshCw, ServerCog } from 'lucide-react';
 import type { EtatSession } from '../utils/api';
-import { MODE_API, connexion } from '../utils/api';
+import { ErreurApi, MODE_API, connexion, sante } from '../utils/api';
 import { verifierConnexionLocale, COMPTES_DEMO } from '../utils/utilisateurs';
 import { libelleRole, type Role } from '../utils/roles';
 
@@ -23,6 +23,29 @@ export function Connexion({ erreurInitiale, onConnecte }: {
   const [afficher, setAfficher] = useState(false);
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
+  /**
+   * État du serveur PHP, testé dès l'affichage de l'écran : sur un paquet
+   * fraîchement recopié, l'API répond « non installé » et aucun compte ne peut
+   * fonctionner. Mieux vaut le dire avec les étapes de l'installation que de
+   * laisser l'utilisateur essayer des mots de passe qui ne peuvent pas aboutir.
+   */
+  const [serveur, setServeur] = useState<'inconnu' | 'pret' | 'non_installe' | 'injoignable'>('inconnu');
+  const [verification, setVerification] = useState(false);
+
+  const verifierServeur = useCallback(async () => {
+    if (!MODE_API) return;
+    setVerification(true);
+    try {
+      await sante();
+      setServeur('pret');
+    } catch (e) {
+      setServeur(e instanceof ErreurApi && e.code === 'non_installe' ? 'non_installe' : 'injoignable');
+    } finally {
+      setVerification(false);
+    }
+  }, []);
+
+  useEffect(() => { void verifierServeur(); }, [verifierServeur]);
 
   async function envoyer(e: FormEvent) {
     e.preventDefault();
@@ -53,6 +76,13 @@ export function Connexion({ erreurInitiale, onConnecte }: {
         utilisateur: { id: compte.id, identifiant: compte.identifiant, nomComplet: compte.nomComplet, role: compte.role },
       });
     } catch (e) {
+      if (e instanceof ErreurApi && e.code === 'non_installe') {
+        // Le panneau d'installation ci-dessous explique quoi faire : pas de
+        // deuxième message d'erreur en rouge par-dessus.
+        setServeur('non_installe');
+        setErreur('');
+        return;
+      }
       setErreur(e instanceof Error ? e.message : 'Connexion impossible.');
     } finally {
       setEnCours(false);
@@ -83,6 +113,43 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à la caisse</h1>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
+
+        {MODE_API && (serveur === 'non_installe' || serveur === 'injoignable') && <div
+          role="status"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <p className="flex items-center gap-2 font-semibold">
+            <ServerCog size={17} className="shrink-0" />
+            {serveur === 'non_installe' ? 'Serveur pas encore installé' : 'Serveur injoignable'}
+          </p>
+          {serveur === 'non_installe' ? <>
+            <p className="mt-1.5 leading-relaxed">
+              La page s’affiche, mais l’API PHP n’a pas encore sa configuration MySQL :
+              aucun compte ne peut se connecter avant l’installation, qui prend une minute.
+            </p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 leading-relaxed">
+              <li>Cliquez sur « Ouvrir l’installation » ci-dessous.</li>
+              <li>Indiquez les accès MySQL (sur WAMP : <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">root</code>, mot de passe vide) et le compte administrateur.</li>
+              <li>Revenez sur cet écran et cliquez sur « Réessayer ».</li>
+            </ol>
+          </> : <p className="mt-1.5 leading-relaxed">
+            Aucune réponse de <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">api/index.php</code>.
+            Vérifiez qu’Apache et MySQL sont démarrés dans WAMP, que le dossier <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">api/</code>
+            est complet, puis réessayez.
+          </p>}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {serveur === 'non_installe' && <a className="btn-primary !py-1.5 !text-xs" href="installer.php">Ouvrir l’installation</a>}
+            <button type="button" className="btn-secondary !py-1.5 !text-xs" onClick={() => void verifierServeur()} disabled={verification}>
+              {verification ? <><Loader2 size={14} className="animate-spin" />Vérification…</> : <><RefreshCw size={14} />Réessayer</>}
+            </button>
+            <a
+              className="text-xs font-semibold underline underline-offset-2 hover:no-underline"
+              href="api/index.php?action=verifier"
+              target="_blank"
+              rel="noreferrer"
+            >Ouvrir le diagnostic du serveur</a>
+          </div>
+        </div>}
 
         <div>
           <label className="label" htmlFor="identifiant">Identifiant</label>
@@ -133,7 +200,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
 
         {MODE_API
           ? <p className="text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-            Mot de passe oublié ? Utilisez <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">outils\creer-admin.bat</code> sur le serveur.
+            Mot de passe oublié ? Un administrateur peut le réinitialiser depuis l’onglet « Administration ».
           </p>
           : <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

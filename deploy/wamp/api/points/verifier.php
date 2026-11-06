@@ -29,7 +29,7 @@ salfa_point('verifier', function (): array {
     $ajouter('sessions PHP', function_exists('session_start'), function_exists('session_start') ? 'disponibles' : 'absentes');
     $ajouter('api/salfa-config.php', is_file(__DIR__ . '/../salfa-config.php'), is_file(__DIR__ . '/../salfa-config.php')
         ? 'présent'
-        : 'absent : lancez outils\installer.bat ou copiez api\salfa-config.modele.php');
+        : 'absent : ouvrez installer.php dans le navigateur (installation en une minute)');
     $ajouter('dossier de travail inscriptible', is_writable(__DIR__ . '/../../data') || @mkdir(__DIR__ . '/../../data', 0775, true), 'data/');
 
     $base = 'non testée';
@@ -44,7 +44,7 @@ salfa_point('verifier', function (): array {
             $admin = (int) salfa_pdo()->query('SELECT COUNT(*) FROM ' . salfa_table('utilisateurs') . " WHERE role = 'admin' AND actif = 1")->fetchColumn();
             $ajouter('connexion MySQL', true, 'base « ' . salfa_config()['base'] . ' » sur ' . salfa_config()['hote']);
             $ajouter('tables', count($tables) >= 14, count($tables) . ' table(s) trouvée(s) : ' . implode(', ', $tables));
-            $ajouter('compte administrateur', $admin > 0, $admin > 0 ? $admin . ' compte(s) actif(s)' : 'aucun : lancez outils\creer-admin.bat');
+            $ajouter('compte administrateur', $admin > 0, $admin > 0 ? $admin . ' compte(s) actif(s)' : 'aucun : relancez installer.php pour recréer un administrateur');
             $livre = salfa_charger_livre();
             $entetes = array_values(array_filter(
                 array_keys((array) ($livre['entetes'] ?? [])),
@@ -80,6 +80,6 @@ salfa_point('verifier', function (): array {
         'controles' => $controles,
         'conseil' => $echecs === 0
             ? 'Installation correcte : ouvrez index.html et connectez-vous.'
-            : 'Corrigez les lignes « ok: false » ci-dessus, puis relancez outils\verifier.bat.',
+            : 'Corrigez les lignes « ok: false » ci-dessus, puis rechargez cette page.',
     ];
 });

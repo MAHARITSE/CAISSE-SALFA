@@ -1,7 +1,7 @@
 # Audit d’interface — CAISSE SALFA
 
 **Date :** 5 novembre 2026
-**Version :** 1.2.0
+**Version :** 1.3.0
 **Périmètre :** coquille applicative, connexion, livre journal, filtres, saisie,
 analyse, exercices, données et sauvegardes, administration, modales, contrôles
 d’affichage et impression. Aucune règle de gestion ni aucun format de
@@ -49,6 +49,7 @@ et sur la façon de s’en servir.
 | Titre d’onglet figé sur « Gestion de Caisse SALFA » | Plusieurs onglets ouverts impossibles à distinguer | Le titre suit la page : « Analyse de la caisse · Caisse SALFA » |
 | Texte d’aide de la connexion en `text-slate-400` | Contraste insuffisant pour une consigne utile | Passé en `text-slate-500` (et `dark:text-slate-400`) |
 | Notifications et total de saisie non annoncés | Lecteurs d’écran muets après un enregistrement ou une modification de montant | `aria-live="polite"` sur la notification et sur le total |
+| Paquet WAMP recopié mais pas encore installé : l’API répond « non installé » et l’écran de connexion affichait cette phrase technique en rouge, sous le mot de passe | On croyait à des identifiants erronés ; rien à l’écran ne disait quoi faire, ni qu’aucun compte ne pouvait fonctionner avant l’installation | Panneau « Serveur pas encore installé » (ou « Serveur injoignable ») au-dessus du formulaire : étapes numérotées et lien direct vers `installer.php`, bouton « Réessayer » qui reteste `api/index.php?action=sante`, lien vers le diagnostic JSON |
 
 ## Ce qui a été volontairement laissé tel quel
 
@@ -81,6 +82,33 @@ et sur la façon de s’en servir.
 > jour et relus, mais `npm run test:e2e` doit être lancé sur un poste outillé
 > avant diffusion.
 
+## Installation dans le navigateur
+
+Le paquet livré imposait jusqu'ici six scripts `.bat` : installation, diagnostic,
+création de compte, sauvegarde, restauration, ouverture du navigateur. Pour qui
+veut simplement « copier un dossier dans `www\` », c'était une étape de plus,
+sur une machine Windows, avec des invites en ligne de commande.
+
+- `installer.php`, à la racine du paquet, remplace tous ces scripts : une page,
+  deux groupes de champs (accès MySQL, compte administrateur), un bouton. Elle
+  crée la base, les 14 tables, les modèles, les catégories, le compte admin et
+  `data\salfa-config.php` — puis se verrouille d'elle-même.
+- Le dossier `outils/` et ses `.bat` sont supprimés ; la documentation ne parle
+  plus que du navigateur.
+- Écran de connexion : le panneau « Serveur pas encore installé » propose
+  désormais **« Ouvrir l'installation »** (lien direct) au lieu d'un
+  `outils\installer.bat` impossible à exécuter depuis un navigateur.
+- Mot de passe administrateur oublié, sans ligne de commande : créer un fichier
+  vide `data\reinitialiser-mdp.txt` sur le serveur, ouvrir `installer.php`, saisir
+  le nouveau mot de passe. Le fichier est supprimé ensuite ; sans lui, la page
+  refuse toute modification.
+- Le nom de la base peut différer de `caisse_salfa` : l'installateur retire les
+  instructions `CREATE DATABASE` / `USE` du script SQL et crée lui-même la base
+  choisie (le fichier reste tel quel pour un import phpMyAdmin).
+- Vérifié sous PHP 8.4 (WebAssembly) : rendu des trois états de la page
+  (installation, déjà installé, réinitialisation), filtrage du script SQL
+  (14 tables et données de départ conservées), 24 tests de l'API toujours verts.
+
 ## Version du paquet
 
 Le paquet livré annonçait deux versions différentes : `api/index.php?action=verifier`
@@ -98,7 +126,9 @@ inaperçue.
 - Le pied de page affiche `v1.2.0`. En mode serveur, il ajoute la version
   annoncée par l’API et affiche un bandeau orange si les deux diffèrent :
   « Paquet incomplet ».
-- `outils\verifier.bat`, `outils\verifier-cli.php` et la réponse JSON de
+- `installer.php` (installation et réinitialisation de mot de passe) et la
+  réponse JSON de `?action=verifier` comparent les deux versions, ligne « version du
+  paquet ».
   `?action=verifier` comparent les deux versions, ligne « version du paquet ».
 
 ## Recommandations restantes
