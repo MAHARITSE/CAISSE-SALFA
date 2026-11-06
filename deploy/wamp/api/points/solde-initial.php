@@ -5,7 +5,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../socle.php';
+require_once __DIR__ . '/../socle.php';
 
 salfa_point('solde-initial', function (): array {
     salfa_exiger_methode('POST');

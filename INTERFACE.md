@@ -89,6 +89,10 @@ Le dossier est livré dans le dépôt (`deploy/wamp/caisse-salfa/`, avec l'archi
 `caisse-salfa.zip`) et ne contient que ce que montre l'explorateur Windows :
 `api`, `assets`, `.htaccess`, `.user.ini`, `favicon`, `index`.
 
+- **100 % MySQL** : en version serveur, l'application ne touche jamais au
+  stockage du navigateur. Écritures, en-têtes, catégories, modèles, compteurs et
+  comptes viennent de la base ; la session est un cookie PHP. Un livre laissé
+  par une ancienne session de démonstration n'apparaît pas et n'est jamais lu.
 - Le premier appel de l'API écrit sa configuration (hors de `www` quand c'est
   possible, sinon dans `api\data\`), crée la base `caisse_salfa`, ses 14 tables,
   les catégories, les modèles de bordereaux et deux comptes de départ

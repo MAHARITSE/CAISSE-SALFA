@@ -8,6 +8,12 @@ page d'installation, aucun fichier à modifier : la base, les tables, les
 catégories, les modèles de bordereaux et les comptes de départ se créent tout
 seuls au premier lancement.
 
+**Tout est dans MySQL.** En version serveur, l'application ne lit ni n'écrit
+jamais le stockage du navigateur : écritures, en-têtes, catégories, modèles,
+compteurs et comptes vivent dans la base. La session est portée par un cookie
+PHP. Effacer les données du site, changer de profil ou naviguer en privé ne
+touche donc pas au livre — seul un vidage de la base le ferait.
+
 ## 1. Copier le dossier dans `www`
 
 1. Démarrer WampServer (icône verte : Apache **et** MySQL).
