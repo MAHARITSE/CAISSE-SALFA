@@ -241,7 +241,7 @@ verifier('en-tête complet conservé tel quel', function () {
 verifier('catégories vides remplacées par les listes de départ', function () {
     $categories = salfa_categories_ou_defaut(['recette' => [], 'depense' => []]);
     egal(10, count($categories['recette']), 'recettes');
-    egal(11, count($categories['depense']), 'dépenses');
+    egal(13, count($categories['depense']), 'dépenses');
     egal('Consultations', $categories['recette'][1]);
 });
 
@@ -254,7 +254,7 @@ verifier('catégories présentes conservées', function () {
 verifier('un seul sens vide complété sans écraser l’autre', function () {
     $categories = salfa_categories_ou_defaut(['recette' => ['A'], 'depense' => []]);
     egal(['A'], $categories['recette']);
-    egal(11, count($categories['depense']));
+    egal(13, count($categories['depense']));
 });
 
 echo "\n";

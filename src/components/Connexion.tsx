@@ -296,7 +296,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
 
       <p className="mt-4 text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400">
         {MODE_API
-          ? 'Session fermée automatiquement après 30 minutes d’inactivité.'
+          ? 'Session fermée automatiquement après 1 heure d’inactivité.'
           : 'Mode démonstration : les données restent dans ce navigateur.'}
         <br />Le navigateur ne mémorise pas le mot de passe.
       </p>

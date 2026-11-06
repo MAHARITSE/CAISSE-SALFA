@@ -24,7 +24,8 @@ export const CATEGORIES_DEPENSE = [
   'Achats médicaments', 'Consommables médicaux', 'Fournitures de bureau',
   'Carburant & transport', 'Maintenance & équipements', 'Salaires & primes',
   'Frais de mission', 'Honoraires', 'Eau & électricité',
-  'Téléphone & internet', 'Divers',
+  'Téléphone & internet', 'Remboursements & rétrocessions',
+  'Versements bancaires', 'Divers',
 ];
 
 export const categoriesPour = (sens: Sens): string[] =>

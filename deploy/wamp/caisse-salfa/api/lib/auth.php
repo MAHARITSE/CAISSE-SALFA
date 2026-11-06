@@ -8,7 +8,7 @@
 declare(strict_types=1);
 
 const SALFA_DUREE_SESSION = 12 * 3600;      // 12 heures
-const SALFA_DUREE_INACTIVITE = 1800;        // 30 minutes
+const SALFA_DUREE_INACTIVITE = 3600;        // 1 heure
 const SALFA_MAX_ESSAIS = 8;                 // par fenêtre et par adresse
 const SALFA_FENETRE_ESSAIS = 15 * 60;       // 15 minutes
 const SALFA_LONGUEUR_MDP = 8;
@@ -25,6 +25,7 @@ function salfa_demarrer_session(): void
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
+    @ini_set('session.gc_maxlifetime', (string) SALFA_DUREE_INACTIVITE);
     session_name('salfa_session');
     session_set_cookie_params([
         'lifetime' => 0,
