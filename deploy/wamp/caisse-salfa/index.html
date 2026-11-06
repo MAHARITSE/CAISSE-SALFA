@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <script>
+      (function() {
+        try {
+          var _fetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            configurable: true,
+            enumerable: true,
+            get: function() { return _fetch; },
+            set: function(v) { _fetch = v; }
+          });
+        } catch (_) {}
+        try {
+          var theme = localStorage.getItem('salfa_theme');
+          var supportDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (!theme && supportDark)) {
+            document.documentElement.classList.add('dark');
+          }
+          var taille = localStorage.getItem('salfa_taille_police');
+          if (taille) {
+            document.documentElement.style.fontSize = taille + 'px';
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0e6351" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#090e17" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Gestion de Caisse SALFA</title>
+    <meta name="description" content="Caisse SALFA : livre journal de trésorerie hospitalière — recettes, dépenses, bordereaux imprimables et sauvegardes." />
+    <meta property="og:title" content="Gestion de Caisse SALFA" />
+    <meta property="og:description" content="Livre journal de trésorerie hospitalière : recettes, dépenses, bordereaux imprimables et sauvegardes." />
+    <script type="module" crossorigin src="./assets/index-ByaZF7hW.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BB0ZfQEF.css">
+    <meta name="salfa-version" content="1.3.0" />
+</head>
+  <body class="antialiased">
+    <div id="root"></div>
+  </body>
+</html>

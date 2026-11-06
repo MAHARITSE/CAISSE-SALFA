@@ -11,10 +11,13 @@ Deux modes, un seul code source :
 | **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
 
 Le mode serveur s’installe par **simple copie d’un dossier** dans
-`C:\wamp64\www\caisse-salfa` : `index.html` compilé, `assets/`, `api/`,
-`.htaccess`, `.user.ini`, `favicon`. Aucun Node.js sur le serveur et **aucune
-installation** : le premier appel crée la configuration, la base MySQL, les
-tables et les comptes de départ. Voir [`deploy/wamp/api/README.md`](./deploy/wamp/api/README.md).
+`C:\wamp64\www\caisse-salfa` : le dossier prêt à l’emploi est livré dans
+[`deploy/wamp/caisse-salfa/`](./deploy/wamp/caisse-salfa) (et dans
+`deploy/wamp/caisse-salfa.zip`). Il contient `index.html` compilé, `assets/`,
+`api/`, `.htaccess`, `.user.ini`, `favicon`. Aucun Node.js sur le serveur et
+**aucune installation** : le premier appel crée la configuration, la base MySQL,
+les tables et les comptes de départ. Voir
+[`deploy/wamp/api/README.md`](./deploy/wamp/api/README.md).
 (`?api=1` dans l’URL force le mode serveur.)
 
 ## Démarrer
@@ -28,11 +31,11 @@ npm test           # tests unitaires et intégration (Vitest / Testing Library)
 npm run check      # lint + tests + build
 ```
 
-Paquet serveur WAMP (frontend compilé en mode API + API PHP, prêt à copier
-dans `www`) :
+Paquet serveur WAMP — déjà livré dans `deploy/wamp/`, à copier dans `www`.
+Pour le régénérer après une modification du code :
 
 ```bash
-npm run build:wamp     # produit deploy/wamp/caisse-salfa/
+npm run build:wamp     # met à jour deploy/wamp/caisse-salfa/ et caisse-salfa.zip
 ```
 
 Tests dans un vrai navigateur (Chromium) :

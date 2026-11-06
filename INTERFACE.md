@@ -85,8 +85,9 @@ et sur la façon de s’en servir.
 ## Déploiement serveur : aucune installation
 
 La version serveur se résume à **copier un dossier** dans `C:\wamp64\www\caisse-salfa`.
-Il ne contient que ce que montre l'explorateur Windows : `api`, `assets`,
-`.htaccess`, `.user.ini`, `favicon`, `index`.
+Le dossier est livré dans le dépôt (`deploy/wamp/caisse-salfa/`, avec l'archive
+`caisse-salfa.zip`) et ne contient que ce que montre l'explorateur Windows :
+`api`, `assets`, `.htaccess`, `.user.ini`, `favicon`, `index`.
 
 - Le premier appel de l'API écrit sa configuration (hors de `www` quand c'est
   possible, sinon dans `api\data\`), crée la base `caisse_salfa`, ses 14 tables,

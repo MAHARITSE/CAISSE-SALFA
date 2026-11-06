@@ -1,0 +1,23 @@
+# CAISSE SALFA — dossiers internes de l'API
+# Aucune donnée sensible ne doit être servie par Apache : la configuration
+# MySQL et le schéma vivent sous api/.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql|.*\.md|.*\.txt)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql|.*\.md|.*\.txt)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # api/data/ porte la configuration MySQL : jamais accessible.
+  RewriteRule ^data/ - [F,L]
+  RewriteRule ^installation/ - [F,L]
+</IfModule>
