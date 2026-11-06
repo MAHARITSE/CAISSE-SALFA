@@ -391,6 +391,43 @@ describe('parcours de caisse', () => {
     expect(await screen.findByRole('heading', { name: 'Livre de caisse' })).toBeInTheDocument();
   });
 
+  it('enregistre la catégorie corrigée depuis l’aperçu sans modifier le reste de la dépense', async () => {
+    const user = userEvent.setup();
+    const date = aujourdHui();
+    const piece = ecritureTest({ id: 'dep-analyse', numero: `DP-${annee}-0001`, date, sens: 'DEPENSE',
+      libelle: 'ACHAT DE GAZOLE', categorie: 'Divers', montant: 5000, reference: 'REF-123',
+      observation: 'À conserver', lignesDetail: [{ id: 'detail-gaz', libelle: 'GAZOLE', montant: 5000 }] });
+    sauvegarderLivre(livreTest({ parametres: parametresTest({ exercice: Number(annee), soldeInitial: 10000 }), ecritures: [piece], compteurs: { [`DP-${annee}`]: 1 } }), 0);
+    render(<App />);
+    await ouvrirSession(user);
+    await user.click(screen.getByRole('button', { name: 'Analyse de la caisse' }));
+    await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
+    const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    await user.selectOptions(within(dialogue).getByLabelText(`Catégorie de DP-${annee}-0001`), 'Carburant & transport');
+    await user.click(within(dialogue).getByRole('button', { name: `Enregistrer la catégorie de DP-${annee}-0001` }));
+    expect(await within(dialogue).findByRole('status')).toHaveTextContent('Catégorie de');
+    const apres = lire().ecritures[0];
+    expect(apres).toMatchObject({ ...piece, categorie: 'Carburant & transport' });
+    expect(lire().parametres.soldeInitial).toBe(10000);
+    expect(lire().compteurs[`DP-${annee}`]).toBe(1);
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
+    await user.click(within(dialogue).getByRole('button', { name: 'Fermer l’aperçu' }));
+    expect(screen.getByText('Carburant & transport')).toBeInTheDocument();
+  });
+
+  it('garde l’aperçu des dépenses en lecture seule pour le comptable', async () => {
+    const user = userEvent.setup();
+    const piece = ecritureTest({ id: 'dep-lecture', numero: `DP-${annee}-0001`, date: aujourdHui(), sens: 'DEPENSE', categorie: 'Divers' });
+    sauvegarderLivre(livreTest({ parametres: parametresTest({ exercice: Number(annee) }), ecritures: [piece] }), 0);
+    render(<App />);
+    await ouvrirSession(user, 'comptable', 'compta1234');
+    await user.click(screen.getByRole('button', { name: 'Analyse de la caisse' }));
+    await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
+    const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    expect(within(dialogue).getByText(/consultation uniquement/)).toBeInTheDocument();
+    expect(within(dialogue).queryByLabelText(`Catégorie de DP-${annee}-0001`)).not.toBeInTheDocument();
+  });
+
   it('restreint ce que chaque rôle peut ouvrir', async () => {
     const user = userEvent.setup();
     const { unmount } = render(<App />);
@@ -489,6 +526,12 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: 'Livre journal' })[0]);
     expect(screen.queryByRole('button', { name: /Nouvelle recette \(bas du tableau\)/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Modifier RC-/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Analyse de la caisse' }));
+    await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
+    const apercuArchive = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    expect(within(apercuArchive).getByText(/Exercice clôturé/)).toBeInTheDocument();
+    expect(within(apercuArchive).queryByLabelText(`Catégorie de DP-${annee - 1}-0001`)).not.toBeInTheDocument();
+    await user.click(within(apercuArchive).getByRole('button', { name: 'Fermer l’aperçu' }));
     await user.click(screen.getByRole('button', { name: new RegExp(`Revenir à l’exercice ${annee}`) }));
 
     // La saisie est de nouveau possible, sur le nouvel exercice.
