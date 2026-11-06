@@ -20,6 +20,9 @@ require __DIR__ . '/../config.php';
 require __DIR__ . '/../lib/utile.php';
 require __DIR__ . '/../lib/validation.php';
 require __DIR__ . '/../lib/aide-objet.php';
+// La connexion PDO n'est ouverte qu'à l'appel : inclure db.php suffit pour
+// éprouver les fonctions pures (en-tête et catégories de secours).
+require __DIR__ . '/../lib/db.php';
 
 $total = 0;
 $echecs = 0;
@@ -214,6 +217,44 @@ verifier('rejette une date ISO illisible', function () {
         return;
     }
     throw new RuntimeException('aucune exception levée');
+});
+
+// --- En-têtes et catégories renvoyés au navigateur ---------------------------
+// Une base fraîche n'a ni en-tête enregistré ni catégories semées. Le serveur
+// doit alors renvoyer les modèles livrés : sans eux, l'écran casse après la
+// connexion (« L'affichage a rencontré un problème »).
+
+verifier('en-tête vide remplacé par le modèle livré', function () {
+    $entete = salfa_entetes_ou_defaut([]);
+    egal(7, count($entete['lignes']), 'nombre de lignes');
+    egal('textes', $entete['mode']);
+    egal('centre', $entete['lignes'][0]['alignement']);
+    egal('FIANGONANA LOTERANA MALAGASY', $entete['lignes'][0]['texte']);
+});
+
+verifier('en-tête complet conservé tel quel', function () {
+    $entete = ['mode' => 'image', 'image' => 'data:image/png;base64,AAA', 'lignes' => [['texte' => 'X']], 'images' => []];
+    egal('X', salfa_entetes_ou_defaut($entete)['lignes'][0]['texte']);
+    egal('image', salfa_entetes_ou_defaut($entete)['mode']);
+});
+
+verifier('catégories vides remplacées par les listes de départ', function () {
+    $categories = salfa_categories_ou_defaut(['recette' => [], 'depense' => []]);
+    egal(10, count($categories['recette']), 'recettes');
+    egal(11, count($categories['depense']), 'dépenses');
+    egal('Consultations', $categories['recette'][1]);
+});
+
+verifier('catégories présentes conservées', function () {
+    $categories = salfa_categories_ou_defaut(['recette' => ['A'], 'depense' => ['B']]);
+    egal(['A'], $categories['recette']);
+    egal(['B'], $categories['depense']);
+});
+
+verifier('un seul sens vide complété sans écraser l’autre', function () {
+    $categories = salfa_categories_ou_defaut(['recette' => ['A'], 'depense' => []]);
+    egal(['A'], $categories['recette']);
+    egal(11, count($categories['depense']));
 });
 
 echo "\n";

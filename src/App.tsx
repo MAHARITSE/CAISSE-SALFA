@@ -148,7 +148,12 @@ export function App() {
   const filtreActif = filtres.sens !== 'TOUS' || Boolean(filtres.categorie || filtres.recherche.trim());
   const suggestionsLibelle = useMemo(() => [...new Set(livre.ecritures.map(e => e.libelle))].slice(-60), [livre.ecritures]);
   const suggestionsTiers = useMemo(() => [...new Set(livre.ecritures.map(e => e.tiers).filter((t): t is string => Boolean(t)))].slice(-60), [livre.ecritures]);
-  const categories = [...new Set([...livre.categories.recette, ...livre.categories.depense, ...livre.ecritures.map(e => e.categorie)])];
+  // Un livre reçu partiel (base fraîche, colonne ajoutée) ne doit pas vider l'écran.
+  const categories = [...new Set([
+    ...(livre.categories?.recette ?? []),
+    ...(livre.categories?.depense ?? []),
+    ...livre.ecritures.map(e => e.categorie),
+  ])];
   const modifierFiltre = (champ: keyof typeof filtres, valeur: string) => setFiltres(f => ({ ...f, [champ]: valeur }));
   const reinitialiser = () => setFiltres({ sens: 'TOUS', categorie: '', recherche: '' });
 

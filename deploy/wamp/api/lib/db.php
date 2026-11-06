@@ -234,8 +234,83 @@ function salfa_charger_livre(): array
         'masques' => $masquesFormates,
         'compteurs' => $compteursFormates,
         'exercicesClotures' => $cloturesFormates,
-        'entetes' => salfa_charger_entetes(),
-        'categories' => salfa_charger_categories(),
+        // Un en-tête vide fait planter l'affichage du navigateur : on renvoie
+        // toujours au moins le modèle livré (même forme que enteteParDefaut()).
+        'entetes' => salfa_entetes_ou_defaut(salfa_charger_entetes()),
+        'categories' => salfa_categories_ou_defaut(salfa_charger_categories()),
+    ];
+}
+
+/**
+ * En-tête renvoyé au navigateur : celui de la base, ou le modèle livré quand la
+ * table est vide (base fraîche, en-tête jamais enregistré).
+ *
+ * Sans cela, `entetes` vaut `[]` et l'écran d'accueil casse dès la première
+ * connexion sur une base neuve.
+ */
+function salfa_entetes_ou_defaut(array $entete): array
+{
+    if (!isset($entete['lignes']) || !is_array($entete['lignes']) || $entete['lignes'] === []) {
+        return salfa_entete_defaut();
+    }
+    $entete['mode'] = ($entete['mode'] ?? 'textes') === 'image' ? 'image' : 'textes';
+    $entete['image'] = is_string($entete['image'] ?? null) ? $entete['image'] : '';
+    $entete['images'] = is_array($entete['images'] ?? null) ? $entete['images'] : [];
+    return $entete;
+}
+
+/** Modèle d'en-tête livré, identique à `enteteParDefaut()` côté navigateur. */
+function salfa_entete_defaut(): array
+{
+    $lignes = [
+        ['FIANGONANA LOTERANA MALAGASY', 11, true],
+        ['(ÉGLISE LUTHERIENNE MALGACHE - MALAGASY LUTHERAN CHURCH)', 9, false],
+        ['SYNODAM-PARITANY FIHERENANA TOLIARA', 9, false],
+        ['SAMPAN’ASA LOTERANA MOMBA NY FAHASALAMANA (SALFA)', 9.5, true],
+        ['DEPARTEMENT DE SANTE - HEALTH DEPARTMENT', 9, false],
+        ['HOPITALY LOTERANA TOLIARY TANAMBAO - BP : 99', 9.5, true],
+        ['E-mail: salfa.tulear@gmail.com', 8.5, false],
+    ];
+    $resultat = [];
+    foreach ($lignes as [$texte, $taille, $gras]) {
+        $resultat[] = [
+            'texte' => $texte,
+            'taille' => $taille,
+            'police' => 'Arial',
+            'gras' => $gras,
+            'italique' => false,
+            'souligne' => false,
+            'alignement' => 'centre',
+        ];
+    }
+    return ['mode' => 'textes', 'image' => '', 'lignes' => $resultat, 'images' => []];
+}
+
+/**
+ * Catégories renvoyées au navigateur : celles de la base, ou les listes de
+ * départ quand le semis n'a pas encore eu lieu. Une liste vide bloque la
+ * saisie (« la liste des catégories ne peut pas être vide »).
+ */
+function salfa_categories_ou_defaut(array $categories): array
+{
+    $recette = is_array($categories['recette'] ?? null) ? array_values($categories['recette']) : [];
+    $depense = is_array($categories['depense'] ?? null) ? array_values($categories['depense']) : [];
+    if ($recette !== [] && $depense !== []) {
+        return ['recette' => $recette, 'depense' => $depense];
+    }
+    $defaut = salfa_categories_defaut();
+    return [
+        'recette' => $recette !== [] ? $recette : $defaut['recette'],
+        'depense' => $depense !== [] ? $depense : $defaut['depense'],
+    ];
+}
+
+/** Catégories livrées avec la caisse, dans l'ordre du script SQL. */
+function salfa_categories_defaut(): array
+{
+    return [
+        'recette' => ['Recettes journalières', 'Consultations', 'Pharmacie', 'Laboratoire', 'Hospitalisation', 'Maternité', 'Imagerie', 'Subventions & dons', 'Remboursements', 'Autres recettes'],
+        'depense' => ['Achats médicaments', 'Consommables médicaux', 'Fournitures de bureau', 'Carburant & transport', 'Maintenance & équipements', 'Salaires & primes', 'Frais de mission', 'Honoraires', 'Eau & électricité', 'Téléphone & internet', 'Divers'],
     ];
 }
 

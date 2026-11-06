@@ -1,5 +1,7 @@
 import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
-import type { DocumentEntete, EnteteDocument } from './entete';
+import { normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
+import { categoriesParDefaut } from './constants';
+import { validerDonnees } from './validation';
 
 /**
  * Client de l'API PHP/MySQL utilisée sur WAMP.
@@ -129,31 +131,79 @@ export async function deconnexion(): Promise<void> {
   await appeler('deconnexion', { methode: 'POST' });
 }
 
+/**
+ * Ramène un livre reçu de MySQL à une forme toujours affichable.
+ *
+ * Le serveur peut répondre avec un livre partiel : premier appel sur une base
+ * fraîche, table des en-têtes vide, catégories non encore semées, colonne
+ * ajoutée par une version plus récente… Sans ce garde-fou, un champ absent
+ * (`entetes`, `categories`) casse le rendu et l'application se ferme sur
+ * l'écran « L'affichage a rencontré un problème ».
+ *
+ * Les valeurs manquantes reprennent celles de la caisse (en-tête livré,
+ * catégories de départ) ; rien n'est inventé ni enregistré côté serveur.
+ */
+export function normaliserLivreServeur(brut: unknown): Sauvegarde {
+  const livre = (brut ?? {}) as Partial<Sauvegarde>;
+  const parametres = (livre.parametres ?? {}) as Partial<Sauvegarde['parametres']>;
+  const complet: Sauvegarde = {
+    format: 'CAISSE-SALFA',
+    version: 1,
+    revision: Number.isSafeInteger(livre.revision) ? Number(livre.revision) : 0,
+    updatedAt: typeof livre.updatedAt === 'string' && livre.updatedAt ? livre.updatedAt : new Date().toISOString(),
+    ecritures: Array.isArray(livre.ecritures) ? livre.ecritures : [],
+    parametres: {
+      soldeInitial: Number.isSafeInteger(parametres.soldeInitial) ? Number(parametres.soldeInitial) : 0,
+      exercice: typeof parametres.exercice === 'number' ? parametres.exercice : undefined,
+      reportPrecedent: parametres.reportPrecedent ?? null,
+    },
+    masques: Array.isArray(livre.masques) ? livre.masques : [],
+    compteurs: livre.compteurs && typeof livre.compteurs === 'object' ? livre.compteurs : {},
+    exercicesClotures: Array.isArray(livre.exercicesClotures) ? livre.exercicesClotures : [],
+    entetes: normaliserEntetes(livre.entetes),
+    categories: livre.categories && typeof livre.categories === 'object'
+      ? { recette: livre.categories.recette ?? [], depense: livre.categories.depense ?? [] }
+      : categoriesParDefaut(),
+  };
+  // Dernière barrière : les catégories vides prennent celles de la caisse. Les
+  // autres contrôles (montants, numéros, révisions) ne sont pas refaits ici :
+  // le serveur les applique déjà, et un livre lisible doit s'afficher.
+  try {
+    return { ...complet, ...validerDonnees(complet) };
+  } catch {
+    return { ...complet, categories: categoriesParDefaut() };
+  }
+}
+
 export async function chargerLivreApi(): Promise<Sauvegarde> {
   const reponse = await appeler<{ livre: Sauvegarde }>('livre');
-  return reponse.livre;
+  return normaliserLivreServeur(reponse.livre);
 }
 
 /** Chaque mutation renvoie le livre complet : le serveur reste la référence. */
+const mutation = (route: string, corps: Record<string, unknown>) =>
+  appeler<{ livre: unknown }>(route, { methode: 'POST', corps })
+    .then(reponse => ({ livre: normaliserLivreServeur(reponse.livre) }));
+
 export const mutations = {
   ecriture: (revision: number, ecriture: Ecriture) =>
-    appeler<{ livre: Sauvegarde }>('ecritures', { methode: 'POST', corps: { revision, ecriture } }),
+    mutation('ecritures', { revision, ecriture }),
   supprimer: (revision: number, id: string) =>
-    appeler<{ livre: Sauvegarde }>('ecritures-supprimer', { methode: 'POST', corps: { revision, id } }),
+    mutation('ecritures-supprimer', { revision, id }),
   restaurerEcriture: (revision: number, ecriture: Ecriture) =>
-    appeler<{ livre: Sauvegarde }>('ecritures-restaurer', { methode: 'POST', corps: { revision, ecriture } }),
+    mutation('ecritures-restaurer', { revision, ecriture }),
   masques: (revision: number, masques: MasqueSaisie[]) =>
-    appeler<{ livre: Sauvegarde }>('masques', { methode: 'POST', corps: { revision, masques } }),
+    mutation('masques', { revision, masques }),
   entete: (revision: number, document: DocumentEntete, entete: EnteteDocument) =>
-    appeler<{ livre: Sauvegarde }>('entete', { methode: 'POST', corps: { revision, document, entete } }),
+    mutation('entete', { revision, document, entete }),
   categories: (revision: number, sens: Sens, categories: string[]) =>
-    appeler<{ livre: Sauvegarde }>('categories', { methode: 'POST', corps: { revision, sens, categories } }),
+    mutation('categories', { revision, sens, categories }),
   soldeInitial: (revision: number, soldeInitial: number) =>
-    appeler<{ livre: Sauvegarde }>('solde-initial', { methode: 'POST', corps: { revision, soldeInitial } }),
+    mutation('solde-initial', { revision, soldeInitial }),
   cloture: (revision: number, archive: unknown) =>
-    appeler<{ livre: Sauvegarde }>('cloture', { methode: 'POST', corps: { revision, archive } }),
+    mutation('cloture', { revision, archive }),
   restauration: (sauvegarde: Sauvegarde) =>
-    appeler<{ livre: Sauvegarde }>('restauration', { methode: 'POST', corps: { sauvegarde } }),
+    mutation('restauration', { sauvegarde }),
 };
 
 /**

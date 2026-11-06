@@ -148,6 +148,27 @@ lisible : version de PHP, extensions, connexion MySQL, nombre de tables, compte
 administrateur, cohérence des versions. C'est le premier endroit à consulter en
 cas de difficulté.
 
+## 7 bis. Écran « L’affichage a rencontré un problème »
+
+Cet écran ne vient plus d’un livre incomplet : le serveur renvoie désormais
+toujours un en-tête de bordereau et des catégories complets, même sur une base
+fraîchement créée (en-tête livré et listes de départ). L’écran affiche en plus
+le détail technique, pour identifier la cause en une lecture.
+
+Que faire, dans l’ordre :
+
+1. **Ctrl+F5** (vider le cache) : le navigateur a pu garder un ancien
+   `index.html` avec l’ancien JavaScript.
+2. Ouvrir `api/index.php?action=verifier` : si les 14 tables sont présentes et
+   MySQL connecté, le problème est côté navigateur, pas côté base.
+3. Dans l’onglet « Données & sauvegardes », « Recharger le livre » : le livre
+   repart de MySQL.
+4. En dernier recours, restaurer la dernière sauvegarde `.sql` (phpMyAdmin →
+   *Importer*) ou JSON depuis l’application.
+
+Rien de tout cela ne supprime les écritures : elles vivent dans MySQL, pas dans
+le navigateur.
+
 ## 8. Sécurité
 
 - **HTTP ne chiffre rien** : sur un réseau, mots de passe et montants circulent
