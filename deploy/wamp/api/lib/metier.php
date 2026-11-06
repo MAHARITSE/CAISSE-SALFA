@@ -577,7 +577,7 @@ function salfa_restaurer_sauvegarde(array $corps): void
     $pdo = salfa_pdo();
     $pdo->beginTransaction();
     try {
-        salfa_verrouiller_livre();
+        salfa_verifier_revision(salfa_revision_attendue($corps));
         $pdo->exec('DELETE FROM ' . salfa_table('details'));
         $pdo->exec('DELETE FROM ' . salfa_table('ecritures'));
         $pdo->exec('DELETE FROM ' . salfa_table('clotures'));

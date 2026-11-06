@@ -10,6 +10,7 @@ import { enregistrerEcriture } from './utils/ledger';
 import { parametresTest } from './test/fixtures';
 import { aujourdHui } from './utils/format';
 import { VERSION_APPLICATION } from './utils/version';
+import { preparerSqlLivre } from './utils/backup';
 
 const lire = (): Sauvegarde => JSON.parse(localStorage.getItem(CLE_LIVRE)!);
 const annee = aujourdHui().slice(0, 4);
@@ -99,6 +100,17 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: 'Annuler la suppression' })[0]);
     expect(lire().ecritures).toHaveLength(2);
     expect(lire().compteurs[`DP-${annee}`]).toBe(1);
+  });
+
+  it('ouvre les formulaires depuis les actions sous le tableau', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await ouvrirSession(user);
+    await user.click(screen.getByRole('button', { name: 'Nouvelle recette (bas du tableau)' }));
+    expect(screen.getByRole('dialog', { name: 'Nouvelle recette' })).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog', { name: 'Nouvelle recette' })).getByRole('button', { name: 'Annuler' }));
+    await user.click(screen.getByRole('button', { name: 'Nouvelle dépense (bas du tableau)' }));
+    expect(screen.getByRole('dialog', { name: 'Nouvelle dépense' })).toBeInTheDocument();
   });
 
   it('personnalise l’en-tête commun et l’imprime sur les deux pièces', async () => {
@@ -316,18 +328,18 @@ describe('parcours de caisse', () => {
     expect(lire().ecritures[0].montant).toBe(500);
   });
 
-  it('vérifie un import, refuse un JSON invalide et restaure après confirmation avec sauvegarde préalable', async () => {
+  it('vérifie un import SQL et restaure après confirmation avec sauvegarde préalable', async () => {
     sauvegarderLivre(livreTest({ ecritures: [ecritureTest()] }), 0);
     const user = userEvent.setup();
     render(<App />);
     await ouvrirSession(user);
     await user.click(screen.getAllByRole('button', { name: 'Données & sauvegardes' })[0]);
-    const input = screen.getByLabelText('Fichier de sauvegarde JSON');
-    await user.upload(input, new File(['{'], 'invalide.json', { type: 'application/json' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('JSON valide');
+    const input = screen.getByLabelText('Fichier de sauvegarde SQL');
+    await user.upload(input, new File(['SELECT 1;'], 'invalide.sql', { type: 'application/sql' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('non compatible');
     expect(lire().ecritures[0].libelle).toBe('Recettes du jour');
-    const contenu = JSON.stringify(livreTest({ ecritures: [ecritureTest({ id: 'restore', numero: 'RC-2026-0099', libelle: 'Livre restauré' })] }));
-    await user.upload(input, new File([contenu], 'valide.json', { type: 'application/json' }));
+    const contenu = preparerSqlLivre(livreTest({ ecritures: [ecritureTest({ id: 'restore', numero: 'RC-2026-0099', libelle: 'Livre restauré' })] }));
+    await user.upload(input, new File([contenu], 'valide.sql', { type: 'application/sql' }));
     await user.click(await screen.findByRole('button', { name: 'Restaurer cette sauvegarde' }));
     const confirmation = screen.getByRole('dialog', { name: 'Remplacer le livre actuel ?' });
     expect(within(confirmation).getByRole('button', { name: 'Restaurer et remplacer' })).toBeDisabled();
@@ -474,6 +486,9 @@ describe('parcours de caisse', () => {
     // L'administrateur peut basculer sur l'exercice clôturé puis revenir à l'exercice en cours.
     await user.selectOptions(screen.getByLabelText('Changer d’exercice'), String(annee - 1));
     expect(screen.getByText(/Consultation de l’/i)).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Livre journal' })[0]);
+    expect(screen.queryByRole('button', { name: /Nouvelle recette \(bas du tableau\)/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Modifier RC-/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: new RegExp(`Revenir à l’exercice ${annee}`) }));
 
     // La saisie est de nouveau possible, sur le nouvel exercice.

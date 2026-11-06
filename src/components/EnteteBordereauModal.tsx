@@ -63,6 +63,9 @@ function styleLigne(ligne: LigneEntete): CSSProperties {
     fontStyle: ligne.italique ? 'italic' : 'normal',
     textDecoration: ligne.souligne ? 'underline' : 'none',
     textAlign: ALIGNEMENT_CSS[ligne.alignement],
+    // Ne pas transformer la casse de la saisie ni de son aperçu dans l'éditeur.
+    fontVariant: 'normal',
+    textTransform: 'none',
     lineHeight: 1.3,
   };
 }
@@ -435,6 +438,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                         className="entete-ligne__champ"
                         style={styleLigne(ligne)}
                         value={ligne.texte}
+                        autoCapitalize="off"
                         maxLength={200}
                         placeholder="Tapez ici le texte imprimé"
                         onChange={e => modifierLigne(index, { texte: e.target.value })}

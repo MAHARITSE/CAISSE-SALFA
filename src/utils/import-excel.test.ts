@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { soldeCloture } from './ledger';
 import { validerSauvegarde } from './validation';
+import { lireSauvegardeSql, preparerSqlLivre } from './backup';
 
 const racine = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -49,6 +50,14 @@ describe('sauvegarde migrée depuis caisse.xlsx et ligne caisse.xlsx', () => {
         expect(catsDepense.has(e.categorie)).toBe(true);
       }
     }
+  });
+
+  it('conserve les 7 342 écritures et les archives dans une sauvegarde SQL restaurable', () => {
+    const source = validerSauvegarde(JSON.parse(readFileSync(join(racine, 'sauvegarde_caisse_salfa.json'), 'utf8')));
+    const restaure = lireSauvegardeSql(preparerSqlLivre(source));
+    expect(restaure.ecritures).toEqual(source.ecritures);
+    expect(restaure.exercicesClotures).toEqual(source.exercicesClotures);
+    expect(restaure.compteurs).toEqual(source.compteurs);
   });
 
   it('génère le fichier SQL complet sauvegarde_caisse_salfa.sql avec toutes les relations', () => {

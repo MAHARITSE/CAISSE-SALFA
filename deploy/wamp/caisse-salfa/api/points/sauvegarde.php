@@ -29,7 +29,20 @@ salfa_point('sauvegarde', function (): array {
 
     // Le .sql contient les comptes : réservé à l'administrateur.
     $utilisateur = salfa_exiger_role('admin');
-    $export = salfa_exporter_sql();
+    // Le verrou empêche les mutations de la caisse durant la lecture du dump
+    // et garantit que l'instantané et les tables correspondent.
+    // Une migration ALTER TABLE ne doit jamais interrompre la transaction MySQL.
+    salfa_migrer_images_entete();
+    $pdo = salfa_pdo();
+    $pdo->beginTransaction();
+    try {
+        salfa_verrouiller_livre();
+        $export = salfa_exporter_sql();
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
     salfa_journaliser('sauvegarde_sql', (int) $utilisateur['id'], 'succes', $export['nom']);
 
     // Réponse en fichier joint : le navigateur télécharge, il n'affiche pas.

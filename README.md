@@ -117,7 +117,7 @@ garder les versions verrouillées par `package-lock.json`.
   revient au modèle livré, logos compris. Un livre créé avant cette version
   reprend ses deux anciens logos comme images placées. L’en-tête suit le livre :
   il est enregistré localement ou dans MySQL (`salfa_entetes`) et transporté par
-  les sauvegardes JSON.
+  les sauvegardes SQL.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
@@ -139,9 +139,12 @@ garder les versions verrouillées par `package-lock.json`.
   sélection affichée ; le solde de clôture reste celui de la période complète.
 - **Impression** : journal en A4 paysage (toutes les pages de la sélection),
   bordereau seul en A4 portrait avec ses zones de signature.
-- **Sauvegardes JSON** : export complet, vérification avant import, aperçu,
-  confirmation explicite et sauvegarde automatique du livre actuel avant
-  remplacement. Un export brut de secours est disponible pour le diagnostic.
+- **Sauvegardes SQL** : export MySQL complet en mode serveur, ou instantané SQL
+  du livre en mode local. La restauration dans l’application vérifie un instantané
+  intégré au fichier, demande confirmation et sauvegarde le livre actuel avant
+  remplacement. Elle restaure le livre, pas les comptes ; pour restaurer également
+  les comptes ou un ancien dump, utiliser phpMyAdmin. Aucun SQL importé n’est
+  exécuté par l’application. Un export brut SQL sert au diagnostic local.
 - **Onglet Exercices & clôtures** : exercice en cours, solde reporté, historique
   des clôtures et téléchargement d’une archive autonome par exercice.
 - **Livres antérieurs** : un livre créé avant cette version reste lisible ; il
@@ -222,11 +225,15 @@ anciens totaux détaillés incohérents à partir des postes positifs, avec un
 avertissement explicite. Les données invalides bloquent la migration plutôt que
 d’être écartées en silence.
 
-Une **sauvegarde JSON complète** utilise le format `CAISSE-SALFA`, version 1.
-Elle peut être restaurée dans un autre navigateur. La restauration **remplace**
-le livre ; elle ne fusionne pas les écritures. L’**export brut de secours**
-conserve les chaînes localStorage d’origine, y compris corrompues ; il est destiné
-au diagnostic et n’est pas un fichier de restauration.
+Une **sauvegarde SQL récente** produite par l’application contient un instantané
+validable du livre. Le bouton de restauration remplace le livre sans fusion et
+ne modifie pas les comptes. Le fichier est limité à 24 Mo (8 Mo pour le livre
+intégré). En mode WAMP, le dump SQL contient aussi les comptes hachés et peut
+être restauré intégralement avec phpMyAdmin ; pour les anciens dumps sans
+instantané, utiliser également phpMyAdmin. En mode local, le SQL contient le
+livre sous forme d’instantané dans une table de sauvegarde, pas une base WAMP.
+L’export brut de secours conserve les clés locales pour diagnostic ; il ne
+constitue pas un fichier de restauration automatique.
 
 ### Important
 
@@ -252,7 +259,7 @@ src/
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
     Exercices.tsx                 exercice en cours, clôtures et archives
-    DonneesSauvegardes.tsx        export/import JSON et secours brut
+    DonneesSauvegardes.tsx        export SQL, restauration du livre et secours brut
     GestionMasquesModal.tsx       modèles de bordereaux
     GestionCategoriesModal.tsx    catégories de recettes et de dépenses
     ChampMontant.tsx              saisie monétaire à séparateurs de milliers
@@ -262,7 +269,7 @@ src/
     ledger.ts                     calculs, numérotation, mutations, clôture annuelle
     validation.ts                 validation stricte des données
     storage.ts                    stockage atomique et migration
-    backup.ts                     sauvegardes JSON et secours
+    backup.ts                     instantanés SQL, validation et secours
     export.ts                     CSV sûr et téléchargements
     format.ts                     dates locales et montants
     constants.ts                  catégories, modes, limites, modèles

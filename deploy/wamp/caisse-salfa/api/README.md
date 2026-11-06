@@ -164,7 +164,7 @@ Que faire, dans l’ordre :
 3. Dans l’onglet « Données & sauvegardes », « Recharger le livre » : le livre
    repart de MySQL.
 4. En dernier recours, restaurer la dernière sauvegarde `.sql` (phpMyAdmin →
-   *Importer*) ou JSON depuis l’application.
+   *Importer*) ou restaurer le livre depuis l’application avec un SQL récent.
 
 Rien de tout cela ne supprime les écritures : elles vivent dans MySQL, pas dans
 le navigateur.
