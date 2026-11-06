@@ -6,14 +6,14 @@ import type { DocumentEntete, EnteteDocument } from './entete';
  *
  * L'application fonctionne en deux modes :
  *  - « local » (par défaut, développement et tests) : stockage du navigateur ;
- *  - « api » (build de déploiement) : toutes les lectures et écritures passent
+ *  - « api » (build de déploiement VITE_MODE_API=api) : toutes les lectures et écritures passent
  *    par l'API PHP, qui reste la seule source de vérité.
  */
 export type ModeStockage = 'local' | 'api';
 
 const VARIABLES = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
 
-/** true pour le build de déploiement WAMP (`npm run build:wamp`) ou ?api=1 dans l'URL. */
+/** true pour un build de déploiement (VITE_MODE_API=api) ou ?api=1 dans l'URL. */
 export const MODE_STOCKAGE: ModeStockage =
   VARIABLES.VITE_MODE_API === 'api' || new URLSearchParams(window.location.search).get('api') === '1' ? 'api' : 'local';
 

@@ -118,10 +118,10 @@ de `C:\wamp64\www\caisse-salfa` (une page recopiée, pas l’API) passait donc
 inaperçue.
 
 - Une seule valeur fait foi : le champ `version` de `package.json`. Elle est
-  recopiée dans `src/utils/version.ts` (`VERSION_APPLICATION`) et dans
-  `api/config.php` (`SALFA_VERSION_API`) ; le test `src/utils/version.test.ts`
-  échoue si les trois divergent.
-- `npm run build:wamp` inscrit la version dans `index.html`
+  recopiée dans `src/utils/version.ts` (`VERSION_APPLICATION`) ; le test
+  `src/utils/version.test.ts` échoue si les deux divergent. L’API PHP, livrée
+  hors de ce dépôt, annonce la même version (`SALFA_VERSION_API`).
+- Le paquet serveur inscrit la version dans `index.html`
   (`<meta name="salfa-version" content="1.2.0">`) et refuse un index sans elle.
 - Le pied de page affiche `v1.2.0`. En mode serveur, il ajoute la version
   annoncée par l’API et affiche un bandeau orange si les deux diffèrent :

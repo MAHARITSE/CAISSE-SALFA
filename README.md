@@ -10,9 +10,11 @@ Deux modes, un seul code source :
 | **local** (par défaut) | stockage du navigateur | poste isolé, démonstration, tests |
 | **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
 
-Le mode serveur est produit par `npm run build:wamp` : `index.html` compilé à la
-racine du paquet, API PHP/MySQL, dossier `data/` privé et installateur dans le navigateur —
-**sans aucun Node.js sur le serveur**. Voir `deploy/wamp/INSTALLATION.md`.
+Le mode serveur suppose un paquet PHP/MySQL servi par Apache (WAMP ou équivalent) :
+`index.html` compilé à la racine, API PHP sous `api/`, dossier `data/` privé et
+installateur dans le navigateur — **sans aucun Node.js sur le serveur**. Le paquet
+n’est plus livré dans ce dépôt : il se reconstitue à partir du frontend compilé et de
+l’API déployée sur le serveur (`?api=1` dans l’URL force le mode serveur).
 
 ## Démarrer
 
@@ -25,10 +27,10 @@ npm test           # tests unitaires et intégration (Vitest / Testing Library)
 npm run check      # lint + tests + build
 ```
 
-Paquet de déploiement Windows/WAMP (frontend compilé + API PHP + installateur `installer.php`) :
+Build en mode serveur (API PHP/MySQL), à copier sur un serveur Apache :
 
 ```bash
-npm run build:wamp     # compile en mode API et remplit deploy/wamp (index.html racine)
+VITE_MODE_API=api npx vite build --base ./
 ```
 
 Tests dans un vrai navigateur (Chromium) :
@@ -39,11 +41,10 @@ npm run test:e2e
 ```
 
 La version de l’application n’est écrite qu’une fois : le champ `version` de
-`package.json`. Elle est recopiée dans `src/utils/version.ts` et dans
-`deploy/wamp/api/config.php` (`SALFA_VERSION_API`), inscrite dans `index.html`
-par `npm run build:wamp`, et `src/utils/version.test.ts` échoue si les trois
-divergent. Le pied de page affiche la version et signale un paquet serveur dont
-l’interface et l’API ne sont pas de la même version.
+`package.json`. Elle est recopiée dans `src/utils/version.ts`, et
+`src/utils/version.test.ts` échoue si les deux divergent. Le pied de page affiche
+la version et signale un paquet serveur dont l’interface et l’API ne sont pas de
+la même version.
 
 `bun.lock` est également maintenu pour les environnements qui utilisent Bun.
 
