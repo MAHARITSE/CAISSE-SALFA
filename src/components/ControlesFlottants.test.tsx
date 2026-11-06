@@ -18,6 +18,18 @@ describe('ControlesFlottants', () => {
     expect(screen.getByText('100%')).toBeInTheDocument();
   });
 
+  it('se place en bas à droite, hors du contenu de la page', () => {
+    render(<ControlesFlottants />);
+    const barre = screen.getByLabelText('Accessibilité et affichage');
+    // Ancrée à droite : elle ne recouvre plus le pied du tableau à gauche.
+    expect(barre.className).toContain('right-4');
+    expect(barre.className).toContain('bottom-4');
+    expect(barre.className).not.toContain('left-4');
+    // Au-dessus du contenu : elle reste cliquable et n'est pas coupée à l'impression.
+    expect(barre.className).toContain('fixed');
+    expect(barre.className).toContain('no-print');
+  });
+
   it('bascule entre mode clair et mode sombre au clic', async () => {
     const user = userEvent.setup();
     render(<ControlesFlottants />);
