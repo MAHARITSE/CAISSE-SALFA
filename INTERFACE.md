@@ -49,6 +49,7 @@ et sur la façon de s’en servir.
 | Titre d’onglet figé sur « Gestion de Caisse SALFA » | Plusieurs onglets ouverts impossibles à distinguer | Le titre suit la page : « Analyse de la caisse · Caisse SALFA » |
 | Texte d’aide de la connexion en `text-slate-400` | Contraste insuffisant pour une consigne utile | Passé en `text-slate-500` (et `dark:text-slate-400`) |
 | Notifications et total de saisie non annoncés | Lecteurs d’écran muets après un enregistrement ou une modification de montant | `aria-live="polite"` sur la notification et sur le total |
+| Paquet WAMP recopié mais pas encore installé : l’API répond « non installé » et l’écran de connexion affichait cette phrase technique en rouge, sous le mot de passe | On croyait à des identifiants erronés ; rien à l’écran ne disait quoi faire, ni qu’aucun compte ne pouvait fonctionner avant l’installation | Panneau « Serveur pas encore installé » (ou « Serveur injoignable ») au-dessus du formulaire : étapes numérotées (`outils\installer.bat`), bouton « Réessayer » qui reteste `api/index.php?action=sante`, lien vers le diagnostic JSON |
 
 ## Ce qui a été volontairement laissé tel quel
 

@@ -205,10 +205,11 @@ copier `data\sauvegardes\` sur un disque externe.
 
 | Symptôme | Cause | Solution |
 | --- | --- | --- |
-| « L'API n'est pas configurée » | `data/salfa-config.php` absent | `outils\installer.bat` |
+| « Serveur pas encore installé » (panneau orange de l'écran de connexion) | `data/salfa-config.php` absent | `outils\installer.bat`, puis « Réessayer » sur l'écran |
 | « Connexion à MySQL impossible » | WAMP arrêté, base ou mot de passe faux | démarrer WAMP, relancer `installer.bat` |
 | Page blanche | erreur PHP | `outils\verifier.bat`, puis `C:\wamp64\logs\php_error.log` |
 | « L'API est introuvable » | dossier `api/` non copié | recopier tout le dossier |
+| « Serveur injoignable » (panneau orange) | Apache ou MySQL arrêté, ou `api/` incomplet | démarrer WAMP, puis `outils\verifier.bat` |
 | « Conflit de révision » | deux postes ont saisi ensemble | recharger : la saisie est conservée |
 | « Session expirée » | 30 min d'inactivité | se reconnecter |
 | Mot de passe oublié | — | `outils\creer-admin.bat` |
