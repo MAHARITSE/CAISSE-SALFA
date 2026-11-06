@@ -8,11 +8,20 @@ page d'installation, aucun fichier à modifier : la base, les tables, les
 catégories, les modèles de bordereaux et les comptes de départ se créent tout
 seuls au premier lancement.
 
+**Tout est dans MySQL.** En version serveur, l'application ne lit ni n'écrit
+jamais le stockage du navigateur : écritures, en-têtes, catégories, modèles,
+compteurs et comptes vivent dans la base. La session est portée par un cookie
+PHP. Effacer les données du site, changer de profil ou naviguer en privé ne
+touche donc pas au livre — seul un vidage de la base le ferait.
+
 ## 1. Copier le dossier dans `www`
 
 1. Démarrer WampServer (icône verte : Apache **et** MySQL).
 2. Copier le dossier **`caisse-salfa`** (celui qui contient `index.html`) dans
    `C:\wamp64\www\` → on obtient `C:\wamp64\www\caisse-salfa\index.html`.
+   Variante : décompresser **`deploy/wamp/caisse-salfa.zip`** dans `C:\wamp64\www\`
+   — l'archive contient déjà le dossier `caisse-salfa\`, rien ne se déverse à
+   la racine de `www`.
 3. Ouvrir **http://127.0.0.1/caisse-salfa/** et se connecter.
 
 Au premier appel, l'API :
@@ -71,8 +80,9 @@ api\
   README.md        ce guide
 ```
 
-Le dossier prêt à copier n'est pas dans le dépôt : il est produit par le build
-(§ 5), car il contient l'application compilée.
+Le dossier prêt à copier est livré dans le dépôt, avec son archive
+`deploy/wamp/caisse-salfa.zip` : il n'y a donc rien à compiler sur le serveur.
+Il est régénéré par le build (§ 5) après une modification du code.
 
 ## 4. Mise à jour d'une installation existante
 
@@ -86,18 +96,18 @@ Le schéma et les comptes existants sont conservés : aucun script SQL à rejoue
 La ligne « version du paquet » du diagnostic signale une interface et une API
 de versions différentes (copie partielle).
 
-## 5. Produire ce dossier depuis le code source
+## 5. Régénérer ce dossier après une modification du code
 
-Sur un poste de développement (Node.js requis **ici seulement**) :
+Le dossier livré est déjà prêt : cette étape ne concerne que le développeur qui
+modifie l'application (Node.js requis **ici seulement**) :
 
 ```bash
 npm ci
-npm run build:wamp     # compile en mode API et remplit deploy/wamp/caisse-salfa/
+npm run build:wamp     # met à jour deploy/wamp/caisse-salfa/ et caisse-salfa.zip
 ```
 
-Puis copier **le contenu** de `deploy/wamp/caisse-salfa/` dans
-`C:\wamp64\www\caisse-salfa\`. Ne pas copier `deploy/wamp/` lui-même : il
-contient les sources de l'API et ce guide, pas l'application compilée.
+Puis copier le dossier (ou le ZIP) sur le serveur. Ne pas copier `deploy/wamp/`
+lui-même dans `www` : il contient aussi les sources et les archives.
 
 ## 6. Sauvegardes
 

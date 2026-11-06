@@ -8,7 +8,7 @@ Deux modes, un seul code source :
 | Mode | Stockage | Usage |
 | --- | --- | --- |
 | **local** (par défaut) | stockage du navigateur | poste isolé, démonstration, tests |
-| **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
+| **serveur** | **MySQL uniquement** (aucun stockage navigateur) | partage entre plusieurs postes du service, déploiement WAMP |
 
 Le mode serveur s’installe par **simple copie d’un dossier** dans
 `C:\wamp64\www\caisse-salfa` : le dossier prêt à l’emploi est livré dans
@@ -16,7 +16,9 @@ Le mode serveur s’installe par **simple copie d’un dossier** dans
 `deploy/wamp/caisse-salfa.zip`). Il contient `index.html` compilé, `assets/`,
 `api/`, `.htaccess`, `.user.ini`, `favicon`. Aucun Node.js sur le serveur et
 **aucune installation** : le premier appel crée la configuration, la base MySQL,
-les tables et les comptes de départ. Voir
+les tables et les comptes de départ. En mode serveur, **la base MySQL est la seule
+source de vérité** : l’application ne lit ni n’écrit le stockage du navigateur,
+et la session est portée par un cookie PHP. Voir
 [`deploy/wamp/api/README.md`](./deploy/wamp/api/README.md).
 (`?api=1` dans l’URL force le mode serveur.)
 

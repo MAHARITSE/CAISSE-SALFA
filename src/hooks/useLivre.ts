@@ -12,14 +12,29 @@ const LIVRE_VIDE: ChargementLivre = {
   erreur: null, avertissement: null, migration: false, normalisation: false,
 };
 
+/**
+ * État initial du livre.
+ *
+ * En mode serveur, **aucune lecture du navigateur** : le livre vient de MySQL,
+ * et lui seul fait foi. Avant le premier chargement, l'écran affiche un livre
+ * vide ; le stockage local n'est jamais consulté, même pour un livre laissé par
+ * une ancienne version de démonstration.
+ */
+function etatInitial(): ChargementLivre {
+  return MODE_API ? LIVRE_VIDE : chargerLivre();
+}
+
 export function useLivre() {
-  const [etat, setEtat] = useState<ChargementLivre>(chargerLivre);
+  const [etat, setEtat] = useState<ChargementLivre>(etatInitial);
   const [messageSync, setMessageSync] = useState('');
   const [chargementApi, setChargementApi] = useState(MODE_API);
   const migrationTentee = useRef(false);
 
   const migrationLegacyTentee = useRef(false);
   useEffect(() => {
+    // Mesures de conversion du stockage navigateur : sans objet sur le serveur,
+    // où la base MySQL est la seule source de vérité.
+    if (MODE_API) return;
     if (etat.erreur || !etat.normalisation || migrationLegacyTentee.current) return;
     migrationLegacyTentee.current = true;
     try {
@@ -35,6 +50,7 @@ export function useLivre() {
   }, []);
 
   useEffect(() => {
+    if (MODE_API) return;
     if (!etat.migration || etat.erreur || migrationTentee.current) return;
     migrationTentee.current = true;
     try {

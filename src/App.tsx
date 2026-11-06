@@ -190,7 +190,11 @@ export function App() {
   }
   async function restaurerLivre(importe: Parameters<typeof restaurer>[0]) {
     try {
-      if (erreur) exporterSecours(); else exporterSauvegarde(livre);
+      // En mode serveur, le livre ne vit que dans MySQL : la copie de sécurité
+      // est celle du serveur, jamais un contenu du navigateur.
+      if (MODE_API) exporterSauvegarde(livre);
+      else if (erreur) exporterSecours();
+      else exporterSauvegarde(livre);
       await restaurer(importe);
       setDerniereSupprimee(null); setSaisie(null); setASupprimer(null); reinitialiser(); setToutAfficher(true);
       setNotification(MODE_API ? 'Sauvegarde restaurée sur le serveur.' : 'Sauvegarde restaurée et enregistrée localement.');
@@ -262,8 +266,10 @@ export function App() {
   async function deconnecter() {
     if (MODE_API) {
       try { await deconnexionApi(); } catch { /* la session est fermée côté serveur au plus tard par expiration */ }
+    } else {
+      // Hors serveur, le compte vit dans le navigateur : on efface sa trace.
+      retenirSessionLocale(null);
     }
-    retenirSessionLocale(null);
     setSession({ connecte: false, utilisateur: null });
     setNotification('');
   }
@@ -310,8 +316,13 @@ export function App() {
     return <>
       <Connexion erreurInitiale={MODE_API ? erreur : null} onConnecte={etat => {
         setSession(etat);
-        if (etat.utilisateur) retenirSessionLocale({ id: String(etat.utilisateur.id) });
-        if (MODE_API) rechargerApi();
+        // Sur le serveur, la session ne vit que dans MySQL (cookie PHP) : rien
+        // n'est mémorisé dans le navigateur. Hors serveur, on la retient.
+        if (MODE_API) {
+          if (etat.utilisateur) rechargerApi();
+        } else if (etat.utilisateur) {
+          retenirSessionLocale({ id: String(etat.utilisateur.id) });
+        }
       }} />
       <ControlesFlottants />
     </>;

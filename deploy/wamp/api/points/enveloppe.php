@@ -1,10 +1,14 @@
 <?php
 /**
  * Enveloppe commune des points d'API : méthode HTTP et mutations.
- * Inclus par api/socle.php, donc disponible dans chaque fichier de api/points/.
+ * Inclus une seule fois, par api/socle.php, et donc disponible dans chaque
+ * fichier de api/points/. Les garde-fous ci-dessous protègent d'une inclusion
+ * multiple : deux déclarations de la même fonction sont une erreur fatale.
  */
 
 declare(strict_types=1);
+
+if (!function_exists('salfa_exiger_methode')) {
 
 /** Refuse la requête si la méthode HTTP n'est pas celle attendue. */
 function salfa_exiger_methode(string $attendu): void
@@ -34,4 +38,4 @@ function salfa_mutation(string $role, string $journal, callable $action): array
             salfa_journaliser($journal, (int) $utilisateur['id'], 'succes', is_string($detail) ? $detail : '');
         }),
     ];
-}
+}}
