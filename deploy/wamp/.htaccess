@@ -20,12 +20,12 @@ DirectoryIndex index.html index.php
 # Le dossier data/ contient api/salfa-config.php (mot de passe MySQL) :
 # il n'est jamais servi par le serveur web.
 <IfModule mod_authz_core.c>
-  <FilesMatch "^(salfa-config\.php|installation\.php|.*\.log|.*\.sql|admin-cree\.txt)$">
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql)$">
     Require all denied
   </FilesMatch>
 </IfModule>
 <IfModule !mod_authz_core.c>
-  <FilesMatch "^(salfa-config\.php|installation\.php|.*\.log|.*\.sql|admin-cree\.txt)$">
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql)$">
     Order allow,deny
     Deny from all
   </FilesMatch>

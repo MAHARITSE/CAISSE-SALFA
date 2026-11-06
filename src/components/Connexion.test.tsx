@@ -33,7 +33,8 @@ describe('connexion en mode serveur', () => {
     render(<Connexion onConnecte={vi.fn()} />);
 
     expect(await screen.findByText('Serveur pas encore installé')).toBeInTheDocument();
-    expect(screen.getByText(/outils\\installer\.bat/)).toBeInTheDocument();
+    // Le paquet s'installe dans le navigateur : un lien direct vers installer.php.
+    expect(screen.getByRole('link', { name: 'Ouvrir l’installation' })).toHaveAttribute('href', 'installer.php');
     expect(screen.getByRole('link', { name: 'Ouvrir le diagnostic du serveur' }))
       .toHaveAttribute('href', 'api/index.php?action=verifier');
     // Le panneau remplace l'erreur rouge : un seul message à lire.

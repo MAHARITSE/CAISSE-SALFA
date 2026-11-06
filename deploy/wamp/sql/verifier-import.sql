@@ -28,8 +28,8 @@ SELECT 'table des en-têtes de bordereau' AS controle,
        IF((SELECT COUNT(*) FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = 'caisse_salfa' AND TABLE_NAME = 'salfa_entetes') = 1, 'OK', 'MANQUANTE') AS etat;
 
--- Aucun compte : l'étape suivante est outils\creer-admin.bat (normal au premier import).
+-- Aucun compte : relancez installer.php pour recréer un administrateur (normal au premier import).
 SELECT 'comptes utilisateurs' AS controle,
        (SELECT COUNT(*) FROM caisse_salfa.salfa_utilisateurs) AS trouve,
-       'créés par creer-admin.bat' AS attendu,
+       'créés par installer.php' AS attendu,
        IF((SELECT COUNT(*) FROM caisse_salfa.salfa_utilisateurs) > 0, 'OK', 'à créer') AS etat;

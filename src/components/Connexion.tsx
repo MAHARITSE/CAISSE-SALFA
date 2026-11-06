@@ -124,13 +124,12 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           </p>
           {serveur === 'non_installe' ? <>
             <p className="mt-1.5 leading-relaxed">
-              La page s’affiche, mais l’API PHP n’a pas encore sa configuration MySQL
-              (<code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">data\salfa-config.php</code>) :
-              aucun compte ne peut se connecter avant l’installation.
+              La page s’affiche, mais l’API PHP n’a pas encore sa configuration MySQL :
+              aucun compte ne peut se connecter avant l’installation, qui prend une minute.
             </p>
             <ol className="mt-2 list-decimal space-y-1 pl-5 leading-relaxed">
-              <li>Sur le serveur, avec WAMP démarré (icône verte), double-cliquez <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">outils\installer.bat</code>.</li>
-              <li>Indiquez les accès MySQL : la base, les 14 tables et le compte administrateur sont créés.</li>
+              <li>Cliquez sur « Ouvrir l’installation » ci-dessous.</li>
+              <li>Indiquez les accès MySQL (sur WAMP : <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">root</code>, mot de passe vide) et le compte administrateur.</li>
               <li>Revenez sur cet écran et cliquez sur « Réessayer ».</li>
             </ol>
           </> : <p className="mt-1.5 leading-relaxed">
@@ -139,6 +138,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
             est complet, puis réessayez.
           </p>}
           <div className="mt-3 flex flex-wrap items-center gap-3">
+            {serveur === 'non_installe' && <a className="btn-primary !py-1.5 !text-xs" href="installer.php">Ouvrir l’installation</a>}
             <button type="button" className="btn-secondary !py-1.5 !text-xs" onClick={() => void verifierServeur()} disabled={verification}>
               {verification ? <><Loader2 size={14} className="animate-spin" />Vérification…</> : <><RefreshCw size={14} />Réessayer</>}
             </button>
@@ -200,7 +200,7 @@ export function Connexion({ erreurInitiale, onConnecte }: {
 
         {MODE_API
           ? <p className="text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-            Mot de passe oublié ? Utilisez <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">outils\creer-admin.bat</code> sur le serveur.
+            Mot de passe oublié ? Un administrateur peut le réinitialiser depuis l’onglet « Administration ».
           </p>
           : <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-900/60">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">

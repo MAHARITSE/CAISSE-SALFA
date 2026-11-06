@@ -30,8 +30,9 @@ function salfa_point(string $nom, callable $action): void
     try {
         if (!salfa_est_installe()) {
             throw new SalFaErreur(
-                'L’API n’est pas encore configurée : lancez outils\installer.bat, ou copiez api\salfa-config.modele.php en api\salfa-config.php puis appelez api/installer.php.',
-                503,
+                'L’API n’est pas encore configurée : ouvrez installer.php dans le navigateur'
+                . ' (http://localhost/caisse-salfa/installer.php) pour créer la base et le compte administrateur.',
+                 503,
                 'non_installe'
             );
         }

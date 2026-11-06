@@ -5,4 +5,4 @@
  * `SALFA_VERSION_API` du paquet WAMP : le test `version.test.ts` le vérifie,
  * et le pied de page signale une API plus ancienne que l'interface.
  */
-export const VERSION_APPLICATION = '1.2.0';
+export const VERSION_APPLICATION = '1.3.0';

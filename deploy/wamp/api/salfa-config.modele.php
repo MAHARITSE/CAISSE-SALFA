@@ -1,8 +1,8 @@
 <?php
 /**
  * Modèle de configuration.
- * En principe inutile : outils\installer.bat écrit data/salfa-config.php.
- * Ce modèle sert en cas d'installation manuelle : copier en data/salfa-config.php.
+ * En principe inutile : installer.php écrit data/salfa-config.php.
+ * Ce modèle sert en cas d'installation manuelle : le copier en data/salfa-config.php.
  * Ne jamais valider le vrai mot de passe dans un dépôt Git.
  */
 
