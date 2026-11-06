@@ -21,6 +21,7 @@ import type { Ecriture, Sens } from '../types';
 import { analyseCategories, totaliser } from '../utils/ledger';
 import { dateFr, formatAr, libelleMois, montantAffiche, nombre } from '../utils/format';
 import { Modale } from './Modale';
+import { ApercuDepenses } from './ApercuDepenses';
 
 /** Regroupe un libellé de sous-ligne en pôle / famille analytique pour l'analyse approfondie. */
 function determinerPoleDetail(sens: Sens, libelleDetail: string, categorieParente: string): string {
@@ -126,7 +127,7 @@ function Repartition({
           type="button"
           onClick={() => onOuvrirDetail(sens, null)}
           className="group flex items-center gap-2 text-left transition-colors hover:text-brand-700 dark:hover:text-brand-300"
-          title={`Ouvrir l’aperçu et l’analyse approfondie des ${recette ? 'recettes' : 'dépenses'}`}
+          title={recette ? 'Ouvrir l’analyse approfondie des recettes' : 'Ouvrir l’aperçu des dépenses'}
         >
           {recette ? (
             <ArrowDownLeft size={20} className="text-emerald-600 dark:text-emerald-400" />
@@ -143,7 +144,7 @@ function Repartition({
             <button
               type="button"
               onClick={() => onOuvrirDetail(sens, null)}
-              aria-label={`Analyse approfondie : ${recette ? 'Origine des recettes' : 'Répartition des dépenses'}`}
+              aria-label={recette ? 'Analyse approfondie : Origine des recettes' : 'Aperçu : Répartition des dépenses'}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-brand-600 dark:hover:bg-brand-950/60 dark:hover:text-brand-300"
             >
               <Eye size={13} />
@@ -171,7 +172,7 @@ function Repartition({
                   onOuvrirDetail(sens, c.nom);
                 }
               }}
-              title={`Cliquez pour voir l’aperçu et l’analyse approfondie de « ${c.nom} »`}
+              title={`Cliquez pour voir ${recette ? 'l’analyse et ' : ''}l’aperçu de « ${c.nom} »`}
               className="group -mx-2.5 cursor-pointer rounded-xl p-2.5 transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none dark:hover:bg-slate-800/60 dark:focus:bg-slate-800/60"
             >
               <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
@@ -1024,7 +1025,13 @@ function ModaleAnalyseApprofondie({
   );
 }
 
-export function Analyse({ lignes, periode }: { lignes: Ecriture[]; periode: string }) {
+export function Analyse({ lignes, periode, categoriesDepense = [], onModifierCategorieDepense, raisonLectureSeule }: {
+  lignes: Ecriture[];
+  periode: string;
+  categoriesDepense?: string[];
+  onModifierCategorieDepense?: (id: string, categorie: string) => Promise<boolean>;
+  raisonLectureSeule?: string;
+}) {
   const { recettes, depenses } = totaliser(lignes);
   const ratio = recettes > 0 ? (depenses / recettes) * 100 : null;
   const [selection, setSelection] = useState<SelectionAnalyse | null>(null);
@@ -1034,7 +1041,7 @@ export function Analyse({ lignes, periode }: { lignes: Ecriture[]; periode: stri
       <div className="flex items-start gap-2.5 rounded-lg border border-brand-100 bg-brand-50/60 p-3.5 text-sm leading-relaxed text-brand-900 dark:border-brand-900/60 dark:bg-brand-950/50 dark:text-brand-200">
         <Info size={18} className="mt-0.5 shrink-0" />
         <p>
-          Analyse de la période complète : <strong>{periode}</strong>. Cliquez sur <strong>Répartition des dépenses</strong>, sur <strong>Origine des recettes</strong> ou sur une catégorie pour ouvrir l’aperçu des pièces et l’analyse approfondie des répartitions.
+          Analyse de la période complète : <strong>{periode}</strong>. Cliquez sur <strong>Répartition des dépenses</strong>, sur <strong>Origine des recettes</strong> ou sur une catégorie pour ouvrir l’aperçu des pièces. Les recettes disposent aussi d’une analyse approfondie.
         </p>
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
@@ -1063,7 +1070,19 @@ export function Analyse({ lignes, periode }: { lignes: Ecriture[]; periode: stri
         </div>
       </div>
 
-      {selection && (
+      {selection?.sens === 'DEPENSE' && (
+        <ApercuDepenses
+          lignes={lignes}
+          periode={periode}
+          categorie={selection.categorie}
+          categories={categoriesDepense}
+          onToutesCategories={() => setSelection({ sens: 'DEPENSE', categorie: null })}
+          onModifierCategorie={onModifierCategorieDepense}
+          raisonLectureSeule={raisonLectureSeule}
+          onFermer={() => setSelection(null)}
+        />
+      )}
+      {selection?.sens === 'RECETTE' && (
         <ModaleAnalyseApprofondie
           lignesPeriode={lignes}
           periode={periode}
