@@ -86,8 +86,10 @@ describe('Analyse approfondie et aperçu des pièces', () => {
     await user.click(within(dialogue).getByText('ACHAT MEDICAMENTS CDM'));
     const tableau = within(dialogue).getByRole('table');
     expect(tableau).toHaveTextContent('PARACETAMOL ET AMOXICILLINE');
+    expect(tableau).toHaveTextContent('Pôle analytique');
     expect(tableau).toHaveTextContent('120 000,00');
     expect(tableau).not.toHaveTextContent(/\bAr\b/);
+    await user.click(within(dialogue).getByRole('button', { name: 'Modifier la catégorie de DP-2026-0001' }));
     await user.selectOptions(within(dialogue).getByLabelText('Catégorie de DP-2026-0001'), 'Divers');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer la catégorie de DP-2026-0001' }));
     expect(enregistrer).toHaveBeenCalledWith('102', 'Divers');
@@ -95,7 +97,34 @@ describe('Analyse approfondie et aperçu des pièces', () => {
     expect(within(dialogue).getByRole('status')).toHaveTextContent('ne correspond plus');
     await user.click(within(dialogue).getByRole('button', { name: 'Toutes les catégories' }));
     dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
-    expect(within(dialogue).getByLabelText('Catégorie de DP-2026-0001')).toHaveValue('Divers');
+    expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0001')).not.toBeInTheDocument();
+    expect(within(dialogue).getByRole('button', { name: /DP-2026-0001.*Divers/ })).toBeInTheDocument();
+  });
+
+  it('garde les lignes compactes et n’ouvre le sélecteur que sur demande, avec annulation', async () => {
+    const user = userEvent.setup();
+    const enregistrer = vi.fn(async (_id: string, _categorie: string) => true);
+    const autre = { ...ecrituresTest[1], id: '103', numero: 'DP-2026-0002', libelle: 'AUTRE', montant: 120_000 };
+    render(<Analyse lignes={[...ecrituresTest, autre]} periode="mai 2026" categoriesDepense={['Achats médicaments', 'Divers']} onModifierCategorieDepense={enregistrer} />);
+    await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
+    const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (2 pièce(s))' });
+    expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0001')).not.toBeInTheDocument();
+    expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0002')).not.toBeInTheDocument();
+    expect(within(dialogue).getAllByText('(50,0 %)')).toHaveLength(2);
+    await user.click(within(dialogue).getByRole('button', { name: 'Modifier la catégorie de DP-2026-0001' }));
+    expect(within(dialogue).getByLabelText('Catégorie de DP-2026-0001')).toHaveValue('Achats médicaments');
+    expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0002')).not.toBeInTheDocument();
+    expect(within(dialogue).queryByRole('table')).not.toBeInTheDocument();
+    await user.selectOptions(within(dialogue).getByLabelText('Catégorie de DP-2026-0001'), 'Divers');
+    await user.click(within(dialogue).getByRole('button', { name: 'Annuler la modification de catégorie de DP-2026-0001' }));
+    expect(enregistrer).not.toHaveBeenCalled();
+    expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0001')).not.toBeInTheDocument();
+    await user.click(within(dialogue).getByRole('button', { name: 'Modifier la catégorie de DP-2026-0001' }));
+    expect(within(dialogue).getByLabelText('Catégorie de DP-2026-0001')).toHaveValue('Achats médicaments');
+    await user.click(within(dialogue).getByRole('button', { name: 'Sous-lignes' }));
+    expect(within(dialogue).getAllByRole('table')).toHaveLength(2);
+    await user.click(within(dialogue).getByRole('button', { name: 'Sous-lignes' }));
+    expect(within(dialogue).queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('compte les pièces affichées et recherche aussi dans les sous-lignes', async () => {
@@ -118,10 +147,12 @@ describe('Analyse approfondie et aperçu des pièces', () => {
     let dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
     expect(within(dialogue).getByText(/Exercice clôturé/)).toBeInTheDocument();
     expect(within(dialogue).queryByLabelText('Catégorie de DP-2026-0001')).not.toBeInTheDocument();
+    expect(within(dialogue).queryByRole('button', { name: 'Modifier la catégorie de DP-2026-0001' })).not.toBeInTheDocument();
     unmount();
     render(<Analyse lignes={ecrituresTest} periode="mai 2026" categoriesDepense={['Achats médicaments', 'Divers']} onModifierCategorieDepense={async () => false} />);
     await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
     dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    await user.click(within(dialogue).getByRole('button', { name: 'Modifier la catégorie de DP-2026-0001' }));
     await user.selectOptions(within(dialogue).getByLabelText('Catégorie de DP-2026-0001'), 'Divers');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer la catégorie de DP-2026-0001' }));
     expect(within(dialogue).getByRole('alert')).toHaveTextContent('n’a pas été enregistrée');

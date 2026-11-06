@@ -126,8 +126,9 @@ garder les versions verrouillées par `package-lock.json`.
   opération de suppression.
 - **Analyse** : répartition des recettes et dépenses par catégorie et ratio
   dépenses/recettes de la période. L’aperçu des dépenses permet de rechercher,
-  trier et déplier les pièces. Les utilisateurs autorisés peuvent corriger la
-  catégorie d’une dépense de l’exercice ouvert et enregistrer le changement ;
+  trier et déplier les pièces. La liste reste compacte : le bouton « Catégorie »
+  ouvre le formulaire uniquement pour la pièce à corriger. Les utilisateurs
+  autorisés peuvent modifier la catégorie d’une dépense de l’exercice ouvert ;
   le comptable et les exercices clôturés restent en lecture seule.
 - **Clôture annuelle** : le livre ne grossit pas indéfiniment. Chaque année est
   un exercice ; la clôture fige ses écritures dans une archive, reporte le solde
