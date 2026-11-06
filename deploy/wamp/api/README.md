@@ -8,6 +8,25 @@ page d'installation, aucun fichier à modifier : la base, les tables, les
 catégories, les modèles de bordereaux et les comptes de départ se créent tout
 seuls au premier lancement.
 
+**Le fichier SQL est livré avec le site : `api/caisse-salfa.sql`.** Il contient
+toute la base — les 14 tables, les catégories, les modèles de bordereaux, les
+paramètres et les deux comptes de connexion. Normalement vous n'en avez pas
+besoin : l'API prépare tout seule au premier appel. Il sert quand on préfère
+partir d'une base déjà faite, ou la déplacer d'un serveur à l'autre :
+
+1. ouvrir **phpMyAdmin** (`http://127.0.0.1/phpmyadmin/`) ;
+2. onglet **Importer**, choisir `caisse-salfa\api\caisse-salfa.sql`, **Exécuter** ;
+3. le fichier affiche quatre lignes de contrôle, toutes en `OK`.
+
+Il crée la base `caisse_salfa` lui-même : inutile de la créer avant, inutile de
+sélectionner quoi que ce soit. Il est **rejouable** : le relancer ne détruit
+aucune écriture et ne réinitialise aucun mot de passe déjà changé. Après
+l'import, ouvrir l'application et se connecter avec `admin` / `admin123`.
+
+> Le dossier `api\` reste fermé au navigateur (Apache refuse les `.sql`) : ce
+> fichier ne se télécharge jamais par une URL, il s'ouvre depuis l'explorateur
+> Windows ou depuis phpMyAdmin.
+
 **Tout est dans MySQL.** En version serveur, l'application ne lit ni n'écrit
 jamais le stockage du navigateur : écritures, en-têtes, catégories, modèles,
 compteurs et comptes vivent dans la base. La session est portée par un cookie
@@ -74,7 +93,8 @@ api\
   socle.php        inclusions + amorçage automatique
   lib\            amorce (base, tables, comptes), db, auth, validation, métier, export SQL
   points\         une action par fichier : livre, ecritures, cloture, sauvegarde…
-  installation\   schéma MySQL (salfa_install.sql) et mises à jour
+  caisse-salfa.sql base complète à importer dans phpMyAdmin (tables + comptes)
+  installation\   schéma interne lu par l'amorçage automatique
   data\            configuration et sauvegardes — interdit d'accès web
   tests\           tests de l'API (ligne de commande, sans MySQL)
   README.md        ce guide
@@ -93,6 +113,8 @@ Il est régénéré par le build (§ 5) après une modification du code.
 3. Actualiser avec **Ctrl+F5**.
 
 Le schéma et les comptes existants sont conservés : aucun script SQL à rejouer.
+Si un doute subsiste, `api/caisse-salfa.sql` peut être réimporté sans risque :
+il ne complète que ce qui manque.
 La ligne « version du paquet » du diagnostic signale une interface et une API
 de versions différentes (copie partielle).
 
@@ -112,7 +134,9 @@ lui-même dans `www` : il contient aussi les sources et les archives.
 ## 6. Sauvegardes
 
 - **Export `.sql`** (onglet « Données & sauvegardes », administrateur) : structure
-  et données, réimportable dans phpMyAdmin → *Importer*.
+  et données **réelles** du moment, réimportable dans phpMyAdmin → *Importer*.
+  C'est la sauvegarde à faire avant toute manipulation ; `api/caisse-salfa.sql`
+  livré avec le site ne contient que la base de départ, sans les écritures.
 - **Sauvegarde JSON** : le livre seul, restaurable depuis l'application.
 - Un dump phpMyAdmin de la base `caisse_salfa` convient aussi ; le fichier
   contient les comptes et leurs empreintes, jamais les mots de passe en clair.

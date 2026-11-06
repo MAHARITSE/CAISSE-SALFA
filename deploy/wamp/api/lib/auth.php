@@ -263,7 +263,7 @@ function salfa_journaliser(string $action, ?int $utilisateurId, string $resultat
  *   admin     — tout, et seul à corriger le solde d'ouverture ou à clôturer.
  *
  * L'ancien rôle « lecteur » est accepté à la hauteur du comptable : une base
- * qui n'aurait pas encore reçu api/installation/salfa_roles.sql continue de fonctionner.
+ * importée avant la version actuelle continue de fonctionner sans conversion.
  *
  * @return array<string, mixed>
  */
