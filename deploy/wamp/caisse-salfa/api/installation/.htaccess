@@ -1,0 +1,9 @@
+# Schéma utilisé par l'amorçage automatique de l'API : jamais servi au navigateur.
+# Le fichier à importer dans phpMyAdmin est sql/caisse-salfa.sql, à la racine du site.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

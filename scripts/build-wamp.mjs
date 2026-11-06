@@ -4,6 +4,8 @@
  *   index.html        page d'accueil (React compilé, mode API)
  *   assets/           JS, CSS, images
  *   api/              API PHP/MySQL (index.php, points/, lib/) et son guide
+ *                     api/caisse-salfa.sql : la base complète, à importer dans
+ *                     phpMyAdmin si l'on ne veut pas laisser l'API la créer
  *   .htaccess         configuration Apache
  *   .user.ini         limites PHP (32 Mo)
  *   favicon.svg       icône de l'onglet
@@ -21,6 +23,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
+import { ecrireScriptSql } from './sql-wamp.mjs';
 
 const racine = resolve(import.meta.dirname, '..');
 const dist = join(racine, 'dist');
@@ -52,6 +55,13 @@ for (const element of ['api', '.htaccess', '.user.ini']) {
   }
 }
 
+// Base complète livrée avec le site : tables, données de départ et comptes de
+// connexion, dans un seul fichier importable tel quel dans phpMyAdmin. Il est
+// régénéré ici pour rester strictement identique au schéma que l'API crée
+// d'elle-même au premier appel.
+const sqlLivre = ecrireScriptSql(join(paquet, 'api', 'caisse-salfa.sql'));
+console.log(`  Base SQL : api/caisse-salfa.sql (${Math.round(sqlLivre.octets / 1024)} Ko, ${sqlLivre.comptes} comptes de départ)`);
+
 // Version du paquet inscrite dans la page : `api/config.php` annonce la même
 // version (SALFA_VERSION_API) et `api/points/verifier.php` compare les deux,
 // ce qui repère un paquet recopié à moitié sur le serveur.
@@ -74,6 +84,7 @@ const obligatoires = [
   '.htaccess',
   '.user.ini',
   'api',
+  'api/caisse-salfa.sql',
   'api/index.php',
   'api/config.php',
   'api/socle.php',
@@ -81,6 +92,7 @@ const obligatoires = [
   'api/.htaccess',
   'api/data/.htaccess',
   'api/installation/salfa_install.sql',
+  'api/installation/.htaccess',
   'api/lib/amorce.php',
   'api/lib/db.php',
   'api/points/verifier.php',

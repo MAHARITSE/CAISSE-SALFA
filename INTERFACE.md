@@ -99,6 +99,11 @@ Le dossier est livré dans le dépôt (`deploy/wamp/caisse-salfa/`, avec l'archi
   (`admin` / `admin123`, `comptable` / `comptable123`).
 - Il n'y a **ni page d'installation, ni script `.bat`, ni ligne de commande, ni
   fichier à modifier**.
+- La base complète est aussi livrée en clair : `api\caisse-salfa.sql`, à
+  importer dans phpMyAdmin → *Importer* pour partir d'une base déjà faite (14
+  tables, catégories, modèles et les deux comptes, `admin` / `admin123` et
+  `comptable` / `comptable123`). Ce fichier est rejouable et affiche quatre
+  contrôles `OK` ; l'API prépare exactement la même base toute seule.
 - Si MySQL refuse l'accès par défaut de WAMP (mot de passe personnalisé, port
   3307), l'écran de connexion demande une fois les accès MySQL : même résultat,
   sans quitter l'application. Le formulaire ne revient plus ensuite.

@@ -1,12 +1,14 @@
 -- ============================================================================
 -- CAISSE SALFA — schéma MySQL / MariaDB pour WAMP
 -- ============================================================================
--- IMPORT DANS phpMyAdmin :
---   onglet « Importer »  ->  choisir ce fichier  ->  Exécuter
---   (inutile de sélectionner une base : ce fichier la crée lui-même)
+-- FICHIER INTERNE : il est lu par l'amorçage automatique de l'API
+-- (api/lib/amorce.php), qui se contente d'en retirer CREATE DATABASE et USE.
+-- Les tables, les données de départ et les comptes y sont créés par
+-- l'application elle-même au premier appel : normalement, personne n'a besoin
+-- d'y toucher.
 --
--- Pour un autre nom de base, modifiez les deux lignes CREATE DATABASE et USE
--- ci-dessous, ainsi que api/salfa-config.php.
+-- Le fichier à IMPORTER dans phpMyAdmin est « sql/caisse-salfa.sql », à la
+-- racine du site : c'est ce même schéma, complété des deux comptes de départ.
 -- ============================================================================
 
 SET NAMES utf8mb4;
