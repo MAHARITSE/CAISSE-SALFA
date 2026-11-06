@@ -1,7 +1,0 @@
-# CAISSE SALFA — dossiers internes de l'API
-# points/, lib/ et tests/ ne sont pas des points d'entrée publics.
-<IfModule mod_authz_core.c>
-  <FilesMatch "^(salfa-config\.php|installation\.php|admin-cree\.txt)$">
-    Require all denied
-  </FilesMatch>
-</IfModule>
