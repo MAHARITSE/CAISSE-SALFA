@@ -310,7 +310,7 @@ function salfa_categories_defaut(): array
 {
     return [
         'recette' => ['Recettes journalières', 'Consultations', 'Pharmacie', 'Laboratoire', 'Hospitalisation', 'Maternité', 'Imagerie', 'Subventions & dons', 'Remboursements', 'Autres recettes'],
-        'depense' => ['Achats médicaments', 'Consommables médicaux', 'Fournitures de bureau', 'Carburant & transport', 'Maintenance & équipements', 'Salaires & primes', 'Frais de mission', 'Honoraires', 'Eau & électricité', 'Téléphone & internet', 'Divers'],
+        'depense' => ['Achats médicaments', 'Consommables médicaux', 'Fournitures de bureau', 'Carburant & transport', 'Maintenance & équipements', 'Salaires & primes', 'Frais de mission', 'Honoraires', 'Eau & électricité', 'Téléphone & internet', 'Remboursements & rétrocessions', 'Versements bancaires', 'Divers'],
     ];
 }
 

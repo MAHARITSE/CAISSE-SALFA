@@ -38,6 +38,12 @@ export function montantEntier(valeur: unknown, champ: string, maximum = MONTANT_
   return valeur;
 }
 
+export function montantPoste(valeur: unknown, champ: string, maximum = MONTANT_MAX): number {
+  exiger(typeof valeur === 'number' && Number.isSafeInteger(valeur) && Math.abs(valeur) <= maximum,
+    `${champ} : montant entier entre -${maximum.toLocaleString('fr-FR')} et ${maximum.toLocaleString('fr-FR')} Ar attendu.`);
+  return valeur;
+}
+
 export function estDateValide(valeur: unknown): valeur is string {
   if (typeof valeur !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valeur)) return false;
   const annee = Number(valeur.slice(0, 4));
@@ -78,10 +84,10 @@ export function validerEcriture(valeur: unknown, chemin = 'Écriture'): Ecriture
         id,
         libelle: texte(l.libelle, 'Libellé du poste', 200, true),
         reference: texteFacultatif(l.reference, 'Référence du poste'),
-        montant: montantEntier(l.montant, 'Montant du poste'),
+        montant: montantPoste(l.montant, 'Montant du poste'),
       };
-    }).filter(l => l.montant > 0);
-    exiger(lignesDetail.length > 0, `${champ} : un détail doit contenir au moins un montant positif.`);
+    }).filter(l => l.montant !== 0);
+    exiger(lignesDetail.some(l => l.montant > 0), `${champ} : un détail doit contenir au moins un montant positif.`);
   }
   const montant = montantEntier(e.montant, `${champ}.montant`);
   exiger(montant > 0, `${champ} : le montant doit être supérieur à zéro.`);

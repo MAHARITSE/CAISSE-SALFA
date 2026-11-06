@@ -76,8 +76,8 @@ function salfa_valider_ecriture(array $e, ?int $exerciceAttendu = null): array
                 throw new SalFaErreur('Identifiant de poste en double.', 400, 'detail_duplique');
             }
             $ids[$id] = true;
-            $montantLigne = salfa_entier($ligne, 'montant', 0, SALFA_MONTANT_MAX);
-            if ($montantLigne <= 0) {
+            $montantLigne = salfa_entier($ligne, 'montant', -SALFA_MONTANT_MAX, SALFA_MONTANT_MAX);
+            if ($montantLigne === 0) {
                 throw new SalFaErreur('Chaque poste doit avoir un montant supérieur à zéro.', 400, 'detail_invalide');
             }
             $lignes[] = [

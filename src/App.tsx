@@ -29,6 +29,9 @@ import { VERSION_APPLICATION } from './utils/version';
 
 type Onglet = OngletApplication;
 
+/** Durée maximale d'inactivité avant fermeture automatique de la session (1 heure). */
+const DUREE_INACTIVITE_MS = 60 * 60 * 1000;
+
 export function App() {
   const { livre, erreur, avertissement, messageSync, muter, muterEnLigne, recharger, rechargerApi, restaurer, chargementApi } = useLivre();
   const journalRef = useRef<LivreJournalHandle>(null);
@@ -132,12 +135,40 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
+  // Fermeture automatique de la session après 1 heure d'inactivité.
+  useEffect(() => {
+    if (!session?.connecte) return;
+    let timer = window.setTimeout(() => { void deconnecter(); }, DUREE_INACTIVITE_MS);
+    const relancer = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => { void deconnecter(); }, DUREE_INACTIVITE_MS);
+    };
+    const evenements = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    for (const evt of evenements) window.addEventListener(evt, relancer, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      for (const evt of evenements) window.removeEventListener(evt, relancer);
+    };
+  }, [session?.connecte]);
+
   // Un livre ancien peut n'avoir aucun exercice tant que la normalisation n'a pas été enregistrée.
   const exercice = livre.parametres.exercice ?? anneeCourante();
-  const journal = useMemo(() => calculerJournal(livre), [livre]);
+  const anneeMois = Number(mois.slice(0, 4));
+  const archiveConsultee = useMemo(
+    () => !toutAfficher && anneeMois !== exercice ? livre.exercicesClotures.find(c => c.annee === anneeMois) ?? null : null,
+    [toutAfficher, anneeMois, exercice, livre.exercicesClotures],
+  );
+  const journalCourant = useMemo(() => calculerJournal(livre), [livre]);
+  const journal = useMemo(
+    () => archiveConsultee
+      ? calculerJournal({ ...livre, ecritures: archiveConsultee.ecritures, parametres: { ...livre.parametres, soldeInitial: archiveConsultee.soldeOuverture } })
+      : journalCourant,
+    [archiveConsultee, livre, journalCourant],
+  );
+  const soldeBaseJournal = archiveConsultee ? archiveConsultee.soldeOuverture : livre.parametres.soldeInitial;
   const duMois = useMemo(() => toutAfficher ? journal : journal.filter(e => e.date.startsWith(mois)), [journal, mois, toutAfficher]);
   const lignes = useMemo(() => filtrerJournal(journal, { ...filtres, mois, toutAfficher }), [journal, filtres, mois, toutAfficher]);
-  const ouverture = useMemo(() => soldeOuverture(journal, mois, toutAfficher, livre.parametres.soldeInitial), [journal, mois, toutAfficher, livre.parametres.soldeInitial]);
+  const ouverture = useMemo(() => soldeOuverture(journal, mois, toutAfficher, soldeBaseJournal), [journal, mois, toutAfficher, soldeBaseJournal]);
   const totauxPeriode = totaliser(duMois);
   const totauxSelection = totaliser(lignes);
   const soldeFin = duMois.length ? duMois[duMois.length - 1].solde : ouverture;
