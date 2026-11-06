@@ -190,9 +190,9 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   margin: 0;
   padding: 0;
   border-radius: 0.8mm;
-  /* Comme le document : l'en-tête s'écrit en petites capitales. */
-  font-variant: small-caps;
-  text-transform: lowercase;
+  /* La saisie respecte les majuscules et minuscules choisies par l'utilisateur. */
+  font-variant: normal;
+  text-transform: none;
   line-height: 1.28;
 }
 .entete-ligne.is-vide:hover { background: rgb(148 163 184 / .10); }

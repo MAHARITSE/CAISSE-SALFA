@@ -37,6 +37,13 @@ describe('client de l’API WAMP', () => {
     expect(JSON.parse(String(options.body))).toMatchObject({ revision: livre.revision, ecriture: { id: ecriture.id } });
   });
 
+  it('transmet aussi la révision attendue pour la restauration', async () => {
+    fetchMock.mockResolvedValueOnce(reponseJson({ ok: true, livre }));
+    await mutations.restauration(livre, 42);
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(options.body))).toMatchObject({ revision: 42, sauvegarde: { format: 'CAISSE-SALFA' } });
+  });
+
   it('passe par l’aiguillage api/index.php avec le nom de l’action', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(reponseJson({ ok: true, livre })));
     await chargerLivreApi();

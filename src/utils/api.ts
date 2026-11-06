@@ -202,8 +202,8 @@ export const mutations = {
     mutation('solde-initial', { revision, soldeInitial }),
   cloture: (revision: number, archive: unknown) =>
     mutation('cloture', { revision, archive }),
-  restauration: (sauvegarde: Sauvegarde) =>
-    mutation('restauration', { sauvegarde }),
+  restauration: (sauvegarde: Sauvegarde, revision: number) =>
+    mutation('restauration', { sauvegarde, revision }),
 };
 
 /**

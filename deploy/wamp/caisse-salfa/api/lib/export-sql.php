@@ -138,8 +138,14 @@ function salfa_exporter_sql(): array
         '',
     ]);
 
+    // Instantané du livre pour la restauration contrôlée depuis l'application.
+    // Le SQL du fichier n'est jamais exécuté par l'application.
+    $livre = salfa_charger_livre();
+    // PHP encode un tableau vide en [] ; les compteurs sont un dictionnaire.
+    $livre['compteurs'] = (object) $livre['compteurs'];
+    $jsonLivre = json_encode($livre, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     $compteurs = [];
-    $morceaux = [$entete];
+    $morceaux = [$entete, '-- SALFA-LIVRE-V1:' . base64_encode($jsonLivre), ''];
 
     foreach (salfa_tables_sauvegardees() as $table) {
         [$nomReel, $creation] = salfa_structure_table($table);

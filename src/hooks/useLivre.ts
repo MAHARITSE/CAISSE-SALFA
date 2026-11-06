@@ -145,7 +145,7 @@ export function useLivre() {
 
   const restaurer = useCallback(async (importe: Sauvegarde): Promise<Sauvegarde> => {
     if (MODE_API) {
-      const { livre } = await mutations.restauration(importe);
+      const { livre } = await mutations.restauration(importe, etat.livre.revision);
       appliquer(livre);
       return livre;
     }

@@ -1,6 +1,6 @@
 <?php
 /**
- * POST api/restauration.php — { sauvegarde } (administrateur).
+ * POST api/restauration.php — { sauvegarde, revision } (administrateur).
  * Le fichier est entièrement validé avant la moindre suppression.
  */
 

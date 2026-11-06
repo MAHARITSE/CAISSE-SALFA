@@ -11,6 +11,34 @@ const ouvrir = () => {
 };
 
 describe('éditeur d’en-tête', () => {
+  it('conserve la casse saisie dans le champ, son aperçu et les données enregistrées', async () => {
+    const user = userEvent.setup();
+    const { onEnregistrer, unmount } = (() => {
+      const onEnregistrer = vi.fn();
+      const rendu = render(<EnteteBordereauModal entetes={enteteParDefaut()} onEnregistrer={onEnregistrer} onFermer={vi.fn()} />);
+      return { onEnregistrer, unmount: rendu.unmount };
+    })();
+    await user.click(screen.getByLabelText(/^Ligne 7/));
+    const champ = screen.getByLabelText('Texte de la ligne 7');
+    await user.clear(champ);
+    const adresse = 'E-mail : Contact.Salfa@example.org';
+    await user.type(champ, adresse);
+    expect(champ).toHaveValue(adresse);
+    expect(champ).toHaveAttribute('autocapitalize', 'off');
+    expect(champ).toHaveStyle({ textTransform: 'none', fontVariant: 'normal' });
+    await user.click(screen.getByLabelText(/^Ligne 1/));
+    const apercu = screen.getByLabelText(/^Ligne 7/);
+    expect(apercu).toHaveTextContent(adresse);
+    expect(apercu).toHaveStyle({ textTransform: 'none', fontVariant: 'normal' });
+    await user.click(screen.getByRole('button', { name: 'Enregistrer l’en-tête' }));
+    const enregistre = onEnregistrer.mock.calls[0][0];
+    expect(enregistre.lignes[6].texte).toBe(adresse);
+    unmount();
+    render(<EnteteBordereauModal entetes={enregistre} onEnregistrer={vi.fn()} onFermer={vi.fn()} />);
+    await user.click(screen.getByLabelText(/^Ligne 7/));
+    expect(screen.getByLabelText('Texte de la ligne 7')).toHaveValue(adresse);
+  });
+
   it('règle la police, la taille et le style de la ligne choisie', async () => {
     const user = userEvent.setup();
     const { onEnregistrer } = ouvrir();

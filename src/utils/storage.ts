@@ -125,7 +125,7 @@ function migrer(): { donnees: DonneesCaisse; avertissement: string | null } {
     donnees,
     avertissement: reparations.total
       ? `${reparations.total} ancien(s) total(s) ont été recalculés à partir des postes valides. Les données d’origine sont conservées ; vérifiez ces pièces et téléchargez une sauvegarde.`
-      : 'Vos anciennes données ont été reprises. Les clés d’origine sont conservées ; téléchargez une sauvegarde JSON pour les protéger.',
+      : 'Vos anciennes données ont été reprises. Les clés d’origine sont conservées ; téléchargez une sauvegarde SQL pour les protéger.',
   };
 }
 

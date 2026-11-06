@@ -40,7 +40,7 @@ export function Exercices({ livre, administrateur = false, exerciceActif, onClot
         <div><p className="summary-label">Clôture</p><p className={`mt-3 text-sm font-semibold ${cloturePossible ? 'text-brand-700 dark:text-brand-300' : 'text-slate-600 dark:text-slate-300'}`}>{cloturePossible ? `Autorisée : ${exercice} est révolu` : `À partir du 1er janvier ${exercice + 1}`}</p></div>
         <div><p className="summary-label">Exercices archivés</p><p className="summary-value">{archives.length}</p></div>
       </div>
-      <p className="border-t border-slate-100 dark:border-slate-800 px-5 py-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400 sm:text-sm">Une sauvegarde JSON de l’exercice en cours est téléchargée automatiquement avant chaque clôture. Les écritures clôturées restent consultables et exportables ci-dessous, mais ne comptent plus dans les soldes courants.</p>
+      <p className="border-t border-slate-100 dark:border-slate-800 px-5 py-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400 sm:text-sm">Une sauvegarde SQL de l’exercice en cours est téléchargée automatiquement avant chaque clôture. Les écritures clôturées restent consultables et exportables ci-dessous, mais ne comptent plus dans les soldes courants.</p>
     </section>
 
     <section className="card overflow-hidden" aria-label="Exercices clôturés">
@@ -69,7 +69,7 @@ export function Exercices({ livre, administrateur = false, exerciceActif, onClot
                       <BookOpen size={14} />{exerciceActif === a.annee ? `Exercice ${a.annee} affiché` : `Ouvrir l’exercice ${a.annee}`}
                     </button>
                   )}
-                  <button className="btn-secondary !py-1.5 !text-xs" onClick={() => onTelechargerArchive(a.annee)} aria-label={`Télécharger l’archive ${a.annee}`}><Download size={14} />Archive JSON</button>
+                  <button className="btn-secondary !py-1.5 !text-xs" onClick={() => onTelechargerArchive(a.annee)} aria-label={`Télécharger l’archive ${a.annee}`}><Download size={14} />Archive SQL</button>
                 </div>
               </td>
             </tr>)}</tbody>

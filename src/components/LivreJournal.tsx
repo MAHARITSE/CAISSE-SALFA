@@ -15,6 +15,7 @@ interface LivreJournalProps {
   depenses: number;
   soldeFin: number;
   filtreActif: boolean;
+  peutModifier?: boolean;
   enEditionId: string | null;
   onEditer: (ecriture: Ecriture) => void;
   onSupprimer: (id: string) => void;
@@ -46,7 +47,7 @@ const PAR_PAGE = 50;
  * depuis l'extérieur, juste après son enregistrement.
  */
 export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(function LivreJournal(
-  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, onNouvelleEcriture, categories, onEnregistrerCategories },
+  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, peutModifier = true, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, onNouvelleEcriture, categories, onEnregistrerCategories },
   ref,
 ) {
   /** Ligne active / sélectionnée dans le tableau */
@@ -369,7 +370,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                       >
                         <Printer size={16} />
                       </button>
-                      <button
+                      {peutModifier && <button
                         type="button"
                         className="icon-button"
                         title="Modifier"
@@ -380,8 +381,8 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                         }}
                       >
                         <Pencil size={16} />
-                      </button>
-                      <button
+                      </button>}
+                      {peutModifier && <button
                         type="button"
                         className="icon-button hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/60 dark:hover:text-rose-400"
                         title="Supprimer"
@@ -389,7 +390,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                         onClick={() => gererSupprimer(ligne)}
                       >
                         <Trash2 size={16} />
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>

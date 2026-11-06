@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ecritureTest } from '../test/fixtures';
 import { celluleCsv, genererLivreCsv } from './export';
 import { aujourdHui, parserMontant } from './format';
-import { lireSauvegarde, preparerSauvegarde } from './backup';
+import { lireSauvegarde, preparerSauvegarde, lireSauvegardeSql, preparerSqlLivre } from './backup';
 import { livreTest } from '../test/fixtures';
 
 describe('exports et saisie des montants', () => {
@@ -42,4 +42,13 @@ describe('exports et saisie des montants', () => {
     expect(() => lireSauvegarde('{')).toThrow('JSON valide');
     expect(() => lireSauvegarde('[]')).toThrow('objet attendu');
   });
+  it('exporte et vérifie un instantané SQL sans exécuter les instructions du fichier', () => {
+    const livre = livreTest({ ecritures: [ecritureTest({ libelle: "Écriture d'été ; ' spéciale" })] });
+    const sql = preparerSqlLivre(livre);
+    expect(sql).toContain('CREATE TABLE');
+    expect(lireSauvegardeSql(sql).ecritures).toEqual(livre.ecritures);
+    expect(() => lireSauvegardeSql('DROP TABLE salfa_ecritures;')).toThrow('non compatible');
+    expect(() => lireSauvegardeSql(sql + sql)).toThrow('non compatible');
+  });
+
 });
