@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { AlertTriangle, BookOpen, Eye, EyeOff, HeartPulse, KeyRound, Loader2, LogIn, RefreshCw, ServerCog } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, Database, Eye, EyeOff, HeartPulse, KeyRound, Loader2, LogIn, RefreshCw, ServerCog } from 'lucide-react';
 import type { EtatSession } from '../utils/api';
-import { ErreurApi, MODE_API, connexion, sante } from '../utils/api';
+import { ErreurApi, MODE_API, configurerServeur, connexion, sante, type AccesMysql } from '../utils/api';
 import { verifierConnexionLocale, COMPTES_DEMO } from '../utils/utilisateurs';
 import { libelleRole, type Role } from '../utils/roles';
 
@@ -24,12 +24,19 @@ export function Connexion({ erreurInitiale, onConnecte }: {
   const [erreur, setErreur] = useState('');
   const [enCours, setEnCours] = useState(false);
   /**
-   * État du serveur PHP, testé dès l'affichage de l'écran : sur un paquet
-   * fraîchement recopié, l'API répond « non installé » et aucun compte ne peut
-   * fonctionner. Mieux vaut le dire avec les étapes de l'installation que de
-   * laisser l'utilisateur essayer des mots de passe qui ne peuvent pas aboutir.
+   * État du serveur PHP, testé dès l'affichage de l'écran.
+   *
+   * Le dossier se copie dans `www` : le premier appel crée la configuration, la
+   * base, les tables et les comptes de départ. Deux cas seulement demandent une
+   * intervention, et ils n'ont rien d'une installation :
+   *  - « configurer » : MySQL répond mais refuse l'accès par défaut de WAMP
+   *    (mot de passe personnalisé, port 3307) — on demande les accès MySQL ;
+   *  - « injoignable » : Apache ou MySQL n'est pas démarré.
    */
-  const [serveur, setServeur] = useState<'inconnu' | 'pret' | 'non_installe' | 'injoignable'>('inconnu');
+  const [serveur, setServeur] = useState<'inconnu' | 'pret' | 'a_configurer' | 'injoignable'>('inconnu');
+  /** Accès MySQL saisis dans le panneau, quand l'accès par défaut échoue. */
+  const [acces, setAcces] = useState<AccesMysql>({ hote: '127.0.0.1', port: 3306, base: 'caisse_salfa', utilisateur: 'root', motDePasse: '' });
+  const [configuration, setConfiguration] = useState<{ enCours: boolean; erreur: string; fait: string }>({ enCours: false, erreur: '', fait: '' });
   const [verification, setVerification] = useState(false);
 
   const verifierServeur = useCallback(async () => {
@@ -39,13 +46,34 @@ export function Connexion({ erreurInitiale, onConnecte }: {
       await sante();
       setServeur('pret');
     } catch (e) {
-      setServeur(e instanceof ErreurApi && e.code === 'non_installe' ? 'non_installe' : 'injoignable');
+      // 503 : la base ou la configuration manque encore. Les codes MySQL
+      // distinguent un accès refusé (à saisir) d'un serveur éteint.
+      const code = e instanceof ErreurApi ? e.code : '';
+      const aSaisir = ['mysql_injoignable', 'base_non_creee', 'base_absente', 'base_indisponible', 'config_non_inscriptible', 'tables_non_creees'];
+      setServeur(aSaisir.includes(code) ? 'a_configurer' : 'injoignable');
     } finally {
       setVerification(false);
     }
   }, []);
 
   useEffect(() => { void verifierServeur(); }, [verifierServeur]);
+
+  /**
+   * Prépare le serveur avec les accès MySQL saisis : base, tables et comptes.
+   *
+   * Simple bouton, jamais un `<form>` : le panneau vit à l'intérieur du
+   * formulaire de connexion, et un formulaire imbriqué est invalide en HTML.
+   */
+  async function preparerServeur() {
+    setConfiguration({ enCours: true, erreur: '', fait: '' });
+    try {
+      const resultat = await configurerServeur({ ...acces, utilisateur: acces.utilisateur.trim() || 'root' });
+      setConfiguration({ enCours: false, erreur: '', fait: resultat.message });
+      setServeur('pret');
+    } catch (err) {
+      setConfiguration({ enCours: false, erreur: err instanceof Error ? err.message : 'Préparation du serveur impossible.', fait: '' });
+    }
+  }
 
   async function envoyer(e: FormEvent) {
     e.preventDefault();
@@ -76,10 +104,10 @@ export function Connexion({ erreurInitiale, onConnecte }: {
         utilisateur: { id: compte.id, identifiant: compte.identifiant, nomComplet: compte.nomComplet, role: compte.role },
       });
     } catch (e) {
-      if (e instanceof ErreurApi && e.code === 'non_installe') {
-        // Le panneau d'installation ci-dessous explique quoi faire : pas de
+      if (e instanceof ErreurApi && ['mysql_injoignable', 'base_non_creee', 'base_absente'].includes(e.code)) {
+        // Le panneau des accès MySQL ci-dessous explique quoi faire : pas de
         // deuxième message d'erreur en rouge par-dessus.
-        setServeur('non_installe');
+        setServeur('a_configurer');
         setErreur('');
         return;
       }
@@ -114,31 +142,68 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
 
-        {MODE_API && (serveur === 'non_installe' || serveur === 'injoignable') && <div
+        {MODE_API && (serveur === 'a_configurer' || serveur === 'injoignable') && <div
           role="status"
           className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-200"
         >
           <p className="flex items-center gap-2 font-semibold">
             <ServerCog size={17} className="shrink-0" />
-            {serveur === 'non_installe' ? 'Serveur pas encore installé' : 'Serveur injoignable'}
+            {serveur === 'a_configurer' ? 'Connexion MySQL à préciser' : 'Serveur injoignable'}
           </p>
-          {serveur === 'non_installe' ? <>
+
+          {serveur === 'a_configurer' && <>
             <p className="mt-1.5 leading-relaxed">
-              La page s’affiche, mais l’API PHP n’a pas encore sa configuration MySQL :
-              aucun compte ne peut se connecter avant l’installation, qui prend une minute.
+              La base et les comptes se créent seuls, mais MySQL n’a pas accepté l’accès
+              par défaut de WampServer. Indiquez les accès une fois : le serveur prépare
+              ensuite sa base, ses tables et ses comptes de départ.
             </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 leading-relaxed">
-              <li>Cliquez sur « Ouvrir l’installation » ci-dessous.</li>
-              <li>Indiquez les accès MySQL (sur WAMP : <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">root</code>, mot de passe vide) et le compte administrateur.</li>
-              <li>Revenez sur cet écran et cliquez sur « Réessayer ».</li>
-            </ol>
-          </> : <p className="mt-1.5 leading-relaxed">
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block text-xs font-semibold">
+                  Hôte
+                  <input className="field mt-1 !py-1.5 !text-xs" value={acces.hote} spellCheck={false}
+                    onChange={e => setAcces(a => ({ ...a, hote: e.target.value }))} />
+                </label>
+                <label className="block text-xs font-semibold">
+                  Port
+                  <input className="field mt-1 !py-1.5 !text-xs" inputMode="numeric" value={acces.port}
+                    onChange={e => setAcces(a => ({ ...a, port: Number(e.target.value.replace(/\D/g, '')) || 3306 }))} />
+                </label>
+                <label className="block text-xs font-semibold">
+                  Base
+                  <input className="field mt-1 !py-1.5 !text-xs" value={acces.base} spellCheck={false}
+                    onChange={e => setAcces(a => ({ ...a, base: e.target.value }))} />
+                </label>
+                <label className="block text-xs font-semibold">
+                  Utilisateur
+                  <input className="field mt-1 !py-1.5 !text-xs" value={acces.utilisateur} spellCheck={false}
+                    onChange={e => setAcces(a => ({ ...a, utilisateur: e.target.value }))} />
+                </label>
+              </div>
+              <label className="block text-xs font-semibold">
+                Mot de passe MySQL <span className="font-normal">(vide sur un WampServer standard)</span>
+                <input className="field mt-1 !py-1.5 !text-xs" type="password" autoComplete="off" value={acces.motDePasse}
+                  onChange={e => setAcces(a => ({ ...a, motDePasse: e.target.value }))} />
+              </label>
+              {configuration.erreur && <p role="alert" className="rounded-lg bg-rose-100/80 p-2 text-xs text-rose-900 dark:bg-rose-950/60 dark:text-rose-200">{configuration.erreur}</p>}
+              <button type="button" className="btn-primary w-full justify-center !py-1.5 !text-xs" onClick={() => void preparerServeur()} disabled={configuration.enCours}>
+                {configuration.enCours ? <><Loader2 size={14} className="animate-spin" />Préparation…</> : <><Database size={14} />Préparer le serveur</>}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed opacity-90">
+              Le compte <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">admin</code> (mot de passe
+              <code className="mx-1 rounded bg-amber-100 px-1 dark:bg-amber-900/60">admin123</code>) est créé à cette étape.
+            </p>
+          </>}
+
+          {serveur === 'injoignable' && <p className="mt-1.5 leading-relaxed">
             Aucune réponse de <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">api/index.php</code>.
-            Vérifiez qu’Apache et MySQL sont démarrés dans WAMP, que le dossier <code className="rounded bg-amber-100 px-1 dark:bg-amber-900/60">api/</code>
-            est complet, puis réessayez.
+            Vérifiez qu’Apache et MySQL sont démarrés dans WampServer (icône verte) et que le dossier
+            <code className="mx-1 rounded bg-amber-100 px-1 dark:bg-amber-900/60">api/</code> a bien été copié à côté de
+            <code className="mx-1 rounded bg-amber-100 px-1 dark:bg-amber-900/60">index.html</code>, puis réessayez.
           </p>}
+
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            {serveur === 'non_installe' && <a className="btn-primary !py-1.5 !text-xs" href="installer.php">Ouvrir l’installation</a>}
             <button type="button" className="btn-secondary !py-1.5 !text-xs" onClick={() => void verifierServeur()} disabled={verification}>
               {verification ? <><Loader2 size={14} className="animate-spin" />Vérification…</> : <><RefreshCw size={14} />Réessayer</>}
             </button>
@@ -149,7 +214,15 @@ export function Connexion({ erreurInitiale, onConnecte }: {
               rel="noreferrer"
             >Ouvrir le diagnostic du serveur</a>
           </div>
-        </div>}
+                </div>}
+
+        {/* Le serveur vient d'être préparé : la confirmation survit à la
+            fermeture du panneau, pour que l'utilisateur sache qu'il peut saisir
+            ses identifiants. */}
+        {MODE_API && serveur === 'pret' && configuration.fait && <p role="status" className="flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200">
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0" />{configuration.fait} Connectez-vous avec le compte
+          <code className="rounded bg-emerald-100 px-1 dark:bg-emerald-900/60">admin</code>.
+        </p>}
 
         <div>
           <label className="label" htmlFor="identifiant">Identifiant</label>
