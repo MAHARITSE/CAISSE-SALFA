@@ -403,6 +403,7 @@ describe('parcours de caisse', () => {
     await user.click(screen.getByRole('button', { name: 'Analyse de la caisse' }));
     await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
     const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    await user.click(within(dialogue).getByRole('button', { name: `Modifier la catégorie de DP-${annee}-0001` }));
     await user.selectOptions(within(dialogue).getByLabelText(`Catégorie de DP-${annee}-0001`), 'Carburant & transport');
     await user.click(within(dialogue).getByRole('button', { name: `Enregistrer la catégorie de DP-${annee}-0001` }));
     expect(await within(dialogue).findByRole('status')).toHaveTextContent('Catégorie de');
@@ -426,6 +427,7 @@ describe('parcours de caisse', () => {
     const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
     expect(within(dialogue).getByText(/consultation uniquement/)).toBeInTheDocument();
     expect(within(dialogue).queryByLabelText(`Catégorie de DP-${annee}-0001`)).not.toBeInTheDocument();
+    expect(within(dialogue).queryByRole('button', { name: `Modifier la catégorie de DP-${annee}-0001` })).not.toBeInTheDocument();
   });
 
   it('restreint ce que chaque rôle peut ouvrir', async () => {
@@ -531,6 +533,7 @@ describe('parcours de caisse', () => {
     const apercuArchive = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
     expect(within(apercuArchive).getByText(/Exercice clôturé/)).toBeInTheDocument();
     expect(within(apercuArchive).queryByLabelText(`Catégorie de DP-${annee - 1}-0001`)).not.toBeInTheDocument();
+    expect(within(apercuArchive).queryByRole('button', { name: `Modifier la catégorie de DP-${annee - 1}-0001` })).not.toBeInTheDocument();
     await user.click(within(apercuArchive).getByRole('button', { name: 'Fermer l’aperçu' }));
     await user.click(screen.getByRole('button', { name: new RegExp(`Revenir à l’exercice ${annee}`) }));
 

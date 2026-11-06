@@ -34,11 +34,13 @@ describe('correction de catégorie en mode serveur', () => {
     await user.click(screen.getByRole('button', { name: 'Analyse de la caisse' }));
     await user.click(screen.getByRole('button', { name: 'Aperçu : Répartition des dépenses' }));
     const dialogue = screen.getByRole('dialog', { name: 'Aperçu des dépenses (1 pièce(s))' });
+    await user.click(within(dialogue).getByRole('button', { name: `Modifier la catégorie de DP-${annee}-0001` }));
     await user.selectOptions(within(dialogue).getByLabelText(`Catégorie de DP-${annee}-0001`), 'Carburant & transport');
     await user.click(within(dialogue).getByRole('button', { name: `Enregistrer la catégorie de DP-${annee}-0001` }));
     expect(api.enregistrer).toHaveBeenCalledOnce();
     expect(api.enregistrer).toHaveBeenCalledWith(4, { ...piece, categorie: 'Carburant & transport' });
     expect(await within(dialogue).findByRole('status')).toHaveTextContent('enregistrée');
-    expect(within(dialogue).getByLabelText(`Catégorie de DP-${annee}-0001`)).toHaveValue('Carburant & transport');
+    expect(within(dialogue).queryByLabelText(`Catégorie de DP-${annee}-0001`)).not.toBeInTheDocument();
+    expect(within(dialogue).getByText('Carburant & transport')).toBeInTheDocument();
   });
 });
