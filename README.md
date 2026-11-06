@@ -225,6 +225,17 @@ anciens totaux détaillés incohérents à partir des postes positifs, avec un
 avertissement explicite. Les données invalides bloquent la migration plutôt que
 d’être écartées en silence.
 
+La sauvegarde migrée livrée (`sauvegarde_caisse_salfa.sql`) place le report de
+12 596 600 Ar au 01/01/2025 (pièce RC-2025-0927, anciennement RC-2024-0001).
+L’ouverture de 2025 est ramenée à zéro : le report figure dans les recettes de
+2025 et la clôture reste à 4 626 500 Ar. L’archive 2024 est désormais vide.
+Le fichier livré reflète uniquement les données des classeurs historiques : il
+ne contient pas les saisies ultérieures d’une installation existante. Sa
+restauration **remplace le livre entier sans fusion**. Exporter d’abord une
+sauvegarde récente et ne pas restaurer ce fichier si les nouvelles données
+doivent être conservées. La mise à jour de l’installation ne modifie pas
+automatiquement un livre existant.
+
 Une **sauvegarde SQL récente** produite par l’application contient un instantané
 validable du livre. Le bouton de restauration remplace le livre sans fusion et
 ne modifie pas les comptes. Le fichier est limité à 24 Mo (8 Mo pour le livre

@@ -13,16 +13,30 @@ describe('sauvegarde migrée depuis caisse.xlsx et ligne caisse.xlsx', () => {
     const brut = JSON.parse(readFileSync(join(racine, 'sauvegarde_caisse_salfa.json'), 'utf8'));
     const livre = validerSauvegarde(brut);
 
-    // Exercices clôturés 2024 (1 écriture) et 2025 (3 580 écritures) + exercice ouvert 2026 (3 761 écritures)
+    // 2024 vide ; 2025 comprend le report déplacé ; 2026 reste inchangé.
     expect(livre.exercicesClotures).toHaveLength(2);
     expect(livre.exercicesClotures[0].annee).toBe(2024);
-    expect(livre.exercicesClotures[0].ecritures).toHaveLength(1);
-    expect(livre.exercicesClotures[0].soldeCloture).toBe(12_596_600);
+    expect(livre.exercicesClotures[0].ecritures).toHaveLength(0);
+    expect(livre.exercicesClotures[0].soldeOuverture).toBe(0);
+    expect(livre.exercicesClotures[0].recettes).toBe(0);
+    expect(livre.exercicesClotures[0].soldeCloture).toBe(0);
 
     expect(livre.exercicesClotures[1].annee).toBe(2025);
-    expect(livre.exercicesClotures[1].ecritures).toHaveLength(3580);
-    expect(livre.exercicesClotures[1].soldeOuverture).toBe(12_596_600);
+    expect(livre.exercicesClotures[1].ecritures).toHaveLength(3581);
+    expect(livre.exercicesClotures[1].soldeOuverture).toBe(0);
+    expect(livre.exercicesClotures[1].recettes).toBe(1_018_934_800);
+    expect(livre.exercicesClotures[1].depenses).toBe(1_014_308_300);
     expect(livre.exercicesClotures[1].soldeCloture).toBe(4_626_500);
+    const report = livre.exercicesClotures[1].ecritures[0];
+    expect(report).toMatchObject({
+      id: '8077', numero: 'RC-2025-0927', date: '2025-01-01',
+      sens: 'RECETTE', libelle: 'RAPPORT A NOUVEAU', montant: 12_596_600,
+      lignesDetail: [{ id: '30193', libelle: 'ERREUR CALCUL', montant: 12_596_600 }],
+      createdAt: '2024-12-31T08:00:00.000Z',
+    });
+    expect(report.observation).toContain('RC-2024-0001');
+    expect(livre.compteurs['RC-2025']).toBe(927);
+    expect(livre.exercicesClotures[1].ecritures.find(e => e.numero === 'RC-2025-0001')?.id).toBe('3051');
 
     expect(livre.parametres.exercice).toBe(2026);
     expect(livre.parametres.soldeInitial).toBe(4_626_500);
@@ -67,10 +81,13 @@ describe('sauvegarde migrée depuis caisse.xlsx et ligne caisse.xlsx', () => {
     expect(sql).toContain('INSERT INTO salfa_clotures');
     expect(sql).toContain('INSERT INTO salfa_ecritures');
     expect(sql).toContain('INSERT INTO salfa_details');
-    expect(sql).toContain("'RC-2024-0001'");
+    expect(sql).toContain("'RC-2025-0927'");
     expect(sql).toContain("'RC-2025-0926'");
     expect(sql).toContain("'DP-2025-2654'");
     expect(sql).toContain("'RC-2026-1010'");
     expect(sql).toContain("'DP-2026-2751'");
+    // Le fichier livré, pas seulement un SQL synthétique, est restaurable dans l'application.
+    const source = validerSauvegarde(JSON.parse(readFileSync(join(racine, 'sauvegarde_caisse_salfa.json'), 'utf8')));
+    expect(lireSauvegardeSql(sql)).toEqual(source);
   });
 });

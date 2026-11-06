@@ -408,19 +408,25 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
           </tfoot>
         </table>
       </div>
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500 sm:text-sm dark:border-slate-800 dark:text-slate-400">
+      <div className="no-print flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500 sm:text-sm dark:border-slate-800 dark:text-slate-400" aria-label="Pied du journal">
         <p>Le solde de clôture tient compte de toute la période, même lorsqu’elle est filtrée.</p>
-        {pages > 1 && (
-          <nav className="flex items-center gap-2" aria-label="Pagination du journal">
-            <button className="icon-button" disabled={pageActuelle === 1} aria-label="Page précédente" onClick={() => setPage(pageActuelle - 1)}>
-              <ChevronLeft size={16} />
-            </button>
-            <span className="tabular-nums">Page {pageActuelle} sur {pages}</span>
-            <button className="icon-button" disabled={pageActuelle === pages} aria-label="Page suivante" onClick={() => setPage(pageActuelle + 1)}>
-              <ChevronRight size={16} />
-            </button>
-          </nav>
-        )}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+          {pages > 1 && (
+            <nav className="flex items-center gap-2" aria-label="Pagination du journal">
+              <button className="icon-button" disabled={pageActuelle === 1} aria-label="Page précédente" onClick={() => setPage(pageActuelle - 1)}>
+                <ChevronLeft size={16} />
+              </button>
+              <span className="whitespace-nowrap tabular-nums">Page {pageActuelle} sur {pages}</span>
+              <button className="icon-button" disabled={pageActuelle === pages} aria-label="Page suivante" onClick={() => setPage(pageActuelle + 1)}>
+                <ChevronRight size={16} />
+              </button>
+            </nav>
+          )}
+          {onNouvelleEcriture && <div className="flex flex-wrap items-center justify-end gap-2" aria-label="Nouvelles écritures en bas du journal">
+            <button className="btn-primary" aria-label="Nouvelle recette (bas du tableau)" onClick={() => onNouvelleEcriture('RECETTE')}><Plus size={16} />Nouvelle recette</button>
+            <button className="btn-danger" aria-label="Nouvelle dépense (bas du tableau)" onClick={() => onNouvelleEcriture('DEPENSE')}><Plus size={16} />Nouvelle dépense</button>
+          </div>}
+        </div>
       </div>
       {pages > 1 && <p className="print-only px-4 py-2 text-xs">L’impression inclut toutes les pages de la sélection.</p>}
     </section>
