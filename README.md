@@ -10,11 +10,12 @@ Deux modes, un seul code source :
 | **local** (par défaut) | stockage du navigateur | poste isolé, démonstration, tests |
 | **serveur** | MySQL via l’API PHP | partage entre plusieurs postes du service, déploiement WAMP |
 
-Le mode serveur suppose un paquet PHP/MySQL servi par Apache (WAMP ou équivalent) :
-`index.html` compilé à la racine, API PHP sous `api/`, dossier `data/` privé et
-installateur dans le navigateur — **sans aucun Node.js sur le serveur**. Le paquet
-n’est plus livré dans ce dépôt : il se reconstitue à partir du frontend compilé et de
-l’API déployée sur le serveur (`?api=1` dans l’URL force le mode serveur).
+Le mode serveur s’installe par **simple copie d’un dossier** dans
+`C:\wamp64\www\caisse-salfa` : `index.html` compilé, `assets/`, `api/`,
+`.htaccess`, `.user.ini`, `favicon`. Aucun Node.js sur le serveur et **aucune
+installation** : le premier appel crée la configuration, la base MySQL, les
+tables et les comptes de départ. Voir [`deploy/wamp/api/README.md`](./deploy/wamp/api/README.md).
+(`?api=1` dans l’URL force le mode serveur.)
 
 ## Démarrer
 
@@ -27,10 +28,11 @@ npm test           # tests unitaires et intégration (Vitest / Testing Library)
 npm run check      # lint + tests + build
 ```
 
-Build en mode serveur (API PHP/MySQL), à copier sur un serveur Apache :
+Paquet serveur WAMP (frontend compilé en mode API + API PHP, prêt à copier
+dans `www`) :
 
 ```bash
-VITE_MODE_API=api npx vite build --base ./
+npm run build:wamp     # produit deploy/wamp/caisse-salfa/
 ```
 
 Tests dans un vrai navigateur (Chromium) :

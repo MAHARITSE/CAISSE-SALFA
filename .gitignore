@@ -15,3 +15,10 @@ blob-report/
 
 # Aperçu de contrôle (capture jetable)
 apercu-bordereau.png
+
+# Paquet WAMP compilé (produit par `npm run build:wamp`) et configuration serveur
+deploy/wamp/caisse-salfa/
+deploy/wamp/salfa-config.php
+deploy/wamp/api/salfa-config.php
+deploy/wamp/caisse-salfa.zip
+salfa-config.php

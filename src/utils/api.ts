@@ -203,3 +203,28 @@ export async function appelerComptes<T>(
 ): Promise<T> {
   return appeler<T>(route, options);
 }
+
+/**
+ * Accès MySQL saisis par l'utilisateur, quand l'accès par défaut de WampServer
+ * ne fonctionne pas (mot de passe personnalisé, port 3307, base déjà nommée
+ * autrement). Le serveur prépare lui-même sa base, ses tables et ses comptes :
+ * il n'y a jamais d'installation à lancer, seulement des accès à préciser.
+ */
+export interface AccesMysql {
+  hote: string;
+  port: number;
+  base: string;
+  utilisateur: string;
+  motDePasse: string;
+}
+
+export interface ResultatConfiguration {
+  message: string;
+  base: string;
+  tables: number;
+  comptes: { administrateur: string; comptable: string };
+}
+
+export async function configurerServeur(acces: AccesMysql): Promise<ResultatConfiguration> {
+  return appeler<ResultatConfiguration>('configurer', { methode: 'POST', corps: acces });
+}

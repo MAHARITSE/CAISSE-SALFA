@@ -1,0 +1,114 @@
+/**
+ * Build du paquet WAMP — structure obtenue dans C:\wamp64\www\caisse-salfa :
+ *
+ *   index.html        page d'accueil (React compilé, mode API)
+ *   assets/           JS, CSS, images
+ *   api/              API PHP/MySQL (index.php, points/, lib/) et son guide
+ *   .htaccess         configuration Apache
+ *   .user.ini         limites PHP (32 Mo)
+ *   favicon.svg       icône de l'onglet
+ *
+ * La racine ne contient que cela : le dossier se copie tel quel dans `www`.
+ *
+ * Aucun Node.js n'est nécessaire sur le serveur, et **aucune installation** :
+ * le dossier se copie dans `www`, le premier appel crée la base, les tables et
+ * les comptes de départ.
+ */
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { execSync } from 'node:child_process';
+
+const racine = resolve(import.meta.dirname, '..');
+const dist = join(racine, 'dist');
+const wamp = join(racine, 'deploy', 'wamp');
+const paquet = join(wamp, 'caisse-salfa');
+
+console.log('→ Compilation du frontend (mode API, chemins relatifs)…');
+execSync('npx tsc --noEmit && npx vite build --base ./', {
+  cwd: racine,
+  stdio: 'inherit',
+  env: { ...process.env, VITE_MODE_API: 'api' },
+});
+
+if (!existsSync(join(dist, 'index.html'))) {
+  console.error('Échec : dist/index.html absent.');
+  process.exit(1);
+}
+
+console.log('→ Copie du frontend dans le paquet…');
+rmSync(paquet, { recursive: true, force: true });
+mkdirSync(paquet, { recursive: true });
+cpSync(dist, paquet, { recursive: true });
+
+console.log('→ Copie de l’API, du schéma et des fichiers serveur…');
+for (const element of ['api', '.htaccess', '.user.ini']) {
+  const source = join(wamp, element);
+  if (existsSync(source)) {
+    cpSync(source, join(paquet, element), { recursive: true });
+  }
+}
+
+// Version du paquet inscrite dans la page : `api/config.php` annonce la même
+// version (SALFA_VERSION_API) et `api/points/verifier.php` compare les deux,
+// ce qui repère un paquet recopié à moitié sur le serveur.
+const { version } = JSON.parse(readFileSync(join(racine, 'package.json'), 'utf8'));
+const pageIndex = join(paquet, 'index.html');
+const page = readFileSync(pageIndex, 'utf8').replace(/\s*<meta name="salfa-version"[^>]*>/g, '');
+const balise = `  <meta name="salfa-version" content="${version}" />\n`;
+writeFileSync(pageIndex, page.replace('</head>', `${balise}</head>`));
+if (!readFileSync(pageIndex, 'utf8').includes(`content="${version}"`)) {
+  console.error('Échec : la version du paquet n’a pas pu être inscrite dans index.html.');
+  process.exit(1);
+}
+console.log(`  Version du paquet : ${version}`);
+
+// Racine du site : exactement ce que l'on voit dans l'explorateur Windows.
+const obligatoires = [
+  'index.html',
+  'favicon.svg',
+  'assets',
+  '.htaccess',
+  '.user.ini',
+  'api',
+  'api/index.php',
+  'api/config.php',
+  'api/socle.php',
+  'api/README.md',
+  'api/.htaccess',
+  'api/data/.htaccess',
+  'api/installation/salfa_install.sql',
+  'api/lib/amorce.php',
+  'api/lib/db.php',
+  'api/points/verifier.php',
+  'api/points/configurer.php',
+  'api/points/sante.php',
+];
+const manquants = obligatoires.filter(f => !existsSync(join(paquet, f)));
+
+// Rien d'autre à la racine : ni schéma SQL, ni dossier de travail apparent,
+// ni configuration écrite (elle vit hors du site ou dans api/data/).
+const racineAutorisee = ['index.html', 'favicon.svg', 'assets', 'api', '.htaccess', '.user.ini'];
+const intrus = readdirSync(paquet).filter(f => !racineAutorisee.includes(f));
+const interdits = ['api/salfa-config.php', 'api/data/salfa-config.php', 'installer.php', 'api/installer.php']
+  .filter(f => existsSync(join(paquet, f)));
+
+if (intrus.length) {
+  console.error('Éléments inattendus à la racine du paquet :', intrus.join(', '));
+  process.exit(1);
+}
+
+const compter = (d) => readdirSync(d).reduce((n, f) => {
+  const p = join(d, f);
+  return n + (statSync(p).isDirectory() ? compter(p) : 1);
+}, 0);
+
+if (manquants.length) {
+  console.error('Fichiers manquants dans deploy/wamp/caisse-salfa :', manquants.join(', '));
+  process.exit(1);
+}
+if (interdits.length) {
+  console.error('Éléments à retirer de deploy/wamp/caisse-salfa :', interdits.join(', '));
+  process.exit(1);
+}
+console.log(`✓ Paquet WAMP prêt : ${compter(paquet)} fichiers dans deploy/wamp/caisse-salfa/`);
+console.log('  Copiez ce dossier dans C:\\wamp64\\www\\ — rien d’autre à installer.');

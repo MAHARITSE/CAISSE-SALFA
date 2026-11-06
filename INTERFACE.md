@@ -49,7 +49,7 @@ et sur la façon de s’en servir.
 | Titre d’onglet figé sur « Gestion de Caisse SALFA » | Plusieurs onglets ouverts impossibles à distinguer | Le titre suit la page : « Analyse de la caisse · Caisse SALFA » |
 | Texte d’aide de la connexion en `text-slate-400` | Contraste insuffisant pour une consigne utile | Passé en `text-slate-500` (et `dark:text-slate-400`) |
 | Notifications et total de saisie non annoncés | Lecteurs d’écran muets après un enregistrement ou une modification de montant | `aria-live="polite"` sur la notification et sur le total |
-| Paquet WAMP recopié mais pas encore installé : l’API répond « non installé » et l’écran de connexion affichait cette phrase technique en rouge, sous le mot de passe | On croyait à des identifiants erronés ; rien à l’écran ne disait quoi faire, ni qu’aucun compte ne pouvait fonctionner avant l’installation | Panneau « Serveur pas encore installé » (ou « Serveur injoignable ») au-dessus du formulaire : étapes numérotées et lien direct vers `installer.php`, bouton « Réessayer » qui reteste `api/index.php?action=sante`, lien vers le diagnostic JSON |
+| Serveur MySQL inaccessible et l’écran de connexion affichait la phrase technique en rouge, sous le mot de passe | On croyait à des identifiants erronés ; rien à l’écran ne disait quoi faire | Panneau « Connexion MySQL à préciser » (ou « Serveur injoignable ») au-dessus du formulaire : hôte, port, base, utilisateur et mot de passe à saisir une fois — le serveur crée alors lui-même sa base, ses tables et ses comptes, sans aucune page d’installation. Bouton « Réessayer » qui reteste `api/index.php?action=sante`, lien vers le diagnostic JSON |
 
 ## Ce qui a été volontairement laissé tel quel
 
@@ -82,32 +82,27 @@ et sur la façon de s’en servir.
 > jour et relus, mais `npm run test:e2e` doit être lancé sur un poste outillé
 > avant diffusion.
 
-## Installation dans le navigateur
+## Déploiement serveur : aucune installation
 
-Le paquet livré imposait jusqu'ici six scripts `.bat` : installation, diagnostic,
-création de compte, sauvegarde, restauration, ouverture du navigateur. Pour qui
-veut simplement « copier un dossier dans `www\` », c'était une étape de plus,
-sur une machine Windows, avec des invites en ligne de commande.
+La version serveur se résume à **copier un dossier** dans `C:\wamp64\www\caisse-salfa`.
+Il ne contient que ce que montre l'explorateur Windows : `api`, `assets`,
+`.htaccess`, `.user.ini`, `favicon`, `index`.
 
-- `installer.php`, à la racine du paquet, remplace tous ces scripts : une page,
-  deux groupes de champs (accès MySQL, compte administrateur), un bouton. Elle
-  crée la base, les 14 tables, les modèles, les catégories, le compte admin et
-  `data\salfa-config.php` — puis se verrouille d'elle-même.
-- Le dossier `outils/` et ses `.bat` sont supprimés ; la documentation ne parle
-  plus que du navigateur.
-- Écran de connexion : le panneau « Serveur pas encore installé » propose
-  désormais **« Ouvrir l'installation »** (lien direct) au lieu d'un
-  `outils\installer.bat` impossible à exécuter depuis un navigateur.
-- Mot de passe administrateur oublié, sans ligne de commande : créer un fichier
-  vide `data\reinitialiser-mdp.txt` sur le serveur, ouvrir `installer.php`, saisir
-  le nouveau mot de passe. Le fichier est supprimé ensuite ; sans lui, la page
-  refuse toute modification.
-- Le nom de la base peut différer de `caisse_salfa` : l'installateur retire les
-  instructions `CREATE DATABASE` / `USE` du script SQL et crée lui-même la base
-  choisie (le fichier reste tel quel pour un import phpMyAdmin).
-- Vérifié sous PHP 8.4 (WebAssembly) : rendu des trois états de la page
-  (installation, déjà installé, réinitialisation), filtrage du script SQL
-  (14 tables et données de départ conservées), 24 tests de l'API toujours verts.
+- Le premier appel de l'API écrit sa configuration (hors de `www` quand c'est
+  possible, sinon dans `api\data\`), crée la base `caisse_salfa`, ses 14 tables,
+  les catégories, les modèles de bordereaux et deux comptes de départ
+  (`admin` / `admin123`, `comptable` / `comptable123`).
+- Il n'y a **ni page d'installation, ni script `.bat`, ni ligne de commande, ni
+  fichier à modifier**.
+- Si MySQL refuse l'accès par défaut de WAMP (mot de passe personnalisé, port
+  3307), l'écran de connexion demande une fois les accès MySQL : même résultat,
+  sans quitter l'application. Le formulaire ne revient plus ensuite.
+- L'amorçage est idempotent : une copie interrompue, un redémarrage ou un
+  deuxième appel ne détruisent ni ne dupliquent rien ; un mot de passe déjà
+  changé n'est jamais réinitialisé.
+- Vérifié sous PHP 8.4 (WebAssembly) : amorçage complet (configuration, base,
+  14 tables, comptes), détection des chemins de configuration, résolution
+  automatique des ports MySQL 3306/3307/3308, et 24 tests de l'API verts.
 
 ## Version du paquet
 
@@ -126,10 +121,8 @@ inaperçue.
 - Le pied de page affiche `v1.2.0`. En mode serveur, il ajoute la version
   annoncée par l’API et affiche un bandeau orange si les deux diffèrent :
   « Paquet incomplet ».
-- `installer.php` (installation et réinitialisation de mot de passe) et la
-  réponse JSON de `?action=verifier` comparent les deux versions, ligne « version du
-  paquet ».
-  `?action=verifier` comparent les deux versions, ligne « version du paquet ».
+- La réponse JSON de `?action=verifier` compare les deux versions, ligne
+  « version du paquet » : une copie partielle du dossier est ainsi repérée.
 
 ## Recommandations restantes
 

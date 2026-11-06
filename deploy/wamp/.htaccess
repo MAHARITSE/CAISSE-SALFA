@@ -1,0 +1,64 @@
+# CAISSE SALFA — configuration Apache (WAMP)
+# Ce fichier est copié à la racine du site : C:\wamp64\www\caisse-salfa\.htaccess
+
+Options -Indexes
+DirectoryIndex index.html index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Le dossier data/ contient la configuration et doit rester inaccessible,
+  # même si la directive ci-dessous n'était pas appliquée par Apache.
+  RewriteRule ^data/ - [F,L]
+
+  # Application monopage : une URL inconnue affiche index.html.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Le dossier data/ contient salfa-config.php (mot de passe MySQL) : il n'est
+# jamais servi par le serveur web. Les dossiers internes de l'API non plus.
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "^(salfa-config\.php|.*\.log|.*\.sql)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+
+# Limites PHP pour l'import d'une sauvegarde complète (32 Mo).
+<IfModule mod_php.c>
+  php_value post_max_size 32M
+  php_value upload_max_filesize 32M
+  php_value memory_limit 256M
+  php_value max_execution_time 120
+</IfModule>
+<IfModule mod_php7.c>
+  php_value post_max_size 32M
+  php_value upload_max_filesize 32M
+  php_value memory_limit 256M
+  php_value max_execution_time 120
+</IfModule>
+<IfModule mod_php8.c>
+  php_value post_max_size 32M
+  php_value upload_max_filesize 32M
+  php_value memory_limit 256M
+  php_value max_execution_time 120
+</IfModule>
+
+# Réponses d'API toujours fraîches, assets compressés mis en cache un an.
+<IfModule mod_headers.c>
+  <FilesMatch "\.php$">
+    Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header always set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+  <FilesMatch "\.(css|js)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  Header always set Referrer-Policy "same-origin"
+</IfModule>
