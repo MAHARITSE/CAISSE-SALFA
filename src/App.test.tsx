@@ -483,3 +483,17 @@ describe('version affichée', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('mise en page', () => {
+  it('occupe toute la largeur de la fenêtre, alignée sur l’en-tête', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await ouvrirSession(user);
+    const principal = document.getElementById('contenu');
+    expect(principal).not.toBeNull();
+    // Plus de largeur maximale centrale : les cartes et le journal suivent
+    // exactement les marges de l'en-tête, d'un bord à l'autre de l'écran.
+    expect(principal!.className).toContain('w-full');
+    expect(principal!.className).not.toContain('max-w-');
+  });
+});
