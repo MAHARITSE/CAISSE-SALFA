@@ -5,6 +5,7 @@ import { dateFr } from '../utils/format';
 import { montantEnLettres } from '../utils/nombreEnLettres';
 import { numeroDocument, TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { Modale } from './Modale';
+import { styleLigneEntete } from '../utils/style-entete';
 
 /** Cases de signature, propres à chaque document. */
 const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
@@ -28,9 +29,6 @@ const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 132.9, blocVideMinimum: 12 };
  * se placent librement sur toute la feuille et ne pèsent pas sur la mise en page.
  */
 
-/** Alignement du modèle → valeur CSS. */
-const ALIGNEMENT_CSS = { gauche: 'left', centre: 'center', droite: 'right' } as const;
-
 /** Montant du modèle officiel : séparateur de milliers insécable et deux décimales. */
 function montantModele(montant: number): string {
   const [entier, decimales] = montant.toFixed(2).split('.');
@@ -48,15 +46,8 @@ function LignesEntete({ entete }: { entete: EnteteDocument }) {
     {lignes.map((ligne, index) => <p
       key={index}
       className="bordereau-ligne-entete"
-      style={{
-        fontFamily: `'${ligne.police}', sans-serif`,
-        fontSize: `${ligne.taille}pt`,
-        fontWeight: ligne.gras ? 700 : 400,
-        fontStyle: ligne.italique ? 'italic' : 'normal',
-        textDecoration: ligne.souligne ? 'underline' : 'none',
-        textAlign: ALIGNEMENT_CSS[ligne.alignement],
-      }}
-    >{ligne.texte}</p>)}
+      style={styleLigneEntete(ligne)}
+    ><span>{ligne.texte}</span></p>)}
   </>;
 }
 

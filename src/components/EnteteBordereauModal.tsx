@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Bold, FileImage, ImageMinus, ImagePlus,
   Italic, Plus, RotateCcw, Trash2, Underline, Type,
 } from 'lucide-react';
 import { Modale } from './Modale';
+import { styleLigneEntete } from '../utils/style-entete';
 import {
   LIBELLES_LIGNES, MAX_IMAGE_OCTETS, MAX_IMAGES_ENTETE, MAX_LIGNES_ENTETE, MAX_LOGO_OCTETS, POLICES,
   enteteParDefaut, lireImageEntete, normaliserEntetes,
@@ -48,27 +49,7 @@ function useTeleversement() {
 
 const arrondi = (valeur: number): number => Math.round(valeur * 10) / 10;
 
-/** Alignement du modèle → valeur CSS. */
-const ALIGNEMENT_CSS = { gauche: 'left', centre: 'center', droite: 'right' } as const;
 const borner = (valeur: number, min: number, max: number): number => Math.min(max, Math.max(min, valeur));
-
-/** Mise en forme d'une ligne : la même à l'écran et sur le papier. */
-function styleLigne(ligne: LigneEntete): CSSProperties {
-  return {
-    fontFamily: `'${ligne.police}', sans-serif`,
-    // La feuille est dessinée en millimètres : les points typographiques
-    // tombent donc exactement à la taille de l'impression.
-    fontSize: `${ligne.taille}pt`,
-    fontWeight: ligne.gras ? 700 : 400,
-    fontStyle: ligne.italique ? 'italic' : 'normal',
-    textDecoration: ligne.souligne ? 'underline' : 'none',
-    textAlign: ALIGNEMENT_CSS[ligne.alignement],
-    // Ne pas transformer la casse de la saisie ni de son aperçu dans l'éditeur.
-    fontVariant: 'normal',
-    textTransform: 'none',
-    lineHeight: 1.3,
-  };
-}
 
 /** Bouton de la barre de mise en forme. */
 function BoutonFormat({ actif, titre, onClick, children, desactive }: {
@@ -429,14 +410,14 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                   return <div
                     key={index}
                     className={`entete-ligne ${active ? 'is-active' : ''} ${vide ? 'is-vide' : ''}`}
-                    style={styleLigne(ligne)}
+                    style={styleLigneEntete(ligne)}
                   >
                     {active
                       ? <input
                         ref={el => { champsLignes.current[index] = el; }}
                         aria-label={`Texte de la ligne ${index + 1}`}
                         className="entete-ligne__champ"
-                        style={styleLigne(ligne)}
+                        style={styleLigneEntete(ligne)}
                         value={ligne.texte}
                         autoCapitalize="off"
                         maxLength={200}
@@ -453,7 +434,7 @@ export function EnteteBordereauModal({ entetes, onEnregistrer, onFermer }: Entet
                       : <button
                         type="button"
                         className="entete-ligne__apercu"
-                        style={styleLigne(ligne)}
+                        style={styleLigneEntete(ligne)}
                         aria-label={libelle}
                         title={`${libelle} — cliquez pour écrire`}
                         onClick={() => setLigneActive(index)}

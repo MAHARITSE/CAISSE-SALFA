@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { BordereauDocument } from './Bordereau';
+import { BordereauDocument, ModaleBordereau } from './Bordereau';
+import { EnteteBordereauModal } from './EnteteBordereauModal';
 import { enteteParDefaut } from '../utils/entete';
 import type { LigneJournal } from '../types';
 
@@ -90,6 +91,33 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(paragraphe.style.fontStyle).toBe('italic');
     expect(paragraphe.style.textDecoration).toBe('underline');
     expect(paragraphe.style.textAlign).toBe('right');
+  });
+
+  it.each(['DEPENSE', 'RECETTE'] as const)('reproduit la casse et la typographie configurées dans l’éditeur sur l’aperçu et l’impression (%s)', sens => {
+    const entete = enteteParDefaut();
+    entete.lignes[6] = { ...entete.lignes[6], texte: 'E-mail : Contact.Salfa@example.org', police: 'Georgia', taille: 12.5, gras: true, italique: true, souligne: true, alignement: 'droite' };
+    render(<>
+      <EnteteBordereauModal entetes={entete} onEnregistrer={vi.fn()} onFermer={vi.fn()} />
+      <ModaleBordereau ligne={ligne(sens)} entete={entete} onFermer={vi.fn()} />
+    </>);
+    const editeur = screen.getByLabelText(/^Ligne 7/);
+    const sortie = document.querySelectorAll('.bordereau-ligne-entete');
+    // Une copie dans l’aperçu et une seconde réservée à l’impression.
+    expect(sortie).toHaveLength(entete.lignes.length * 2);
+    for (const element of [sortie[6], sortie[6 + entete.lignes.length]]) {
+      expect(element).toHaveTextContent('E-mail : Contact.Salfa@example.org');
+      for (const prop of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'textDecoration', 'textAlign', 'fontVariant', 'textTransform', 'lineHeight'] as const) {
+        expect((element as HTMLElement).style[prop]).toBe((editeur as HTMLElement).style[prop]);
+      }
+      expect(element).toHaveStyle({ textTransform: 'none', fontVariant: 'normal', fontSize: '12.5pt', textAlign: 'right' });
+    }
+  });
+
+  it('préserve l’en-tête image complet sans transformation', () => {
+    const entete = { ...enteteParDefaut(), mode: 'image' as const, image: 'data:image/png;base64,AAAA' };
+    const { container } = render(<BordereauDocument ligne={ligne('DEPENSE')} entete={entete} />);
+    expect(screen.getByAltText('En-tête fourni')).toHaveAttribute('src', entete.image);
+    expect(container.querySelector('.bordereau-entete__textes')).not.toBeInTheDocument();
   });
 
   it('présente le document comme une feuille A4 portrait', () => {
