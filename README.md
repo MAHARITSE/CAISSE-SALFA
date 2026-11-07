@@ -96,7 +96,10 @@ garder les versions verrouillées par `package-lock.json`.
   majuscules, comme les catégories nouvellement saisies ou renommées. Les données
   historiques ne sont pas converties automatiquement. Les montants affichés ont
   deux décimales et des séparateurs de milliers ; la saisie reste en ariary
-  entiers. La devise n’est pas répétée dans les tableaux.
+  entiers. Dans la zone d’ajout d’un poste, Entrée a le même effet que le bouton
+  « Ajouter » ; un poste en cours doit être ajouté ou vidé avant l’enregistrement.
+  Le libellé de l’écriture est saisi librement, sans liste de suggestions.
+  La devise n’est pas répétée dans les tableaux.
 - **Catégories gérées par sens** : les recettes et les dépenses ont chacune
   leur liste de catégories, modifiable depuis le bouton « Gérer » du formulaire
   de saisie (ajout, renommage, ordre, suppression, restauration des listes

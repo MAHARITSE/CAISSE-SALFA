@@ -14,7 +14,6 @@ interface SaisieEcritureProps {
   sensInitial: Sens;
   exercice: number;
   numeroSuivant: (sens: Sens, date: string) => string | null;
-  suggestionsLibelle: string[];
   suggestionsTiers: string[];
   masques: MasqueSaisie[];
   /** Catégories gérées dans le livre, distinctes par sens. */
@@ -33,7 +32,7 @@ function posteRempli(ligne: LigneBrouillon): boolean {
   return ligne.description.trim() !== '' && (parserMontant(ligne.montant) ?? 0) > 0;
 }
 
-export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsLibelle, suggestionsTiers, masques, categories: categoriesDuLivre, onOuvrirGestionCategories, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
+export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsTiers, masques, categories: categoriesDuLivre, onOuvrirGestionCategories, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
   const sens = edition?.sens ?? sensInitial;
   const estRecette = sens === 'RECETTE';
   const formId = useId();
@@ -56,6 +55,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [enregistrement, setEnregistrement] = useState(false);
   const soumission = useRef(false);
   const libelleRef = useRef<HTMLInputElement>(null);
+  const posteRef = useRef<HTMLInputElement>(null);
   const erreurRef = useRef<HTMLDivElement>(null);
   const masquesPourSens = masques.filter(m => m.sens === sens);
 
@@ -101,6 +101,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     if (lignes.length >= MAX_DETAILS) { setErreur(`Un bordereau peut contenir ${MAX_DETAILS} postes au maximum.`); return; }
     setLignes(prev => [...prev, { id: identifiant('d'), description: nouveauPoste.trim(), montant: String(montant) }]);
     setNouveauPoste(''); setNouveauMontant(''); setErreur(''); changer();
+    posteRef.current?.focus();
   }
 
   function appliquerMasque(m: MasqueSaisie) {
@@ -127,6 +128,10 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     if (soumission.current) return;
     setErreur('');
     try {
+      // Ne jamais perdre un poste encore présent dans la zone d'ajout.
+      if (detaille && (nouveauPoste.trim() || nouveauMontant.trim())) {
+        throw new Error('Ajoutez le poste en cours avec « Ajouter » ou Entrée, ou videz ses champs avant d’enregistrer.');
+      }
       // Un seul poste complété suffit : les lignes vides ou incomplètes ne sont pas retenues.
       if (detaille && !lignesRetenues.length) {
         throw new Error('Renseignez au moins un poste (libellé et montant) ou choisissez « Montant unique ».');
@@ -159,7 +164,13 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     }
   }
 
-  const toucheAjout = (e: React.KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); ajouterPoste(); } };
+  const toucheAjout = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Dans les deux champs d'ajout, Entrée valide le poste, pas le formulaire.
+    // La composition IME et l'activation normale du bouton restent intactes.
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing || !(e.target instanceof HTMLInputElement)) return;
+    e.preventDefault();
+    if (!e.repeat) ajouterPoste();
+  };
 
   return (
     <>
@@ -222,7 +233,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
             <div><label className="label" htmlFor={`${formId}-date`}>Date de l’opération *</label><input id={`${formId}-date`} className="field" type="date" min={`${exercice}-01-01`} max={`${exercice}-12-31`} required value={date} onChange={e => setDate(e.target.value)} autoFocus /></div>
             <div className="flex items-end"><p className="flex min-h-[42px] w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500 sm:text-[13px] dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400"><span className="size-2 shrink-0 rounded-full bg-emerald-500" />Caisse en espèces — aucun autre mode n’est géré</p></div>
           </div>
-          <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} list={`${formId}-libelles`} placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /><datalist id={`${formId}-libelles`}>{suggestionsLibelle.map(l => <option key={l} value={l} />)}</datalist></div>
+          <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field" required maxLength={200} value={libelle} onChange={e => setLibelle(masqueMajuscules(e.target.value))} autoComplete="off" placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
@@ -238,12 +249,12 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
             </div>
             {!detaille ? <div><ChampMontant id={`${formId}-montant`} label="Montant total (Ar) *" className="text-xl font-bold" valeur={montantSimple} onChange={setMontantSimple} placeholder="0" obligatoire aide={`Montant entier en ariary, séparé par milliers. Maximum : ${formatAr(MONTANT_MAX)}.`} /></div> : <>
               <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Un modèle de saisie, choisi en haut du formulaire, remplit les postes d’un seul geste.</p><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button></div>
-              <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:grid-cols-[1fr_150px_auto]">
-                <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(masqueMajuscules(e.target.value))} onKeyDown={toucheAjout} placeholder="Consultation…" /></div>
+              <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:grid-cols-[1fr_150px_auto]" onKeyDown={toucheAjout}>
+                <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input ref={posteRef} id={`${formId}-poste`} className="field" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(masqueMajuscules(e.target.value))} placeholder="Consultation…" /></div>
                 <div><ChampMontant id={`${formId}-mnt-poste`} label="Montant (Ar)" valeur={nouveauMontant} onChange={setNouveauMontant} placeholder="0" /></div>
                 <button type="button" className="btn-secondary self-end" onClick={ajouterPoste}><Plus size={16} /><span className="sm:sr-only xl:not-sr-only">Ajouter</span></button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Montants en ariary</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Appuyez sur Entrée ou sur Ajouter pour ajouter le poste. Montants en ariary.</p>
               <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                 <table className="w-full min-w-[420px] text-sm"><thead className="bg-slate-50 dark:bg-slate-800/40 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"><tr><th className="p-2 text-left">Poste *</th><th className="p-2 text-right">Montant *</th><th className="w-10"><span className="sr-only">Actions</span></th></tr></thead><tbody>
                   {!lignes.length && <tr><td colSpan={3} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400"><ListPlus className="mx-auto mb-2 text-slate-300 dark:text-slate-600" size={26} />Ajoutez un poste ou appliquez un modèle.</td></tr>}
