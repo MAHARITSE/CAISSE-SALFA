@@ -39,7 +39,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsLibelle={[]}
         suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
@@ -61,7 +60,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsLibelle={[]}
         suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
@@ -107,7 +105,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsLibelle={[]}
         suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
@@ -137,7 +134,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsLibelle={[]}
         suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
