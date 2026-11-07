@@ -102,14 +102,16 @@ describe('parcours de caisse', () => {
     expect(lire().compteurs[`DP-${annee}`]).toBe(1);
   });
 
-  it('ouvre les formulaires depuis les actions sous le tableau', async () => {
+  it('conserve les actions de création en haut, sans boutons au pied du journal', async () => {
     const user = userEvent.setup();
     render(<App />);
     await ouvrirSession(user);
-    await user.click(screen.getByRole('button', { name: 'Nouvelle recette (bas du tableau)' }));
+    const pied = screen.getByLabelText('Pied du journal');
+    expect(within(pied).queryByRole('button', { name: /Nouvelle recette|Nouvelle dépense/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     expect(screen.getByRole('dialog', { name: 'Nouvelle recette' })).toBeInTheDocument();
     await user.click(within(screen.getByRole('dialog', { name: 'Nouvelle recette' })).getByRole('button', { name: 'Annuler' }));
-    await user.click(screen.getByRole('button', { name: 'Nouvelle dépense (bas du tableau)' }));
+    await user.click(screen.getByRole('button', { name: 'Nouvelle dépense' }));
     expect(screen.getByRole('dialog', { name: 'Nouvelle dépense' })).toBeInTheDocument();
   });
 
@@ -133,6 +135,11 @@ describe('parcours de caisse', () => {
     // Un seul en-tête : la première ligne vaut pour les deux imprimés.
     await user.clear(within(modale).getByLabelText('Texte de la ligne 1'));
     await user.type(within(modale).getByLabelText('Texte de la ligne 1'), 'CAISSE CENTRALE SALFA');
+    await user.click(within(modale).getByLabelText(/^Ligne 7/));
+    await user.clear(within(modale).getByLabelText('Texte de la ligne 7'));
+    await user.type(within(modale).getByLabelText('Texte de la ligne 7'), 'E-mail : Contact.Salfa@example.org');
+    await user.selectOptions(within(modale).getByLabelText('Police'), 'Georgia');
+    await user.click(within(modale).getByRole('button', { name: 'Aligner à droite' }));
     await user.click(within(modale).getByRole('button', { name: 'Enregistrer l’en-tête' }));
 
     expect(lire().entetes.lignes[0].texte).toBe('CAISSE CENTRALE SALFA');
@@ -142,6 +149,9 @@ describe('parcours de caisse', () => {
     await user.click(screen.getByRole('button', { name: `Imprimer le bordereau RC-${annee}-0001` }));
     const autorisation = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(autorisation).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
+    const emailRecette = within(autorisation).getByText('E-mail : Contact.Salfa@example.org').closest('p');
+    expect(emailRecette).toHaveStyle({ fontFamily: "'Georgia', sans-serif", textAlign: 'right', textTransform: 'none', fontVariant: 'normal' });
+    expect(document.querySelector('.print-bordereau .bordereau-ligne-entete:last-child')).toHaveTextContent('E-mail : Contact.Salfa@example.org');
     expect(within(autorisation).getByText('AUTORISATION DE RECETTES')).toBeInTheDocument();
     expect(autorisation).toHaveTextContent(`ARC-${annee}-0001`);
     await user.click(within(autorisation).getByRole('button', { name: 'Modifier l’en-tête' }));
@@ -161,6 +171,7 @@ describe('parcours de caisse', () => {
     await user.click(screen.getAllByRole('button', { name: `Imprimer le bordereau DP-${annee}-0001` })[0]);
     const engagement = screen.getByRole('dialog', { name: 'Bordereau imprimable' });
     expect(within(engagement).getByText('CAISSE CENTRALE SALFA')).toBeInTheDocument();
+    expect(within(engagement).getByText('E-mail : Contact.Salfa@example.org').closest('p')).toHaveStyle({ textAlign: 'right', textTransform: 'none', fontVariant: 'normal' });
     // La demande d'engagement porte elle aussi son titre, sigle compris.
     expect(within(engagement).getByText('DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)')).toBeInTheDocument();
     // Le document porte son propre numéro, aligné sur la pièce.

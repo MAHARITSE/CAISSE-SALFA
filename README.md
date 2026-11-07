@@ -111,6 +111,8 @@ garder les versions verrouillées par `package-lock.json`.
   seule fois depuis le bouton « En-tête ». Chaque ligne se met en forme comme
   dans un traitement de texte — police, taille au demi-point, gras, italique,
   souligné, alignement — et l’on ajoute, réordonne ou supprime des lignes.
+  L’aperçu du bordereau et son impression conservent la casse et la mise en
+  forme choisies dans l’éditeur, ainsi que les positions des images.
   Les images se **glissent librement sur la feuille A4** : on les dépose, on les
   déplace à la souris ou au doigt, puis on les règle au millimètre (position et
   largeur). L’aperçu montre la feuille entière. « Restaurer l’en-tête fourni »
@@ -142,7 +144,9 @@ garder les versions verrouillées par `package-lock.json`.
   détaillés non comptés deux fois. Les totaux exportés correspondent à la
   sélection affichée ; le solde de clôture reste celui de la période complète.
 - **Impression** : journal en A4 paysage (toutes les pages de la sélection),
-  bordereau seul en A4 portrait avec ses zones de signature.
+  bordereau seul en A4 portrait avec ses zones de signature. La hauteur de la
+  feuille n’ajoute pas de page vide à la fin ; une pièce trop longue peut
+  continuer sur les pages nécessaires.
 - **Sauvegardes SQL** : export MySQL complet en mode serveur, ou instantané SQL
   du livre en mode local. La restauration dans l’application vérifie un instantané
   intégré au fichier, demande confirmation et sauvegarde le livre actuel avant

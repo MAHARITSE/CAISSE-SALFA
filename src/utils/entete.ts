@@ -115,8 +115,7 @@ export function numeroDocument(numeroPiece: string): string | null {
 
 /**
  * En-tête des imprimés officiels de l'hôpital, relevé sur les modèles fournis.
- * Les lignes 1, 4 et 6 sont en capitales grasses, les autres en petites
- * capitales.
+ * Les lignes 1, 4 et 6 sont en gras. La casse de chaque texte est conservée.
  */
 const ENTETE_LIVRE = [
   'FIANGONANA LOTERANA MALAGASY',

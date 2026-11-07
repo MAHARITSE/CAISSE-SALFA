@@ -16,19 +16,26 @@ const props = {
 };
 
 describe('pied du journal', () => {
-  it('regroupe la pagination et les actions de saisie dans la même barre', async () => {
+  it('conserve la note et la pagination sans actions de saisie au pied du tableau', async () => {
     const user = userEvent.setup();
     const ouvrir = vi.fn();
     render(<LivreJournal {...props} onNouvelleEcriture={ouvrir} />);
     const pagination = screen.getByRole('navigation', { name: 'Pagination du journal' });
     const footer = pagination.closest<HTMLElement>('[aria-label="Pied du journal"]')!;
     expect(footer).toHaveTextContent('Le solde de clôture tient compte de toute la période');
-    expect(within(footer).getByRole('button', { name: 'Nouvelle recette (bas du tableau)' })).toBeInTheDocument();
-    await user.click(within(footer).getByRole('button', { name: 'Nouvelle recette (bas du tableau)' }));
-    await user.click(within(footer).getByRole('button', { name: 'Nouvelle dépense (bas du tableau)' }));
-    expect(ouvrir.mock.calls).toEqual([['RECETTE'], ['DEPENSE']]);
+    expect(within(footer).queryByRole('button', { name: /Nouvelle recette|Nouvelle dépense/ })).not.toBeInTheDocument();
     await user.click(within(pagination).getByRole('button', { name: 'Page précédente' }));
     expect(pagination).toHaveTextContent('Page 1 sur 2');
+    expect(ouvrir).not.toHaveBeenCalled();
+  });
+
+  it('conserve les raccourcis de saisie proposés quand le journal est vide', async () => {
+    const user = userEvent.setup();
+    const ouvrir = vi.fn();
+    render(<LivreJournal {...props} lignes={[]} onNouvelleEcriture={ouvrir} />);
+    await user.click(screen.getByRole('button', { name: 'Saisir une recette' }));
+    await user.click(screen.getByRole('button', { name: 'Saisir une dépense' }));
+    expect(ouvrir.mock.calls).toEqual([['RECETTE'], ['DEPENSE']]);
   });
 
   it('ne montre pas les actions de saisie en lecture seule', () => {

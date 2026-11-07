@@ -111,9 +111,19 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 /* En-tête du document : un bandeau à hauteur fixe, où textes et images se placent. */
 .bordereau-entete { break-inside: avoid; }
 .bordereau-entete__image { display: block; width: 100%; height: auto; object-fit: contain; }
-/* Les textes restent dans la colonne centrale ; les images flottent par-dessus. */
-.bordereau-entete__textes { margin: 0 26mm; }
-.bordereau-entete__textes p { margin: 0; color: #000; line-height: 1.3; }
+/* 26 mm depuis les bords de la feuille, comme dans l'éditeur : le document
+   possède déjà 6,6 mm de padding de chaque côté. */
+.bordereau-entete__textes { margin: 0 calc(26mm - 6.6mm); }
+.bordereau-entete__textes p {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 4.05mm;
+  margin: 0;
+  padding: 0.1mm 0.6mm;
+  color: #000;
+}
+.bordereau-entete__textes p > span { display: block; width: 100%; }
 /* Images posées sur la feuille : position libre en millimètres, depuis le coin. */
 .bordereau-entete__image-libre { position: absolute; height: auto; object-fit: contain; }
 .entete-bordereau__vide { margin: 0; font-size: 11px; font-style: italic; color: #94a3b8; text-align: center; }
@@ -296,9 +306,6 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 .bordereau-entete__logo { display: flex; justify-content: center; }
 .bordereau-entete__logo img { max-width: 21mm; max-height: 22mm; width: auto; height: auto; object-fit: contain; }
 .bordereau-entete__textes { text-align: center; }
-.bordereau-entete__textes p { margin: 0; line-height: 1.28; font-variant: small-caps; }
-/* Le modèle écrit l'en-tête en petites capitales, pas en capitales pleines. */
-.bordereau-entete__textes p { text-transform: lowercase; }
 
 /* Titre du document : compact, le tableau doit tenir dans la page. */
 .bordereau-titre {
@@ -412,9 +419,21 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   .screen-page-hidden { display: table-row !important; }
   body:has(.print-bordereau) .app-shell { display: none !important; }
   .print-bordereau { page: bordereau; padding: 0; }
-  /* Le document porte ses propres cotes (mm) : aucune règle d'impression ne
-     doit les écraser, sinon la feuille déborde sur une seconde page. */
-  .bordereau-document { page-break-inside: avoid; break-inside: avoid; zoom: 1 !important; box-shadow: none; }
+  /* À l'écran la feuille mesure 297 mm pour l'aperçu. À l'impression, ne pas
+     imposer la hauteur A4 ni la bordure décorative : une fraction de millimètre
+     hors page peut déclencher une feuille blanche selon le pilote. Le contenu
+     reste libre de se poursuivre sur les pages suivantes si nécessaire. */
+  .print-bordereau .bordereau-document {
+    min-height: 0;
+    height: auto;
+    padding-bottom: 0;
+    border-color: transparent;
+    border-bottom-width: 0;
+    page-break-inside: auto;
+    break-inside: auto;
+    zoom: 1 !important;
+    box-shadow: none;
+  }
   @page { size: A4 landscape; margin: 12mm; }
   /* Bordereau : une page A4 portrait, marges portées par le document lui-même. */
   @page bordereau { size: A4 portrait; margin: 0; }
