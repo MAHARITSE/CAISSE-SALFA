@@ -1,11 +1,9 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, Settings2 } from 'lucide-react';
 import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
 import { montantEnLettres } from '../utils/nombreEnLettres';
-import { numeroDocument, TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
-import { Modale } from './Modale';
+import { TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { styleLigneEntete } from '../utils/style-entete';
 
 /** Cases de signature, propres à chaque document. */
@@ -180,7 +178,7 @@ interface ModaleBordereauProps {
  * La copie n'est montée qu'à l'ouverture de la modale : `window.print()`
  * n'imprime donc que ce bordereau, jamais le journal affiché derrière.
  */
-export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imprimerDirectement = false }: ModaleBordereauProps) {
+export function ModaleBordereau({ ligne, entete, onFermer }: ModaleBordereauProps) {
   useEffect(() => {
     document.body.classList.add('has-print-bordereau');
 
@@ -203,35 +201,10 @@ export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imp
     };
   }, [onFermer]);
 
-  return <>
-    {/* La modale se monte à la demande : `key` fige l'en-tête tel qu'il était
-        au moment de l'ouverture, il faut donc la remonter s'il change. */}
-    <Modale
-      titre="Bordereau imprimable"
-      sousTitre={`${numeroDocument(ligne.numero) ?? ligne.numero} · Pièce ${ligne.numero} · ${dateFr(ligne.date)}`}
-      largeur="document"
-      icone={<Printer size={21} />}
-      onFermer={onFermer}
-      pied={<div className="flex flex-wrap justify-end gap-2">
-        {onModifierEntete && <button className="btn-secondary" onClick={onModifierEntete}><Settings2 size={16} />Modifier l’en-tête</button>}
-        <button className="btn-secondary" onClick={onFermer}>Fermer</button>
-        <button className="btn-primary" onClick={() => window.print()}><Printer size={16} />Imprimer ce bordereau</button>
-      </div>}
-    >
-      {imprimerDirectement && <p role="status" className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 print:hidden">
-        Écriture enregistrée. Vérifiez le bordereau puis cliquez sur « Imprimer ce bordereau ».
-      </p>}
-      {/* À l'écran : une feuille A4 réellement au format, réduite si la fenêtre est étroite. */}
-      <div className="bordereau-apercu">
-        <BordereauDocument ligne={ligne} entete={entete} />
-      </div>
-    </Modale>
-
-    {createPortal(
-      <div className="print-only print-bordereau">
-        <BordereauDocument ligne={ligne} entete={entete} />
-      </div>,
-      document.body,
-    )}
-  </>;
+  return createPortal(
+    <div className="print-only print-bordereau">
+      <BordereauDocument ligne={ligne} entete={entete} />
+    </div>,
+    document.body,
+  );
 }

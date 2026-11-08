@@ -101,16 +101,14 @@ describe('bordereau imprimable conforme aux modèles', () => {
       <ModaleBordereau ligne={ligne(sens)} entete={entete} onFermer={vi.fn()} />
     </>);
     const editeur = screen.getByLabelText(/^Ligne 7/);
-    const sortie = document.querySelectorAll('.bordereau-ligne-entete');
-    // Une copie dans l’aperçu et une seconde réservée à l’impression.
-    expect(sortie).toHaveLength(entete.lignes.length * 2);
-    for (const element of [sortie[6], sortie[6 + entete.lignes.length]]) {
-      expect(element).toHaveTextContent('E-mail : Contact.Salfa@example.org');
-      for (const prop of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'textDecoration', 'textAlign', 'fontVariant', 'textTransform', 'lineHeight'] as const) {
-        expect((element as HTMLElement).style[prop]).toBe((editeur as HTMLElement).style[prop]);
-      }
-      expect(element).toHaveStyle({ textTransform: 'none', fontVariant: 'normal', fontSize: '12.5pt', textAlign: 'right' });
+    const sortie = document.querySelectorAll('.print-bordereau .bordereau-ligne-entete');
+    expect(sortie).toHaveLength(entete.lignes.length);
+    const element = sortie[6];
+    expect(element).toHaveTextContent('E-mail : Contact.Salfa@example.org');
+    for (const prop of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'textDecoration', 'textAlign', 'fontVariant', 'textTransform', 'lineHeight'] as const) {
+      expect((element as HTMLElement).style[prop]).toBe((editeur as HTMLElement).style[prop]);
     }
+    expect(element).toHaveStyle({ textTransform: 'none', fontVariant: 'normal', fontSize: '12.5pt', textAlign: 'right' });
   });
 
   it('préserve l’en-tête image complet sans transformation', () => {

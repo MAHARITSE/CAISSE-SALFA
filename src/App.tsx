@@ -120,16 +120,27 @@ export function App() {
   useEffect(() => {
     const entete = enteteRef.current;
     if (!entete) return;
-    const mesurer = () => setHauteurEntete(entete.offsetHeight);
+    const mesurer = () => {
+      const h = entete.offsetHeight || Math.round(entete.getBoundingClientRect().height);
+      if (h > 0) setHauteurEntete(h);
+    };
     mesurer();
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', mesurer);
-      return () => window.removeEventListener('resize', mesurer);
+    const timer = setTimeout(mesurer, 100);
+    window.addEventListener('resize', mesurer);
+    if (typeof ResizeObserver !== 'undefined') {
+      const observateur = new ResizeObserver(mesurer);
+      observateur.observe(entete);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('resize', mesurer);
+        observateur.disconnect();
+      };
     }
-    const observateur = new ResizeObserver(mesurer);
-    observateur.observe(entete);
-    return () => observateur.disconnect();
-  }, [session]);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', mesurer);
+    };
+  }, [session, onglet]);
 
   useEffect(() => {
     if (!notification) return;
@@ -495,7 +506,7 @@ export function App() {
 
         {onglet === 'journal' && <>
           {!erreur && afficherSynthese && <Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} />}
-          <div className="no-print z-10 py-1 bg-slate-100/80 backdrop-blur-md dark:bg-slate-950/80 sm:sticky" style={{ top: hauteurEntete }}><section className="card space-y-3 p-4 border border-slate-200 shadow-sm dark:border-slate-800 bg-white dark:bg-slate-900" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois affiché" value={mois} min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && !archiveConsultee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={15} />Annuler la suppression</button>}</div>{saisieOuverte && !archiveConsultee
+          <div className="no-print z-10 py-1 bg-slate-100/90 backdrop-blur-md dark:bg-slate-950/90 sticky" style={{ top: hauteurEntete || 88 }}><section className="card space-y-3 p-4 border border-slate-200 shadow-sm dark:border-slate-800 bg-white dark:bg-slate-900" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois affiché" value={mois} min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && !archiveConsultee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={15} />Annuler la suppression</button>}</div>{saisieOuverte && !archiveConsultee
               ? <div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'RECETTE', edition: null })}><Plus size={16} />Nouvelle recette</button><button className="btn-danger" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'DEPENSE', edition: null })}><Plus size={16} />Nouvelle dépense</button></div>
               : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{archiveConsultee ? `Exercice ${archiveConsultee.annee} clôturé : consultation en lecture seule.` : 'Consultation seule : votre rôle ne saisit pas d’écriture.'}</p>}</div>
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><div className="segmented" aria-label="Filtrer par type">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(s => <button key={s} aria-pressed={filtres.sens === s} onClick={() => modifierFiltre('sens', s)}>{s === 'TOUS' ? 'Tous' : s === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par catégorie" value={filtres.categorie} onChange={e => modifierFiltre('categorie', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option key={c}>{c}</option>)}</select><div className="relative min-w-44 flex-1"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" className="field !py-2 !pl-9 !text-sm" aria-label="Rechercher dans le journal" placeholder="Rechercher une pièce, un libellé, un tiers…" value={filtres.recherche} onChange={e => modifierFiltre('recherche', e.target.value)} /></div>{filtreActif && <button className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}<span className="hidden items-center gap-1 text-xs text-slate-400 dark:text-slate-500 xl:flex"><SlidersHorizontal size={14} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span></div>

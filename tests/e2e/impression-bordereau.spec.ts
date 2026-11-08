@@ -34,7 +34,6 @@ async function ouvrirBordereau(page: Page, sens: 'dépense' | 'recette', postes:
   await page.reload();
   await ouvrirSession(page);
   await page.getByRole('button', { name: new RegExp(`^Imprimer le bordereau ${sens === 'dépense' ? 'DP' : 'RC'}-`) }).first().click();
-  await expect(page.getByRole('dialog', { name: 'Bordereau imprimable' })).toBeVisible();
   await page.emulateMedia({ media: 'print' });
   const feuille = page.locator('.print-bordereau .bordereau-document');
   await expect(feuille).toBeVisible();
