@@ -41,7 +41,7 @@ export function App() {
    * (téléphone) ou que la taille de police change.
    */
   const enteteRef = useRef<HTMLElement | null>(null);
-  const [hauteurEntete, setHauteurEntete] = useState(0);
+  const [hauteurEntete, setHauteurEntete] = useState(104);
   // L'application s'ouvre toujours sur la page de connexion : aucun écran de
   // caisse n'est visible avant qu'un compte soit reconnu.
   const [session, setSession] = useState<EtatSession | null>(null);
@@ -121,26 +121,28 @@ export function App() {
     const entete = enteteRef.current;
     if (!entete) return;
     const mesurer = () => {
-      const h = entete.offsetHeight || Math.round(entete.getBoundingClientRect().height);
-      if (h > 0) setHauteurEntete(h);
+      const rect = entete.getBoundingClientRect();
+      const h = Math.max(entete.offsetHeight, Math.round(rect.height));
+      if (h > 50) setHauteurEntete(h);
     };
     mesurer();
-    const timer = setTimeout(mesurer, 100);
+    const t1 = setTimeout(mesurer, 50);
+    const t2 = setTimeout(mesurer, 250);
+    const t3 = setTimeout(mesurer, 800);
     window.addEventListener('resize', mesurer);
+    let obs: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
-      const observateur = new ResizeObserver(mesurer);
-      observateur.observe(entete);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener('resize', mesurer);
-        observateur.disconnect();
-      };
+      obs = new ResizeObserver(mesurer);
+      obs.observe(entete);
     }
     return () => {
-      clearTimeout(timer);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       window.removeEventListener('resize', mesurer);
+      if (obs) obs.disconnect();
     };
-  }, [session, onglet]);
+  }, [session, onglet, afficherSynthese, livre]);
 
   useEffect(() => {
     if (!notification) return;

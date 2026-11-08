@@ -21,7 +21,7 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
  * l'imprimé A4 fourni : 11,1 mm par ligne remplie et 120 mm pour l'ensemble
  * des lignes remplies et du bloc vide.
  */
-const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 120, blocVideMinimum: 12 };
+const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 100, blocVideMinimum: 12 };
 
 /**
  * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,

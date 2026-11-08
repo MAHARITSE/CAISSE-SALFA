@@ -438,19 +438,25 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
     box-shadow: none;
   }
   .print-bordereau .bordereau-document--court {
-    max-height: 280mm;
-    overflow: hidden;
-    break-after: avoid;
-    page-break-after: avoid;
+    max-height: 270mm !important;
+    overflow: hidden !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
   .bordereau-signatures {
-    break-inside: avoid;
-    break-after: avoid;
-    page-break-after: avoid;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
   @page { size: A4 landscape; margin: 12mm; }
   /* Bordereau : une page A4 portrait, marges portées par le document lui-même. */
   @page bordereau { size: A4 portrait; margin: 0; }
   body.has-print-bordereau,
-  body:has(.print-bordereau) { page: bordereau; margin: 0 !important; padding: 0 !important; }
+  body:has(.print-bordereau) {
+    page: bordereau;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+  }
 }
