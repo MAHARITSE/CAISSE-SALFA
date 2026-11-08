@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { verrouillerDefilement } from '../utils/verrouDefilement';
 
 interface ModaleProps {
   titre: string;
@@ -20,12 +21,14 @@ export function Modale({ titre, sousTitre, icone, onFermer, children, pied, larg
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    const overflowPrecedent = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     if (!dialog.open) dialog.showModal();
+    const libererDefilement = verrouillerDefilement(dialog.ownerDocument.body);
     return () => {
-      if (dialog.open) dialog.close();
-      document.body.style.overflow = overflowPrecedent;
+      try {
+        if (dialog.open) dialog.close();
+      } finally {
+        libererDefilement();
+      }
     };
   }, []);
 
