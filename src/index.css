@@ -283,11 +283,13 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 }
 .bordereau-document {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 210mm;
   min-height: 297mm;
   /* Cotes du modèle : en-tête à 10 mm du haut, tableau de 6,6 à 203,4 mm.
      Marges symétriques : le tableau est centré au dixième de millimètre. */
-  padding: 9.5mm 6.6mm 4.6mm 6.6mm;
+  padding: 9.5mm 6.6mm 15mm 6.6mm;
   box-sizing: border-box;
   background: #fff;
   color: #000;
@@ -370,8 +372,38 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 .bordereau-total-montant { font-weight: 700; }
 /* Lignes vides : le filet doit rester visible même sans contenu. */
 
-/* Mention en toutes lettres, sans italique, comme sur les modèles. */
-.bordereau-lettres { margin: 9mm 0 2.9mm; }
+/* Le pied descend au bas de la feuille sans recouvrir les lignes du tableau.
+   Sur les pièces longues, le document peut grandir et continuer normalement. */
+.bordereau-document > * { flex-shrink: 0; }
+.bordereau-contenu {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.bordereau-introduction { flex-shrink: 0; }
+.bordereau-introduction > .bordereau-ligne:last-child { margin-bottom: 0; }
+.bordereau-contenu > .bordereau-table { flex: 1 0 auto; }
+.bordereau-pied {
+  display: flex;
+  flex-direction: column;
+  break-inside: avoid;
+}
+
+/* Bande de 15 mm entre le tableau et les signatures. La hauteur peut
+   augmenter si un montant très long nécessite plusieurs lignes. */
+.bordereau-lettres {
+  margin: 0;
+  min-height: 15mm;
+  display: flex;
+  align-items: center;
+  font-weight: 400;
+  text-transform: none;
+}
+/* La formule introductive conserve sa typographie d'origine. */
+.bordereau-lettres__montant {
+  font-weight: 700;
+  text-transform: capitalize;
+}
 
 /* Cases de signature : pleine largeur, autant de colonnes que de signataires. */
 .bordereau-signatures {
@@ -420,28 +452,21 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   body.has-print-bordereau #root,
   body:has(.print-bordereau) #root,
   body:has(.print-bordereau) .app-shell { display: none !important; }
-  .print-bordereau { page: bordereau; margin: 0 !important; padding: 0 !important; }
-  /* À l'écran la feuille mesure 297 mm pour l'aperçu. À l'impression, ne pas
-     imposer la hauteur A4 ni la bordure décorative : une fraction de millimètre
-     hors page peut déclencher une feuille blanche selon le pilote. Le contenu
-     reste libre de se poursuivre sur les pages suivantes si nécessaire. */
+  .print-bordereau { margin: 0 !important; padding: 0 !important; }
+  /* Garder 1 mm de sécurité contre les arrondis du moteur d'impression.
+     La hauteur minimale ancre le pied en bas, sans hauteur maximale ni
+     position absolue qui risquerait de tronquer une pièce longue. */
   .print-bordereau .bordereau-document {
-    min-height: 0;
+    min-height: 296mm;
     height: auto;
-    padding-bottom: 0;
+    /* 14 mm + 1 mm de sécurité de la feuille = 15 mm sous les signatures. */
+    padding-bottom: 14mm;
     margin-bottom: 0 !important;
-    border-color: transparent;
-    border-bottom-width: 0;
+    border: 0;
     page-break-inside: auto;
     break-inside: auto;
     zoom: 1 !important;
     box-shadow: none;
-  }
-  .print-bordereau .bordereau-document--court {
-    max-height: 270mm !important;
-    overflow: hidden !important;
-    break-after: avoid !important;
-    page-break-after: avoid !important;
   }
   .bordereau-signatures {
     break-inside: avoid !important;
@@ -449,14 +474,11 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
     page-break-after: avoid !important;
   }
   @page { size: A4 landscape; margin: 12mm; }
-  /* Bordereau : une page A4 portrait, marges portées par le document lui-même. */
-  @page bordereau { size: A4 portrait; margin: 0; }
+  /* Le portail du bordereau remplace temporairement ce format par du portrait,
+     sans page nommée ni changement de format en fin de document. */
   body.has-print-bordereau,
   body:has(.print-bordereau) {
-    page: bordereau;
     margin: 0 !important;
     padding: 0 !important;
-    max-height: 297mm !important;
-    overflow: hidden !important;
   }
 }
