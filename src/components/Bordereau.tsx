@@ -183,10 +183,25 @@ interface ModaleBordereauProps {
 export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imprimerDirectement = false }: ModaleBordereauProps) {
   useEffect(() => {
     document.body.classList.add('has-print-bordereau');
+
+    const timer = setTimeout(() => {
+      try {
+        window.print();
+      } catch (_) {}
+    }, 50);
+
+    const handleAfterPrint = () => {
+      onFermer();
+    };
+
+    window.addEventListener('afterprint', handleAfterPrint);
+
     return () => {
+      clearTimeout(timer);
+      window.removeEventListener('afterprint', handleAfterPrint);
       document.body.classList.remove('has-print-bordereau');
     };
-  }, []);
+  }, [onFermer]);
 
   return <>
     {/* La modale se monte à la demande : `key` fige l'en-tête tel qu'il était
