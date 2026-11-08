@@ -49,8 +49,9 @@ export function parserMontant(saisie: string, autoriserNegatif = false): number 
 }
 
 /**
- * Masque de saisie des libellés : les majuscules restent actives (caps lock).
- * La longueur ne change pas, le curseur n'est donc pas déplacé.
+ * Normalisation des libellés à l'ajout ou à l'enregistrement.
+ * Ne pas l'appliquer à chaque frappe : réécrire la valeur native perturbe
+ * les suggestions Windows, les remplacements et les compositions IME.
  */
 export function masqueMajuscules(texte: string): string {
   return texte.toUpperCase();
