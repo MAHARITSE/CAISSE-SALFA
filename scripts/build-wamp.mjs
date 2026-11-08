@@ -126,8 +126,12 @@ function archiver(dossier, cible) {
     execSync(`zip -qr "${cible}" "${basename(dossier)}"`, { cwd: parent, stdio: 'ignore' });
     return;
   } catch {
-    // Pas de `zip` : on tente PowerShell (Compress-Archive), puis on avertit.
+    // Pas de `zip` : on tente python3 -m zipfile, puis PowerShell, puis warning.
   }
+  try {
+    execSync(`python3 -m zipfile -c "${cible}" "${basename(dossier)}"`, { cwd: parent, stdio: 'ignore' });
+    return;
+  } catch {}
   try {
     execSync(
       `powershell -NoProfile -Command "Compress-Archive -Path '${dossier}' -DestinationPath '${cible}' -Force"`,
@@ -135,7 +139,7 @@ function archiver(dossier, cible) {
     );
     return;
   } catch {
-    console.warn('  (archive ignorée : ni zip ni PowerShell disponibles)');
+    console.warn('  (archive ignorée : ni zip, ni python3, ni PowerShell disponibles)');
   }
 }
 
@@ -160,5 +164,9 @@ console.log(`✓ Paquet WAMP prêt : ${compter(paquet)} fichiers dans deploy/wam
 const archive = join(wamp, 'caisse-salfa.zip');
 rmSync(archive, { force: true });
 archiver(paquet, archive);
-console.log(`✓ Archive prête : deploy/wamp/caisse-salfa.zip (${Math.round(statSync(archive).size / 1024)} Ko)`);
+if (existsSync(archive)) {
+  console.log(`✓ Archive prête : deploy/wamp/caisse-salfa.zip (${Math.round(statSync(archive).size / 1024)} Ko)`);
+} else {
+  console.log('ℹ Le dossier deploy/wamp/caisse-salfa/ est prêt (l’archive ZIP n’a pas pu être générée).');
+}
 console.log('  Copiez le dossier (ou décompressez le ZIP) dans C:\\wamp64\\www\\ — rien d’autre à installer.');
