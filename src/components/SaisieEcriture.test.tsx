@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Sens } from '../types';
@@ -69,13 +69,13 @@ describe('saisie des postes et du libellé', () => {
     await user.keyboard('{Enter}');
     expect(within(dialogue).getByRole('alert')).toHaveTextContent('montant du poste');
     expect(onEnregistrer).not.toHaveBeenCalled();
-    expect(poste).toHaveValue('SECOND');
+    expect(poste).toHaveValue('second');
     await user.type(montant, '2000');
     // Une saisie non ajoutée ne doit pas disparaître lors de l'enregistrement.
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(within(dialogue).getByRole('alert')).toHaveTextContent('Ajoutez le poste en cours');
     expect(onEnregistrer).not.toHaveBeenCalled();
-    expect(poste).toHaveValue('SECOND');
+    expect(poste).toHaveValue('second');
     expect(montant).toHaveValue('2\u202f000');
     await user.type(montant, '{Enter}');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
@@ -97,6 +97,69 @@ describe('saisie des postes et du libellé', () => {
     expect(onEnregistrer).not.toHaveBeenCalled();
   });
 
+  it.each(['RECETTE', 'DEPENSE'] as const)('laisse les remplacements de suggestion natifs puis enregistre une seule fois (%s)', async sens => {
+    const user = userEvent.setup();
+    const { dialogue, onEnregistrer } = ouvrir(sens);
+    const libelle = within(dialogue).getByLabelText(/Libellé de l’écriture/);
+    await user.type(libelle, 'achat de carb');
+    // Une suggestion remplace le mot incomplet, sans réécriture de sa casse.
+    fireEvent.input(libelle, { target: { value: 'achat de carburant ' }, inputType: 'insertReplacementText', data: 'carburant ' });
+    expect(libelle).toHaveValue('achat de carburant ');
+    // Certains claviers utilisent insertText plutôt qu'insertReplacementText.
+    fireEvent.input(libelle, { target: { value: 'achat de carburant groupe' }, inputType: 'insertText', data: 'groupe' });
+    expect(libelle).toHaveValue('achat de carburant groupe');
+    await user.type(within(dialogue).getByLabelText(/Montant total/), '1000');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onEnregistrer).toHaveBeenCalledOnce();
+    expect(onEnregistrer.mock.calls[0][0].libelle).toBe('ACHAT DE CARBURANT GROUPE');
+  });
+
+  it('ne valide ni poste ni formulaire pendant la composition d’une suggestion', async () => {
+    const user = userEvent.setup();
+    const { dialogue, onEnregistrer } = ouvrir('DEPENSE');
+    await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'test suggestion');
+    await user.click(within(dialogue).getByRole('button', { name: 'Détail par postes' }));
+    const poste = within(dialogue).getByLabelText('Poste', { exact: true });
+    await user.type(within(dialogue).getByLabelText('Montant (Ar)', { exact: true }), '2000');
+    fireEvent.compositionStart(poste);
+    fireEvent.input(poste, { target: { value: 'médicam' }, inputType: 'insertCompositionText', isComposing: true });
+    expect(poste).toHaveValue('médicam');
+    fireEvent.keyDown(poste, { key: 'Enter', isComposing: true });
+    fireEvent.keyDown(poste, { key: 'Enter', keyCode: 229 });
+    // Même si le clavier ne fournit pas isComposing, le cycle reste suivi.
+    fireEvent.keyDown(poste, { key: 'Enter' });
+    fireEvent.submit(poste.closest('form')!);
+    expect(onEnregistrer).not.toHaveBeenCalled();
+    expect(within(dialogue).queryByLabelText('Libellé du poste 1')).not.toBeInTheDocument();
+    fireEvent.input(poste, { target: { value: 'médicaments' }, inputType: 'insertCompositionText', isComposing: true });
+    fireEvent.compositionEnd(poste, { data: 'médicaments' });
+    expect(poste).toHaveValue('médicaments');
+    fireEvent.keyDown(poste, { key: 'Enter', keyCode: 229 });
+    expect(within(dialogue).queryByLabelText('Libellé du poste 1')).not.toBeInTheDocument();
+    fireEvent.keyDown(poste, { key: 'Enter' });
+    const ajoute = within(dialogue).getByLabelText('Libellé du poste 1');
+    expect(ajoute).toHaveValue('MÉDICAMENTS');
+    // La correction d'un poste existant est elle aussi laissée au navigateur.
+    fireEvent.input(ajoute, { target: { value: 'médicaments externes' }, inputType: 'insertReplacementText' });
+    expect(ajoute).toHaveValue('médicaments externes');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onEnregistrer).toHaveBeenCalledOnce();
+    expect(onEnregistrer.mock.calls[0][0].lignesDetail).toMatchObject([{ libelle: 'MÉDICAMENTS EXTERNES', montant: 2000 }]);
+  });
+
+  it('permet de réessayer après une exception d’enregistrement sans actualiser', async () => {
+    const user = userEvent.setup();
+    const { dialogue, onEnregistrer } = ouvrir('RECETTE');
+    onEnregistrer.mockRejectedValueOnce(new Error('Serveur indisponible'));
+    await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'recette test');
+    await user.type(within(dialogue).getByLabelText(/Montant total/), '1000');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(within(dialogue).getByRole('alert')).toHaveTextContent('Serveur indisponible');
+    expect(within(dialogue).getByLabelText(/Libellé de l’écriture/)).toHaveValue('recette test');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onEnregistrer).toHaveBeenCalledTimes(2);
+  });
+
   it('laisse le libellé libre sans liste déroulante et conserve les suggestions du tiers', async () => {
     const user = userEvent.setup();
     const { dialogue } = ouvrir('DEPENSE');
@@ -104,7 +167,8 @@ describe('saisie des postes et du libellé', () => {
     expect(libelle).not.toHaveAttribute('list');
     expect(libelle).toHaveAttribute('autocomplete', 'off');
     await user.type(libelle, 'frais de mission');
-    expect(libelle).toHaveValue('FRAIS DE MISSION');
+    expect(libelle).toHaveValue('frais de mission');
+    expect(libelle).toHaveClass('saisie-majuscules');
     expect(within(dialogue).getByLabelText('Bénéficiaire / fournisseur')).toHaveAttribute('list');
     expect(within(dialogue).getByRole('combobox', { name: 'Catégorie *' })).toBeInTheDocument();
   });

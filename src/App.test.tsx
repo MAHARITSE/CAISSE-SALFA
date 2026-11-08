@@ -289,7 +289,8 @@ describe('parcours de caisse', () => {
     await user.type(within(dialog).getByLabelText(/Montant total/), '1000');
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
     expect(within(dialog).getByRole('alert')).toHaveTextContent('stockage du navigateur est plein');
-    expect(within(dialog).getByLabelText(/Libellé de l’écriture/)).toHaveValue('À CONSERVER');
+    // Le texte natif est conservé ; seules l'affichage et la sauvegarde sont en capitales.
+    expect(within(dialog).getByLabelText(/Libellé de l’écriture/)).toHaveValue('À conserver');
     expect(localStorage.getItem(CLE_LIVRE)).toBeNull();
     spy.mockRestore();
     await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));

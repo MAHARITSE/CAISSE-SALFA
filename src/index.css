@@ -67,6 +67,11 @@
   .summary-note { @apply mt-2 text-xs leading-relaxed text-slate-500 sm:text-[13px] dark:text-slate-400; }
 }
 
+/* Afficher les libellés en capitales sans réécrire la valeur du champ pendant
+   la frappe : les suggestions Windows et les IME gardent leur texte natif.
+   La conversion des données est faite à l'ajout ou à l'enregistrement. */
+.saisie-majuscules { text-transform: uppercase; }
+
 /* Lien d'évitement : masqué tant qu'il n'a pas le focus clavier. */
 .lien-evitement {
   position: fixed;
