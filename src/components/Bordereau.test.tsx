@@ -34,7 +34,7 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(screen.getByText('2 657 400,00')).toBeInTheDocument();
     // Chaque poste porte aussi son montant à deux décimales.
     expect(screen.getByText('238 000,00')).toBeInTheDocument();
-    expect(screen.getByText('Arrêté à la somme de deux millions six cent cinquante-sept mille quatre cents Ariary')).toBeInTheDocument();
+    expect(screen.getByText('deux millions six cent cinquante-sept mille quatre cents Ariary').closest('p')).toHaveTextContent('Arrêté à la somme de deux millions six cent cinquante-sept mille quatre cents Ariary');
     for (const titre of ['Caissier(e)', 'Gestionnaire', 'Médecin Chef']) expect(screen.getByText(titre)).toBeInTheDocument();
     expect(screen.queryByText('Demandeur')).not.toBeInTheDocument();
   });
@@ -44,7 +44,10 @@ describe('bordereau imprimable conforme aux modèles', () => {
     // La dépense porte son titre complet, sigle compris, comme la recette.
     expect(screen.getByRole('heading', { name: 'DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)' })).toBeInTheDocument();
     expect(screen.getByText('TOTAL DES DEPENSES')).toBeInTheDocument();
-    expect(screen.getByText(/Arrêté à la somme de quatre millions quarante-deux mille Ariary/)).toBeInTheDocument();
+    const montantLettres = screen.getByText('quatre millions quarante-deux mille Ariary');
+    expect(montantLettres.tagName).toBe('STRONG');
+    expect(montantLettres.closest('p')).toHaveTextContent('Arrêté à la somme de quatre millions quarante-deux mille Ariary');
+    expect(screen.getByText('Arrêté à la somme de')).not.toHaveClass('bordereau-lettres__montant');
     for (const titre of ['Demandeur', 'Caissier(e)', 'Gestionnaire', 'Médecin Chef']) expect(screen.getByText(titre)).toBeInTheDocument();
     // Quatre signataires : quatre colonnes.
     expect(container.querySelectorAll('.bordereau-signatures > div')).toHaveLength(4);
@@ -61,7 +64,17 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(container.querySelectorAll('.bordereau-ligne-vide')).toHaveLength(1);
     // Le bloc vide s'ajuste pour que le tableau garde toujours la même hauteur.
     const bloc = container.querySelector('.bordereau-ligne-vide') as HTMLElement;
-    expect(parseFloat(bloc.style.height)).toBeGreaterThan(12);
+    // Une ligne à 11,1 mm + 118,9 mm de vide : corps de tableau de 130 mm.
+    expect(parseFloat(bloc.style.height)).toBeCloseTo(118.9);
+  });
+
+  it('réduit seulement le bloc vide quand le tableau contient beaucoup de postes', () => {
+    const lignesDetail = Array.from({ length: 12 }, (_, i) => ({ id: `d${i}`, libelle: `POSTE ${i + 1}`, montant: 1000 }));
+    const { container } = render(<BordereauDocument ligne={ligne('DEPENSE', { lignesDetail, montant: 12000 })} entete={enteteParDefaut()} />);
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(13);
+    expect((container.querySelector('.bordereau-ligne-vide') as HTMLElement).style.height).toBe('0mm');
+    expect(screen.getByText('POSTE 12')).toBeInTheDocument();
+    expect(screen.getByText('Médecin Chef')).toBeInTheDocument();
   });
 
   it('reprend l’en-tête de l’hôpital et ses deux logos', () => {
@@ -116,6 +129,15 @@ describe('bordereau imprimable conforme aux modèles', () => {
     const { container } = render(<BordereauDocument ligne={ligne('DEPENSE')} entete={entete} />);
     expect(screen.getByAltText('En-tête fourni')).toHaveAttribute('src', entete.image);
     expect(container.querySelector('.bordereau-entete__textes')).not.toBeInTheDocument();
+  });
+
+  it('impose le portrait seulement pendant l’impression du bordereau', () => {
+    const { unmount } = render(<ModaleBordereau ligne={ligne('DEPENSE')} entete={enteteParDefaut()} onFermer={vi.fn()} />);
+    expect(document.body).toHaveClass('has-print-bordereau');
+    expect(document.querySelector('.print-bordereau style')?.textContent).toBe('@media print { @page { size: A4 portrait; margin: 0; } }');
+    unmount();
+    expect(document.body).not.toHaveClass('has-print-bordereau');
+    expect(document.querySelector('.print-bordereau style')).toBeNull();
   });
 
   it('présente le document comme une feuille A4 portrait', () => {

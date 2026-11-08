@@ -2,7 +2,6 @@ import { useId, useState, type FormEvent } from 'react';
 import { AlertCircle, ArrowDown, ArrowUp, Plus, RotateCcw, Save, Tag, Trash2 } from 'lucide-react';
 import type { Categories, Sens } from '../types';
 import { MAX_CATEGORIES, MAX_LONGUEUR_CATEGORIE, categoriesParDefaut } from '../utils/constants';
-import { masqueMajuscules } from '../utils/format';
 import { Modale } from './Modale';
 
 interface Props {
@@ -129,7 +128,7 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
             className="field"
             maxLength={MAX_LONGUEUR_CATEGORIE}
             value={nouvelle}
-            onChange={e => { setNouvelle(masqueMajuscules(e.target.value)); setErreur(''); }}
+            onChange={e => { setNouvelle(e.target.value); setErreur(''); }}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); ajouter(); } }}
             placeholder="Ex. Imagerie médicale"
           />
@@ -146,7 +145,7 @@ export function GestionCategoriesModal({ categories, erreurExterne, onEnregistre
             aria-label={`Catégorie ${index + 1}`}
             maxLength={MAX_LONGUEUR_CATEGORIE}
             value={categorie}
-            onChange={e => renommer(index, masqueMajuscules(e.target.value))}
+            onChange={e => renommer(index, e.target.value)}
           />
           <div className="flex shrink-0">
             <button type="button" className="icon-button" disabled={index === 0} aria-label={`Monter la catégorie ${index + 1}`} onClick={() => deplacer(index, -1)}><ArrowUp size={15} /></button>

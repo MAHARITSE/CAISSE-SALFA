@@ -256,26 +256,26 @@ describe('parcours de caisse', () => {
     const gestion = screen.getByRole('dialog', { name: 'Catégories de saisie' });
     await user.click(within(gestion).getByRole('tab', { name: /Dépenses/ }));
     await user.type(within(gestion).getByLabelText('Nouvelle catégorie'), 'Entretien du groupe');
-    expect(within(gestion).getByLabelText('Nouvelle catégorie')).toHaveValue('ENTRETIEN DU GROUPE');
+    expect(within(gestion).getByLabelText('Nouvelle catégorie')).toHaveValue('Entretien du groupe');
     await user.click(within(gestion).getByRole('button', { name: 'Ajouter' }));
     await user.click(within(gestion).getByRole('button', { name: 'Enregistrer' }));
 
     // Seules les catégories de dépenses ont changé.
     const livre = lire();
-    expect(livre.categories.depense).toContain('ENTRETIEN DU GROUPE');
-    expect(livre.categories.recette).not.toContain('ENTRETIEN DU GROUPE');
+    expect(livre.categories.depense).toContain('Entretien du groupe');
+    expect(livre.categories.recette).not.toContain('Entretien du groupe');
     expect(livre.categories.recette).toContain('Consultations');
 
     // La nouvelle catégorie est proposée dans le formulaire de dépense…
     const apres = screen.getByRole('dialog', { name: 'Nouvelle dépense' });
     expect(within(apres).getByLabelText('Catégorie *')).toHaveValue(livre.categories.depense[0]);
-    await user.selectOptions(within(apres).getByLabelText('Catégorie *'), 'ENTRETIEN DU GROUPE');
-    expect(within(apres).getByLabelText('Catégorie *')).toHaveValue('ENTRETIEN DU GROUPE');
+    await user.selectOptions(within(apres).getByLabelText('Catégorie *'), 'Entretien du groupe');
+    expect(within(apres).getByLabelText('Catégorie *')).toHaveValue('Entretien du groupe');
     await user.click(within(apres).getByRole('button', { name: 'Annuler' }));
     // …et absente de celui des recettes.
     await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
     const recette = screen.getByRole('dialog', { name: 'Nouvelle recette' });
-    expect(within(recette).queryByRole('option', { name: 'ENTRETIEN DU GROUPE' })).not.toBeInTheDocument();
+    expect(within(recette).queryByRole('option', { name: 'Entretien du groupe' })).not.toBeInTheDocument();
   });
 
   it('conserve la saisie et affiche une erreur explicite quand le stockage est plein', async () => {

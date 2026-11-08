@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
-import { montantEnLettres } from '../utils/nombreEnLettres';
+import { nombreEnLettres } from '../utils/nombreEnLettres';
 import { TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { styleLigneEntete } from '../utils/style-entete';
 
@@ -18,10 +18,12 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
  *
  * Le bloc occupe la place restante, de sorte que le tableau garde toujours la
  * même hauteur quelle que soit la taille de la pièce. Cotes relevées sur
- * l'imprimé A4 fourni : 11,1 mm par ligne remplie et 120 mm pour l'ensemble
- * des lignes remplies et du bloc vide.
+ * l'imprimé A4 fourni : 11,1 mm par ligne remplie. L'ensemble des lignes
+ * remplies et du bloc vide mesure 130 mm. Le bloc vide se réduit jusqu'à zéro
+ * sur les pièces détaillées pour préserver la place des signatures et la marge
+ * inférieure de 15 mm, sans réduire ni masquer les lignes remplies.
  */
-const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 100, blocVideMinimum: 12 };
+const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 130, blocVideMinimum: 0 };
 
 /**
  * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,
@@ -67,99 +69,105 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
     // Une pièce en montant unique occupe une seule ligne récapitulative.
     : [{ id: 'unique', libelle: ligne.libelle, montant: ligne.montant, observation: ligne.reference ?? '' }];
 
-  const estCourt = details.length <= 15;
+  return <article className="bordereau-document border border-slate-300 bg-white text-black">
+    <div className="bordereau-contenu">
+      <div className="bordereau-introduction">
+        {/* Les images se posent sur la feuille entière, hors du flux du document. */}
+        <header className="bordereau-entete">
+          {entete.mode === 'image' && entete.image
+            ? <img src={entete.image} alt="En-tête fourni" className="bordereau-entete__image" />
+            : <>
+              <div className="bordereau-entete__textes"><LignesEntete entete={entete} /></div>
+              {entete.images.filter(image => image.source).map(image => <img
+                key={image.id}
+                src={image.source}
+                alt={image.alt}
+                className="bordereau-entete__image-libre"
+                /* Coordonnées converties depuis le haut de la feuille vers le bandeau. */
+                style={{
+                  left: `${image.x}mm`,
+                  top: `${image.y}mm`,
+                  width: `${image.largeur}mm`,
+                }}
+              />)}
+            </>}
+        </header>
 
-  return <article className={`bordereau-document border border-slate-300 bg-white text-black ${estCourt ? 'bordereau-document--court' : ''}`}>
-    {/* Les images se posent sur la feuille entière, hors du flux du document. */}
-    <header className="bordereau-entete">
-      {entete.mode === 'image' && entete.image
-        ? <img src={entete.image} alt="En-tête fourni" className="bordereau-entete__image" />
-        : <>
-          <div className="bordereau-entete__textes"><LignesEntete entete={entete} /></div>
-          {entete.images.filter(image => image.source).map(image => <img
-            key={image.id}
-            src={image.source}
-            alt={image.alt}
-            className="bordereau-entete__image-libre"
-            /* Coordonnées converties depuis le haut de la feuille vers le bandeau. */
-            style={{
-              left: `${image.x}mm`,
-              top: `${image.y}mm`,
-              width: `${image.largeur}mm`,
-            }}
-          />)}
-        </>}
-    </header>
+        {/* Les deux documents portent leur titre, comme les états officiels :
+            AUTORISATION DE RECETTES, DEMANDE D’ENGAGEMENT DE DÉPENSES (DED). */}
+        <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
 
-    {/* Les deux documents portent leur titre, comme les états officiels :
-        AUTORISATION DE RECETTES, DEMANDE D’ENGAGEMENT DE DÉPENSES (DED). */}
-    <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
+        <p className="bordereau-piece"><strong>Pièce n°</strong></p>
 
-    <p className="bordereau-piece"><strong>Pièce n°</strong></p>
+        <p className="bordereau-ligne"><span className="bordereau-etiquette">DATE :</span>{' '}{dateFr(ligne.date)}</p>
+        <p className="bordereau-ligne">
+          <span className="bordereau-etiquette">Objet :</span>{' '}{ligne.libelle}{ligne.tiers ? ` — ${ligne.tiers}` : ''}
+        </p>
+      </div>
 
-    <p className="bordereau-ligne"><span className="bordereau-etiquette">DATE :</span>{' '}{dateFr(ligne.date)}</p>
-    <p className="bordereau-ligne">
-      <span className="bordereau-etiquette">Objet :</span>{' '}{ligne.libelle}{ligne.tiers ? ` — ${ligne.tiers}` : ''}
-    </p>
-
-    <table className="bordereau-table">
-      <colgroup>
-        <col className="col-numero" />
-        <col className="col-libelle" />
-        <col className="col-compte" />
-        <col className="col-montant" />
-        <col className="col-observation" />
-      </colgroup>
-      <thead>
-        <tr>
-          <th>N°</th>
-          <th>Libellé</th>
-          <th>N° Compte</th>
-          <th>Montant</th>
-          <th>Observation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {details.map((d, i) => <tr key={d.id}>
-          <td className="bordereau-cellule-numero">{i + 1}</td>
-          <td className="bordereau-cellule-libelle">{d.libelle}</td>
-          <td />
-          <td className="bordereau-cellule-montant">{montantModele(d.montant)}</td>
-          <td className="bordereau-cellule-observation">{d.observation}</td>
-        </tr>)}
-        <tr
-          className="bordereau-ligne-vide"
-          aria-hidden="true"
-          style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.lignesTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
-        >
-          <td />
-          <td />
-          <td />
-          <td />
-          <td />
-        </tr>
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan={3} className="bordereau-total-libelle">
-            TOTAL DES {recette ? 'RECETTES' : 'DEPENSES'}
-          </td>
-          <td className="bordereau-cellule-montant bordereau-total-montant">{montantModele(ligne.montant)}</td>
-          <td />
-        </tr>
-      </tfoot>
-    </table>
-
-    <p className="bordereau-lettres">{montantEnLettres(ligne.montant)}</p>
-
-    <div
-      className="bordereau-signatures"
-      style={{ gridTemplateColumns: `repeat(${SIGNATURES[ligne.sens].length}, minmax(0, 1fr))` }}
-    >
-      {SIGNATURES[ligne.sens].map(titre => <div key={titre} className="bordereau-signature">
-        <p className="bordereau-signature__titre">{titre}</p>
-      </div>)}
+      <table className="bordereau-table">
+        <colgroup>
+          <col className="col-numero" />
+          <col className="col-libelle" />
+          <col className="col-compte" />
+          <col className="col-montant" />
+          <col className="col-observation" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Libellé</th>
+            <th>N° Compte</th>
+            <th>Montant</th>
+            <th>Observation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {details.map((d, i) => <tr key={d.id}>
+            <td className="bordereau-cellule-numero">{i + 1}</td>
+            <td className="bordereau-cellule-libelle">{d.libelle}</td>
+            <td />
+            <td className="bordereau-cellule-montant">{montantModele(d.montant)}</td>
+            <td className="bordereau-cellule-observation">{d.observation}</td>
+          </tr>)}
+          <tr
+            className="bordereau-ligne-vide"
+            aria-hidden="true"
+            style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.lignesTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
+          >
+            <td />
+            <td />
+            <td />
+            <td />
+            <td />
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={3} className="bordereau-total-libelle">
+              TOTAL DES {recette ? 'RECETTES' : 'DEPENSES'}
+            </td>
+            <td className="bordereau-cellule-montant bordereau-total-montant">{montantModele(ligne.montant)}</td>
+            <td />
+          </tr>
+        </tfoot>
+      </table>
     </div>
+
+    <footer className="bordereau-pied">
+      <p className="bordereau-lettres"><span>Arrêté à la somme de{' '}
+        <strong className="bordereau-lettres__montant">{nombreEnLettres(ligne.montant)} Ariary</strong>
+      </span></p>
+
+      <div
+        className="bordereau-signatures"
+        style={{ gridTemplateColumns: `repeat(${SIGNATURES[ligne.sens].length}, minmax(0, 1fr))` }}
+      >
+        {SIGNATURES[ligne.sens].map(titre => <div key={titre} className="bordereau-signature">
+          <p className="bordereau-signature__titre">{titre}</p>
+        </div>)}
+      </div>
+    </footer>
   </article>;
 }
 
@@ -203,6 +211,11 @@ export function ModaleBordereau({ ligne, entete, onFermer }: ModaleBordereauProp
 
   return createPortal(
     <div className="print-only print-bordereau">
+      {/* Remplacer le format par défaut pour TOUT le travail d'impression.
+          Une page nommée portrait dans un document par défaut paysage peut
+          laisser une page paysage blanche à la sortie du bordereau.
+          Cette règle disparaît avec le portail : le journal reste en paysage. */}
+      <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
       <BordereauDocument ligne={ligne} entete={entete} />
     </div>,
     document.body,
