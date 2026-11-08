@@ -135,3 +135,47 @@ test('le journal retrouve son format paysage après fermeture du bordereau', asy
   expect(formatsPages(pdf)).not.toHaveLength(0);
   for (const [, , largeur, hauteur] of formatsPages(pdf)) expect(largeur).toBeGreaterThan(hauteur);
 });
+
+test('le CSS du paquet WAMP conserve les dimensions A4 du développement', async ({ page }, info) => {
+  await ouvrirBordereau(page, 'dépense', 2);
+  // Réutiliser exactement la même pièce, sans dépendre d'une base MySQL de test.
+  // Seule la feuille de style change : celle réellement livrée avec WAMP.
+  const piece = await page.locator('.print-bordereau').evaluate(el => el.outerHTML);
+  const mesurer = () => page.locator('.bordereau-document').evaluate(el => {
+    const mm = (px: number) => px * 25.4 / 96;
+    const feuille = el.getBoundingClientRect();
+    const tableau = el.querySelector('.bordereau-table')!.getBoundingClientRect();
+    const signatures = el.querySelector('.bordereau-signatures')!.getBoundingClientRect();
+    return {
+      largeur: mm(feuille.width),
+      hauteur: mm(feuille.height),
+      largeurTableau: mm(tableau.width),
+      basSignatures: mm(signatures.bottom - feuille.top),
+      zoom: getComputedStyle(el).zoom,
+    };
+  });
+  const developpement = await mesurer();
+  const { readFile } = await import('node:fs/promises');
+  const index = await readFile('deploy/wamp/caisse-salfa/index.html', 'utf8');
+  const css = index.match(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/);
+  expect(css, 'Le paquet WAMP doit référencer sa feuille de style compilée').not.toBeNull();
+  const href = `/deploy/wamp/caisse-salfa/${css![1].replace(/^\.\//, '')}`;
+  await page.route('**/impression-paquet-wamp', route => route.fulfill({
+    contentType: 'text/html',
+    body: `<!doctype html><html lang="fr"><head><meta charset="UTF-8"><link rel="stylesheet" href="${href}"></head><body class="has-print-bordereau">${piece}</body></html>`,
+  }));
+  await page.goto('/impression-paquet-wamp');
+  const deploiement = await mesurer();
+  expect(deploiement).toEqual(developpement);
+  expect(deploiement.largeur).toBeCloseTo(210, 0);
+  expect(deploiement.hauteur).toBeCloseTo(296, 0);
+  expect(deploiement.basSignatures).toBeCloseTo(282, 0);
+  expect(deploiement.zoom).toBe('1');
+  const pdf = await page.pdf({ preferCSSPageSize: true, scale: 1, printBackground: true });
+  await info.attach('bordereau-wamp-echelle-100.pdf', { body: pdf, contentType: 'application/pdf' });
+  expect(nombrePages(pdf)).toBe(1);
+  for (const [, , largeur, hauteur] of formatsPages(pdf)) {
+    expect(largeur * 25.4 / 72).toBeCloseTo(210, 0);
+    expect(hauteur * 25.4 / 72).toBeCloseTo(297, 0);
+  }
+});
