@@ -417,8 +417,10 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   tfoot { display: table-row-group; }
   tr { break-inside: avoid; }
   .screen-page-hidden { display: table-row !important; }
+  body.has-print-bordereau #root,
+  body:has(.print-bordereau) #root,
   body:has(.print-bordereau) .app-shell { display: none !important; }
-  .print-bordereau { page: bordereau; padding: 0; }
+  .print-bordereau { page: bordereau; margin: 0 !important; padding: 0 !important; }
   /* À l'écran la feuille mesure 297 mm pour l'aperçu. À l'impression, ne pas
      imposer la hauteur A4 ni la bordure décorative : une fraction de millimètre
      hors page peut déclencher une feuille blanche selon le pilote. Le contenu
@@ -427,6 +429,7 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
     min-height: 0;
     height: auto;
     padding-bottom: 0;
+    margin-bottom: 0 !important;
     border-color: transparent;
     border-bottom-width: 0;
     page-break-inside: auto;
@@ -434,9 +437,20 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
     zoom: 1 !important;
     box-shadow: none;
   }
+  .print-bordereau .bordereau-document--court {
+    max-height: 280mm;
+    overflow: hidden;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .bordereau-signatures {
+    break-inside: avoid;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
   @page { size: A4 landscape; margin: 12mm; }
   /* Bordereau : une page A4 portrait, marges portées par le document lui-même. */
   @page bordereau { size: A4 portrait; margin: 0; }
-  .print-bordereau { page: bordereau; margin: 0; padding: 0; }
-  body:has(.print-bordereau) { page: bordereau; }
+  body.has-print-bordereau,
+  body:has(.print-bordereau) { page: bordereau; margin: 0 !important; padding: 0 !important; }
 }

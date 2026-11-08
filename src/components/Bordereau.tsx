@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, Settings2 } from 'lucide-react';
 import type { LigneJournal } from '../types';
@@ -19,10 +20,10 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
  *
  * Le bloc occupe la place restante, de sorte que le tableau garde toujours la
  * même hauteur quelle que soit la taille de la pièce. Cotes relevées sur
- * l'imprimé A4 fourni : 11,5 mm par ligne remplie et 133,6 mm pour l'ensemble
+ * l'imprimé A4 fourni : 11,1 mm par ligne remplie et 120 mm pour l'ensemble
  * des lignes remplies et du bloc vide.
  */
-const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 132.9, blocVideMinimum: 12 };
+const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 120, blocVideMinimum: 12 };
 
 /**
  * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,
@@ -68,7 +69,9 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
     // Une pièce en montant unique occupe une seule ligne récapitulative.
     : [{ id: 'unique', libelle: ligne.libelle, montant: ligne.montant, observation: ligne.reference ?? '' }];
 
-  return <article className="bordereau-document border border-slate-300 bg-white text-black">
+  const estCourt = details.length <= 15;
+
+  return <article className={`bordereau-document border border-slate-300 bg-white text-black ${estCourt ? 'bordereau-document--court' : ''}`}>
     {/* Les images se posent sur la feuille entière, hors du flux du document. */}
     <header className="bordereau-entete">
       {entete.mode === 'image' && entete.image
@@ -178,6 +181,13 @@ interface ModaleBordereauProps {
  * n'imprime donc que ce bordereau, jamais le journal affiché derrière.
  */
 export function ModaleBordereau({ ligne, entete, onModifierEntete, onFermer, imprimerDirectement = false }: ModaleBordereauProps) {
+  useEffect(() => {
+    document.body.classList.add('has-print-bordereau');
+    return () => {
+      document.body.classList.remove('has-print-bordereau');
+    };
+  }, []);
+
   return <>
     {/* La modale se monte à la demande : `key` fige l'en-tête tel qu'il était
         au moment de l'ouverture, il faut donc la remonter s'il change. */}
