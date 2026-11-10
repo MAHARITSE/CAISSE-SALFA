@@ -307,3 +307,17 @@ tests/e2e/                        parcours Chromium (desktop, mobile, onglets)
 Voir aussi [`AUDIT.md`](./AUDIT.md) pour le détail des corrections métier et
 [`INTERFACE.md`](./INTERFACE.md) pour l’audit d’interface (thème sombre,
 accessibilité, ergonomie) et ses vérifications.
+
+### Demandes de précision sur une écriture
+
+Dans le journal de l'exercice ouvert, l'administrateur utilise le bouton « ? » de la ligne pour envoyer une demande. Tous les administrateurs et caissiers la voient dans le panneau des demandes du journal ; celui-ci se met à jour à la connexion et toutes les minutes. Le caissier peut ouvrir la pièce, l'enregistrer, puis marquer explicitement la demande comme complétée. L'historique est consultable dans le même panneau. Une pièce supprimée ou clôturée n'est plus modifiable depuis ce panneau.
+
+En mode serveur, les demandes sont partagées dans une table MySQL créée au premier accès (le compte MySQL doit avoir le droit CREATE). Elles ne sont pas comprises dans les exports/restaurations du livre de l'application : sauvegarder également cette table avec la base MySQL. En mode local, elles restent dans le stockage du navigateur et ne sont pas partagées entre ordinateurs ni incluses dans les sauvegardes du livre.
+
+### Messagerie privée et session
+
+L'icône enveloppe dans l'en-tête ouvre les messages privés. Chaque utilisateur peut choisir un destinataire actif, envoyer un message et marquer les messages reçus comme lus ; le compteur est actualisé toutes les minutes. Sur le serveur, l'API ne renvoie que les messages envoyés ou reçus par le compte connecté. La table MySQL `messages_prives` est créée au premier accès : elle doit être sauvegardée avec la base (les exports du livre ne la comprennent pas). En mode local de démonstration, les messages restent dans le navigateur et ne sont pas protégés contre une personne ayant accès à son stockage ; utiliser le mode serveur pour la confidentialité et le partage entre ordinateurs.
+
+La déconnexion automatique après une heure est supprimée. La session utilise un cookie de session Chrome, partagé entre les onglets et fenêtres, et reste active après actualisation ; le bouton de déconnexion reste disponible. Chrome peut restaurer les cookies de session lors de la restauration des onglets après fermeture ou incident : dans ce cas la connexion peut être restaurée. Pour garantir la fermeture de l'accès sur un poste partagé, utiliser le bouton « Se déconnecter ». Un compte désactivé, une session révoquée, une perte de données de session serveur ou une expiration de secours peuvent également nécessiter une reconnexion.
+
+Pour les alertes de messages, ouvrez la messagerie puis cliquez sur « Activer les notifications et le son » et autorisez Chrome. Une notification système signale les nouveaux messages reçus (sans exposer leur contenu) ; un clic ouvre la messagerie. La vérification a lieu environ chaque minute tant que l'application est ouverte et connectée. Après chaque lancement, ouvrir la messagerie pour autoriser le son ; Chrome peut bloquer le son sans interaction. Les réglages Windows, le mode concentration ou Chrome peuvent aussi masquer les notifications ou couper le son. Il n'y a pas de notification lorsque le site est fermé. Les notifications web exigent un contexte sécurisé : sur un serveur WAMP accessible par adresse IP HTTP, configurer HTTPS avec un certificat reconnu par les postes clients (ou utiliser localhost sur le serveur). Si Chrome restaure plusieurs onglets de la caisse, chacun peut signaler le même message.

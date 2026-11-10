@@ -278,3 +278,34 @@ export interface ResultatConfiguration {
 export async function configurerServeur(acces: AccesMysql): Promise<ResultatConfiguration> {
   return appeler<ResultatConfiguration>('configurer', { methode: 'POST', corps: acces });
 }
+
+export interface DemandePrecision {
+  id: number;
+  ecritureId: string;
+  numero: string;
+  message: string;
+  auteur: string;
+  creeLe: string;
+  completeLe: string | null;
+  completePar: string | null;
+}
+
+export async function lireDemandes(): Promise<DemandePrecision[]> {
+  return (await appeler<{ demandes: DemandePrecision[] }>('precisions')).demandes;
+}
+export async function envoyerDemande(corps: { operation: 'creer'; ecritureId: string; message: string } | { operation: 'completer'; id: number }): Promise<DemandePrecision[]> {
+  return (await appeler<{ demandes: DemandePrecision[] }>('precisions', { methode: 'POST', corps })).demandes;
+}
+
+export interface MessagePrive {
+  id: number; auteurId: number | string; destinataireId: number | string;
+  auteurNom: string; destinataireNom: string; contenu: string; creeLe: string; luLe: string | null;
+}
+export interface BoiteMessages {
+  comptes: { id: number | string; nomComplet: string; identifiant: string }[];
+  messages: MessagePrive[];
+}
+export function lireMessages(): Promise<BoiteMessages> { return appeler('messages'); }
+export function modifierMessages(corps: { operation: 'envoyer'; destinataireId: string; contenu: string } | { operation: 'lire'; id: number }): Promise<BoiteMessages> {
+  return appeler('messages', { methode: 'POST', corps });
+}

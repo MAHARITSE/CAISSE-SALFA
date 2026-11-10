@@ -243,8 +243,8 @@ export const CLE_SESSION_LOCALE = 'salfa_session_locale_v1';
 /** Mémorise le compte connecté hors serveur, pour retrouver qui change son mot de passe. */
 export function retenirSessionLocale(compte: { id: string } | null): void {
   try {
-    if (!compte) localStorage.removeItem(CLE_SESSION_LOCALE);
-    else localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: compte.id }));
+    if (!compte) { localStorage.removeItem(CLE_SESSION_LOCALE); document.cookie = 'salfa_session_locale=; path=/; max-age=0; SameSite=Lax'; }
+    else { localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: compte.id })); document.cookie = 'salfa_session_locale=1; path=/; SameSite=Lax'; }
   } catch { /* stockage indisponible : la session reste en mémoire */ }
 }
 
@@ -253,4 +253,12 @@ function lireSessionLocale(): { id: string } | null {
     const brut = localStorage.getItem(CLE_SESSION_LOCALE);
     return brut ? JSON.parse(brut) as { id: string } : null;
   } catch { return null; }
+}
+
+/** Restaurer uniquement tant que le cookie de session du navigateur existe. */
+export async function restaurerSessionLocale(): Promise<Compte | null> {
+  if (!document.cookie.split(';').some(c => c.trim() === 'salfa_session_locale=1')) return null;
+  const session = lireSessionLocale();
+  if (!session) return null;
+  return (await listerComptes()).find(c => c.id === session.id && c.actif) ?? null;
 }
