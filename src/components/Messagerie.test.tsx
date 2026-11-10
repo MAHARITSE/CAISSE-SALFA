@@ -76,3 +76,26 @@ it('désactive la réponse lorsque l’expéditeur n’est plus actif', async ()
   fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
   expect(await screen.findByRole('button', { name: 'Répondre' })).toBeDisabled();
 });
+
+it('filtre les messages et protège le brouillon lors du changement de réponse', async () => {
+  const base = { destinataireId: '2', destinataireNom: 'Caisse', creeLe: new Date().toISOString(), luLe: null };
+  localStorage.setItem('salfa_messages_prives', JSON.stringify([
+    { ...base, id: 1, auteurId: '1', auteurNom: 'Admin', contenu: 'Premier message' },
+    { ...base, id: 2, auteurId: '3', auteurNom: 'Autre', contenu: 'Second message' },
+    { ...base, id: 3, auteurId: '2', auteurNom: 'Caisse', destinataireId: '1', destinataireNom: 'Admin', contenu: 'Message envoyé' },
+  ]));
+  render(<Messagerie utilisateur={caisse} />);
+  fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 2 non lus/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Envoyés' }));
+  expect(screen.getByText('Message envoyé')).toBeInTheDocument();
+  expect(screen.queryByText('Premier message')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Reçus' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Répondre' })[0]);
+  expect(screen.getByText('Message de Admin')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Brouillon important' } });
+  const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Répondre' })[1]);
+  expect(confirmation).toHaveBeenCalled();
+  expect(screen.getByLabelText('Message')).toHaveValue('Brouillon important');
+  expect(screen.getByText('Réponse à')).toHaveTextContent('Admin');
+});
