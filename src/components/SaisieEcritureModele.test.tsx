@@ -15,7 +15,7 @@ const masquesTest: MasqueSaisie[] = [
     nom: 'Recettes hôpital',
     sens: 'RECETTE',
     description: 'Postes médicaux standards',
-    libelle: 'RECETTES JOURNALIERES DU SERVICE',
+    libelle: 'ANCIEN LIBELLÉ DIFFÉRENT',
     lignes: [
       { description: 'Consultation', montantDefaut: 5000 },
       { description: 'PHARMACIE', montantDefaut: 12000 },
@@ -52,7 +52,7 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
     expect(screen.getByRole('combobox', { name: /choisir un modèle de saisie/i })).toBeInTheDocument();
   });
 
-  it('applique le modèle, préremplit le libellé rattaché et place le curseur à la fin du champ', async () => {
+  it('applique le nom du modèle comme libellé et place le curseur à la fin du champ', async () => {
     const user = userEvent.setup();
     render(
       <SaisieEcriture
@@ -77,18 +77,18 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
     await user.selectOptions(selectHaut, 'modele-hopital');
 
     // Le libellé associé est prérempli
-    expect(champLibelle.value).toBe('RECETTES JOURNALIERES DU SERVICE');
+    expect(champLibelle.value).toBe('RECETTES HÔPITAL');
 
     // Vérifie que le focus et le curseur sont placés à la fin du champ
     await waitFor(() => {
       expect(document.activeElement).toBe(champLibelle);
-      expect(champLibelle.selectionStart).toBe('RECETTES JOURNALIERES DU SERVICE'.length);
-      expect(champLibelle.selectionEnd).toBe('RECETTES JOURNALIERES DU SERVICE'.length);
+      expect(champLibelle.selectionStart).toBe('RECETTES HÔPITAL'.length);
+      expect(champLibelle.selectionEnd).toBe('RECETTES HÔPITAL'.length);
     });
 
     // L'utilisateur peut immédiatement continuer sa saisie à la fin du champ
     await user.type(champLibelle, ' - MATIN');
-    expect(champLibelle.value).toBe('RECETTES JOURNALIERES DU SERVICE - MATIN');
+    expect(champLibelle.value).toBe('RECETTES HÔPITAL - MATIN');
 
     // Les anciens modèles mixtes sont aussi convertis dans les champs de saisie.
     expect(screen.getByLabelText('Libellé du poste 1')).toHaveValue('CONSULTATION');
@@ -174,3 +174,15 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
   });
 });
 
+
+it('demande confirmation avant de remplacer un libellé déjà saisi', async () => {
+  const user = userEvent.setup();
+  render(<SaisieEcriture ecritureEnEdition={null} sensInitial="RECETTE" exercice={2026} numeroSuivant={() => 'RC-2026-0001'} suggestionsTiers={[]} masques={masquesTest} categories={categoriesTest} onOuvrirGestionCategories={vi.fn()} onOuvrirGestionMasques={vi.fn()} onEnregistrer={vi.fn()} onFermer={vi.fn()} />);
+  const champ = screen.getByLabelText(/Libellé de l’écriture/i);
+  await user.type(champ, 'Autre libellé');
+  await user.selectOptions(screen.getByRole('combobox', { name: /choisir un modèle de saisie/i }), 'modele-hopital');
+  expect(screen.getByRole('dialog', { name: 'Appliquer ce modèle ?' })).toBeInTheDocument();
+  expect(champ).toHaveValue('Autre libellé');
+  await user.click(screen.getByRole('button', { name: 'Appliquer le modèle' }));
+  expect(champ).toHaveValue('RECETTES HÔPITAL');
+});
