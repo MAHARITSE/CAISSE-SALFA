@@ -7,6 +7,8 @@ import { anneeCourante, dateFr, decalerMois, formatAr, libelleMois, moisCourant 
 
 import { exporterLivreCsv, telechargerTexte } from './utils/export';
 import { exporterArchiveExercice, exporterSqlLivre, exporterSecours } from './utils/backup';
+import { Messagerie } from './components/Messagerie';
+import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
 import { LivreJournal, type LivreJournalHandle } from './components/LivreJournal';
 import { SaisieEcriture } from './components/SaisieEcriture';
@@ -23,14 +25,12 @@ import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { ControlesFlottants } from './components/ControlesFlottants';
 import { MODE_API, deconnexion as deconnexionApi, exporterSql, mutations, sante as santeApi, session as sessionApi, type EtatSession } from './utils/api';
 import { enteteModifie, numeroDocument, type EnteteDocument } from './utils/entete';
-import { retenirSessionLocale } from './utils/utilisateurs';
+import { retenirSessionLocale, restaurerSessionLocale } from './utils/utilisateurs';
 import { libelleRole, ongletsAutorises, peutAdministrer, peutModifierSoldeOuverture, peutSaisir, type OngletApplication, type Role } from './utils/roles';
 import { VERSION_APPLICATION } from './utils/version';
 
 type Onglet = OngletApplication;
 
-/** Durée maximale d'inactivité avant fermeture automatique de la session (1 heure). */
-const DUREE_INACTIVITE_MS = 60 * 60 * 1000;
 
 export function App() {
   const { livre, erreur, avertissement, messageSync, muter, muterEnLigne, recharger, rechargerApi, restaurer, chargementApi } = useLivre();
@@ -42,24 +42,23 @@ export function App() {
    */
   const enteteRef = useRef<HTMLElement | null>(null);
   const [hauteurEntete, setHauteurEntete] = useState(104);
-  // L'application s'ouvre toujours sur la page de connexion : aucun écran de
-  // caisse n'est visible avant qu'un compte soit reconnu.
+  // Une session du navigateur est vérifiée avant d’afficher la caisse.
   const [session, setSession] = useState<EtatSession | null>(null);
   /** Chacun change son propre mot de passe : la modale vit au-dessus du shell. */
   const [motDePasseOuvert, setMotDePasseOuvert] = useState(false);
-  const [verificationSession, setVerificationSession] = useState(MODE_API);
+  const [verificationSession, setVerificationSession] = useState(true);
   /** Version annoncée par api/sante.php, affichée en mode serveur. */
   const [versionApi, setVersionApi] = useState<string | null>(null);
 
   // Au démarrage en mode serveur : vérifier la session puis charger le livre MySQL.
   useEffect(() => {
-    if (!MODE_API) return;
     let actif = true;
-    sessionApi()
+    const lecture = MODE_API ? sessionApi() : restaurerSessionLocale().then(utilisateur => ({ connecte: !!utilisateur, utilisateur }));
+    lecture
       .then(etat => {
         if (!actif) return;
         setSession(etat);
-        if (etat.connecte) rechargerApi();
+        if (MODE_API && etat.connecte) rechargerApi();
       })
       .catch(() => { if (actif) setSession({ connecte: false, utilisateur: null }); })
       .finally(() => { if (actif) setVerificationSession(false); });
@@ -81,6 +80,7 @@ export function App() {
   });
   const [filtres, setFiltres] = useState<Omit<FiltresJournal, 'mois' | 'toutAfficher'>>({ sens: 'TOUS', categorie: '', recherche: '' });
   const [toutAfficher, setToutAfficher] = useState(false);
+  const [demandeCible, setDemandeCible] = useState<Ecriture | null>(null);
   const [saisie, setSaisie] = useState<{ sens: Sens; edition: Ecriture | null } | null>(null);
   const [masquesOuverts, setMasquesOuverts] = useState(false);
   const [categoriesOuvertes, setCategoriesOuvertes] = useState(false);
@@ -150,20 +150,11 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
-  // Fermeture automatique de la session après 1 heure d'inactivité.
+  // Maintient la session serveur pendant que le navigateur est ouvert.
   useEffect(() => {
-    if (!session?.connecte) return;
-    let timer = window.setTimeout(() => { void deconnecter(); }, DUREE_INACTIVITE_MS);
-    const relancer = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => { void deconnecter(); }, DUREE_INACTIVITE_MS);
-    };
-    const evenements = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
-    for (const evt of evenements) window.addEventListener(evt, relancer, { passive: true });
-    return () => {
-      window.clearTimeout(timer);
-      for (const evt of evenements) window.removeEventListener(evt, relancer);
-    };
+    if (!MODE_API || !session?.connecte) return;
+    const timer = window.setInterval(() => { void sessionApi().catch(() => {}); }, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
   }, [session?.connecte]);
 
   // Le rôle décide de tout ce qui s'ouvre : pages, réglages et saisie.
@@ -431,7 +422,7 @@ export function App() {
     document.title = `${titrePage} · Caisse SALFA`;
   }, [titrePage]);
 
-  if (MODE_API && verificationSession) {
+  if (verificationSession) {
     return <>
       <div className="flex min-h-screen items-center justify-center text-sm text-slate-500 dark:bg-slate-950 dark:text-slate-400">Vérification de la session…</div>
       <ControlesFlottants />
@@ -481,7 +472,7 @@ export function App() {
                 : <p className="mt-0.5 text-sm font-semibold text-slate-700 dark:text-slate-200">Exercice {exercice}</p>}
             </div>
           </div>
-          <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}><span className={`size-2 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? (MODE_API ? 'Serveur à vérifier' : 'Stockage à vérifier') : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-xs text-slate-500 dark:text-slate-400 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{session.utilisateur.nomComplet}</p><p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={16} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={16} /></button></div> : <span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title="Caisse SALFA">CS</span>}</div>
+          <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}><span className={`size-2 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? (MODE_API ? 'Serveur à vérifier' : 'Stockage à vérifier') : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-xs text-slate-500 dark:text-slate-400 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{session.utilisateur.nomComplet}</p><p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><Messagerie utilisateur={session.utilisateur} /><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={16} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={16} /></button></div> : <span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title="Caisse SALFA">CS</span>}</div>
         </div>
         <nav className="flex flex-wrap gap-1.5 border-t border-slate-100 px-3 py-2 sm:px-5 dark:border-slate-800" aria-label="Navigation principale">{navigation.map(n => <button key={n.id} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors sm:px-3.5 sm:py-2.5 sm:text-sm ${onglet === n.id ? 'bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/60 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'}`} aria-current={onglet === n.id ? 'page' : undefined} aria-label={n.label} onClick={() => setOnglet(n.id)}><n.icone size={16} /><span className="sm:hidden">{n.labelCourt}</span><span className="hidden sm:inline">{n.label}</span></button>)}</nav>
       </header>
@@ -507,13 +498,14 @@ export function App() {
         )}
 
         {onglet === 'journal' && <>
+          {session?.utilisateur && (role === 'admin' || role === 'caissier') && <DemandesPrecision utilisateur={session.utilisateur} ecritures={livre.ecritures} cible={demandeCible} fermer={() => setDemandeCible(null)} editer={e => setSaisie({ sens: e.sens, edition: e })} />}
           {!erreur && afficherSynthese && <Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} />}
           <div className="no-print z-10 py-1 bg-slate-100/90 backdrop-blur-md dark:bg-slate-950/90 sticky" style={{ top: hauteurEntete || 88 }}><section className="card space-y-3 p-4 border border-slate-200 shadow-sm dark:border-slate-800 bg-white dark:bg-slate-900" aria-label="Période, filtres et nouvelles écritures"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois affiché" value={mois} min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>{derniereSupprimee && !archiveConsultee && <button className="btn-secondary" onClick={annulerSuppression} disabled={Boolean(erreur)}><RotateCcw size={15} />Annuler la suppression</button>}</div>{saisieOuverte && !archiveConsultee
               ? <div className="flex flex-wrap gap-2"><button className="btn-primary" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'RECETTE', edition: null })}><Plus size={16} />Nouvelle recette</button><button className="btn-danger" disabled={Boolean(erreur)} onClick={() => setSaisie({ sens: 'DEPENSE', edition: null })}><Plus size={16} />Nouvelle dépense</button></div>
               : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{archiveConsultee ? `Exercice ${archiveConsultee.annee} clôturé : consultation en lecture seule.` : 'Consultation seule : votre rôle ne saisit pas d’écriture.'}</p>}</div>
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><div className="segmented" aria-label="Filtrer par type">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(s => <button key={s} aria-pressed={filtres.sens === s} onClick={() => modifierFiltre('sens', s)}>{s === 'TOUS' ? 'Tous' : s === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par catégorie" value={filtres.categorie} onChange={e => modifierFiltre('categorie', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option key={c}>{c}</option>)}</select><div className="relative min-w-44 flex-1"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" className="field !py-2 !pl-9 !text-sm" aria-label="Rechercher dans le journal" placeholder="Rechercher une pièce, un libellé, un tiers…" value={filtres.recherche} onChange={e => modifierFiltre('recherche', e.target.value)} /></div>{filtreActif && <button className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}<span className="hidden items-center gap-1 text-xs text-slate-400 dark:text-slate-500 xl:flex"><SlidersHorizontal size={14} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span></div>
           </section></div>
-          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} ref={journalRef} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
+          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onDemanderPrecision={administre && !archiveConsultee ? setDemandeCible : undefined} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} ref={journalRef} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} value={mois} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} categoriesDepense={livre.categories.depense} onModifierCategorieDepense={saisieOuverte && !archiveConsultee ? modifierCategorieDepense : undefined} raisonLectureSeule={archiveConsultee ? 'Exercice clôturé : les catégories sont en lecture seule.' : !saisieOuverte ? 'Votre rôle permet la consultation uniquement.' : undefined} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} administrateur={administre} exerciceActif={exerciceAffiche} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} onOuvrirExercice={changerExerciceConsulte} />)}

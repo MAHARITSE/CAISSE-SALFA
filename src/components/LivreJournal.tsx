@@ -18,6 +18,7 @@ interface LivreJournalProps {
   peutModifier?: boolean;
   enEditionId: string | null;
   onEditer: (ecriture: Ecriture) => void;
+  onDemanderPrecision?: (ecriture: Ecriture) => void;
   onSupprimer: (id: string) => void;
   onReinitialiser: () => void;
   /** En-têtes personnalisés des deux bordereaux ; vide = en-têtes livrés. */
@@ -47,7 +48,7 @@ const PAR_PAGE = 50;
  * depuis l'extérieur, juste après son enregistrement.
  */
 export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(function LivreJournal(
-  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, peutModifier = true, enEditionId, onEditer, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, onNouvelleEcriture, categories, onEnregistrerCategories },
+  { lignes, soldeOuverture, periode, recettes, depenses, soldeFin, filtreActif, peutModifier = true, enEditionId, onEditer, onDemanderPrecision, onSupprimer, onReinitialiser, entetes = entetesParDefaut(), onEnregistrerEntete, onNouvelleEcriture, categories, onEnregistrerCategories },
   ref,
 ) {
   /** Ligne active / sélectionnée dans le tableau */
@@ -370,6 +371,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                       >
                         <Printer size={16} />
                       </button>
+                      {onDemanderPrecision && <button type="button" className="icon-button" title="Demander une précision" aria-label={`Demander une précision pour ${ligne.numero}`} onClick={() => onDemanderPrecision(ligne)}>?</button>}
                       {peutModifier && <button
                         type="button"
                         className="icon-button"
