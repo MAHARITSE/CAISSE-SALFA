@@ -7,8 +7,7 @@
 
 declare(strict_types=1);
 
-const SALFA_DUREE_SESSION = 12 * 3600;      // 12 heures
-const SALFA_DUREE_INACTIVITE = 3600;        // 1 heure
+const SALFA_DUREE_SESSION = 365 * 24 * 3600; // expiration de secours pour les sessions abandonnées
 const SALFA_MAX_ESSAIS = 8;                 // par fenêtre et par adresse
 const SALFA_FENETRE_ESSAIS = 15 * 60;       // 15 minutes
 const SALFA_LONGUEUR_MDP = 8;
@@ -25,7 +24,7 @@ function salfa_demarrer_session(): void
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
-    @ini_set('session.gc_maxlifetime', (string) SALFA_DUREE_INACTIVITE);
+    @ini_set('session.gc_maxlifetime', (string) SALFA_DUREE_SESSION);
     session_name('salfa_session');
     session_set_cookie_params([
         'lifetime' => 0,
@@ -97,14 +96,6 @@ function salfa_utilisateur_courant(bool $exiger = true): ?array
         }
         return null;
     }
-    $derniere = (int) ($_SESSION['derniere_activite'] ?? 0);
-    if ($derniere > 0 && (time() - $derniere) > SALFA_DUREE_INACTIVITE) {
-        salfa_fermer_session();
-        if ($exiger) {
-            throw new SalFaErreur('Session expirée après une longue inactivité. Reconnectez-vous.', 401, 'session_expiree');
-        }
-        return null;
-    }
     if (salfa_session_en_base() && !salfa_session_base_valide((int) $ligne['id'], (string) $session['jeton'])) {
         salfa_fermer_session();
         if ($exiger) {
@@ -113,6 +104,9 @@ function salfa_utilisateur_courant(bool $exiger = true): ?array
         return null;
     }
     $_SESSION['derniere_activite'] = time();
+    if (salfa_session_en_base()) {
+        salfa_executer('UPDATE ' . salfa_table('sessions') . ' SET expire_le = DATE_ADD(NOW(3), INTERVAL ? SECOND) WHERE jeton_hash = ?', [SALFA_DUREE_SESSION, salfa_hacher_jeton((string) $session['jeton'])]);
+    }
     return [
         'id' => (int) $ligne['id'],
         'identifiant' => (string) $ligne['identifiant'],

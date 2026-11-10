@@ -454,27 +454,41 @@ export function App() {
     <div>
       <a href="#contenu" className="lien-evitement no-print">Aller au contenu principal</a>
       <header ref={enteteRef} id="entete" className="no-print sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-7">
-          <div className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm"><HeartPulse size={24} strokeWidth={2} /></span>
-            <div><p className="text-xl font-extrabold tracking-tight text-brand-950 dark:text-brand-300">SALFA</p><p className="text-xs tracking-[0.14em] text-slate-400 dark:text-slate-500">GESTION DE CAISSE</p></div>
-            <div className="ml-2 border-l border-slate-200 pl-3 sm:pl-4 dark:border-slate-800">
-              <p className="hidden text-xs text-slate-400 sm:block dark:text-slate-500">Caisse principale</p>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-7 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="flex size-11 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-sm"><HeartPulse size={23} strokeWidth={2} /></span>
+              <div className="leading-tight"><p className="text-lg font-extrabold tracking-tight text-brand-950 dark:text-brand-300">SALFA</p><p className="mt-0.5 text-[10px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">GESTION DE CAISSE</p></div>
+            </div>
+            <div className="min-w-0 border-l border-slate-200 pl-3 sm:pl-5 dark:border-slate-700">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Caisse principale</p>
               {administre && exercicesDisponibles.length > 1
                 ? <select
                     aria-label="Changer d’exercice"
                     value={exerciceAffiche}
                     onChange={e => changerExerciceConsulte(Number(e.target.value))}
-                    className="mt-0.5 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-800 transition-colors hover:border-brand-400 focus:border-brand-600 focus:outline-none sm:text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    className="mt-1 max-w-full cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-800 transition-colors hover:border-brand-400 focus:border-brand-600 focus:outline-none sm:text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     {exercicesDisponibles.map(ex => <option key={ex.annee} value={ex.annee}>Exercice {ex.annee}{ex.cloture ? ' (clôturé)' : ''}</option>)}
                   </select>
-                : <p className="mt-0.5 text-sm font-semibold text-slate-700 dark:text-slate-200">Exercice {exercice}</p>}
+                : <p className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">Exercice {exercice}</p>}
             </div>
           </div>
-          <div className="flex items-center gap-3"><span className={`hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium md:inline-flex ${erreur ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}><span className={`size-2 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? (MODE_API ? 'Serveur à vérifier' : 'Stockage à vérifier') : MODE_API ? `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}` : livre.revision ? 'Enregistré localement' : 'Stockage local prêt'}</span><span className="hidden text-xs text-slate-500 dark:text-slate-400 lg:inline">{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</span>{session?.utilisateur ? <div className="flex items-center gap-2"><div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{session.utilisateur.nomComplet}</p><p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">{libelleRole(session.utilisateur.role)}</p></div><span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title={session.utilisateur.nomComplet}>{initiales(session.utilisateur.nomComplet)}</span><Messagerie utilisateur={session.utilisateur} /><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={16} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={16} /></button></div> : <span className="flex size-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300" title="Caisse SALFA">CS</span>}</div>
+          <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+            {MODE_API && <span className={`hidden items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold lg:inline-flex ${erreur ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}><span className={`size-2 rounded-full ${erreur ? 'bg-rose-500' : 'bg-emerald-500'}`} />{erreur ? 'Serveur à vérifier' : `Serveur MySQL${livre.revision ? ` · révision ${livre.revision}` : ''}`}</span>}
+            {session?.utilisateur && <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <div className="flex min-w-0 items-center gap-2.5 sm:border-l sm:border-slate-200 sm:pl-4 dark:sm:border-slate-700">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-800 ring-1 ring-brand-100 dark:bg-brand-950 dark:text-brand-300 dark:ring-brand-900" title={session.utilisateur.nomComplet}>{initiales(nomProfil(session.utilisateur.nomComplet, libelleRole(session.utilisateur.role)))}</span>
+                <div className="min-w-0 leading-tight"><p className="max-w-36 truncate text-sm font-bold text-slate-800 sm:max-w-44 dark:text-slate-100" title={session.utilisateur.nomComplet}>{nomProfil(session.utilisateur.nomComplet, libelleRole(session.utilisateur.role))}</p><p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">{libelleRole(session.utilisateur.role)}</p></div>
+              </div>
+              <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800"><Messagerie utilisateur={session.utilisateur} /><button className="icon-button" aria-label="Changer mon mot de passe" title="Changer mon mot de passe" onClick={() => setMotDePasseOuvert(true)}><KeyRound size={16} /></button><button className="icon-button" aria-label="Se déconnecter" title="Se déconnecter" onClick={deconnecter}><LogOut size={16} /></button></div>
+            </div>}
+          </div>
         </div>
-        <nav className="flex flex-wrap gap-1.5 border-t border-slate-100 px-3 py-2 sm:px-5 dark:border-slate-800" aria-label="Navigation principale">{navigation.map(n => <button key={n.id} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors sm:px-3.5 sm:py-2.5 sm:text-sm ${onglet === n.id ? 'bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/60 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'}`} aria-current={onglet === n.id ? 'page' : undefined} aria-label={n.label} onClick={() => setOnglet(n.id)}><n.icone size={16} /><span className="sm:hidden">{n.labelCourt}</span><span className="hidden sm:inline">{n.label}</span></button>)}</nav>
+        <div className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 sm:px-5 dark:border-slate-800">
+          <nav className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto" aria-label="Navigation principale">{navigation.map(n => <button key={n.id} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors sm:px-3.5 sm:py-2.5 sm:text-sm ${onglet === n.id ? 'bg-brand-50 font-semibold text-brand-800 dark:bg-brand-950/60 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'}`} aria-current={onglet === n.id ? 'page' : undefined} aria-label={n.label} onClick={() => setOnglet(n.id)}><n.icone size={16} /><span className="sm:hidden">{n.labelCourt}</span><span className="hidden sm:inline">{n.label}</span></button>)}</nav>
+          <time className="shrink-0 whitespace-nowrap border-l border-slate-200 pl-3 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400" dateTime={new Intl.DateTimeFormat('sv-SE').format(new Date())}>{new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}</time>
+        </div>
       </header>
       <main id="contenu" tabIndex={-1} className="w-full space-y-5 px-4 pb-20 pt-6 outline-none sm:px-7 sm:pb-20 sm:pt-7">
         <div className="no-print flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">{titrePage}</h1><p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{sousTitrePage}</p></div>{onglet === 'journal' && <div className="flex flex-wrap gap-2"><button type="button" className={`btn-secondary ${!afficherSynthese ? '!border-slate-300 dark:!border-slate-700' : ''}`} onClick={basculerSynthese} aria-expanded={afficherSynthese} aria-label={afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'} title={afficherSynthese ? 'Masquer les cartes de synthèse' : 'Afficher les cartes de synthèse'}>{afficherSynthese ? <EyeOff size={16} /> : <Eye size={16} />}<span>{afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'}</span></button><button className="btn-secondary" disabled={Boolean(erreur)} onClick={() => { try { exporterLivreCsv(lignes, { periode, soldeOuverture: ouverture, ...totauxSelection, soldeFin, selection: filtreActif }); setNotification('Export CSV téléchargé. Les montants détaillés ne sont pas comptés deux fois.'); } catch { setNotification('L’export a échoué. Réessayez ou utilisez la sauvegarde SQL.'); } }}><Download size={16} />Exporter CSV</button><button className="btn-secondary" disabled={Boolean(erreur)} onClick={() => window.print()}><Printer size={16} />Imprimer</button></div>}</div>
@@ -562,8 +576,16 @@ export function App() {
     <ControlesFlottants />
   </div>;
 }
-function initiales(nom: string): string {
-  return nom.split(/\s+/).filter(Boolean).slice(0, 2).map(m => m[0]?.toUpperCase() ?? '').join('') || 'CS';
+export function nomProfil(nom: string, role: string): string {
+  // Les comptes historiques peuvent avoir le rôle ajouté après un tiret dans le nom.
+  const morceaux = nom.split(/\s+[—–-]\s+/);
+  if (morceaux.length > 1 && morceaux[morceaux.length - 1].trim().localeCompare(role, 'fr', { sensitivity: 'base' }) === 0) {
+    return morceaux.slice(0, -1).join(' — ').trim() || nom;
+  }
+  return nom;
+}
+export function initiales(nom: string): string {
+  return (nom.match(/\p{L}[\p{L}\p{M}]*/gu) ?? []).slice(0, 2).map(m => m[0].toUpperCase()).join('') || 'CS';
 }
 
 export default App;
