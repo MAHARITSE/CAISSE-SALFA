@@ -111,8 +111,8 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
     setErreur('');
     changer();
 
-    // Rattaché au modèle : libellé prérempli et reprise de saisie directement à la fin du champ
-    const libelleAAppliquer = m.libelle ? masqueMajuscules(m.libelle) : (libelle.trim() ? libelle : masqueMajuscules(m.nom));
+    // Le nom du modèle sert de libellé, y compris pour les anciens modèles.
+    const libelleAAppliquer = masqueMajuscules(m.nom);
     setLibelle(libelleAAppliquer);
     positionnerCurseurFinLibelle(libelleAAppliquer);
   }
@@ -120,7 +120,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   function choisirMasque(id: string) {
     const m = masques.find(m => m.id === id && m.sens === sens);
     if (!m) return;
-    if (lignes.length > 0 || parserMontant(montantSimple)) setMasqueAConfirmer(m);
+    if (lignes.length > 0 || parserMontant(montantSimple) || (libelle.trim() && masqueMajuscules(libelle.trim()) !== masqueMajuscules(m.nom))) setMasqueAConfirmer(m);
     else appliquerMasque(m);
   }
 
@@ -274,7 +274,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
         </form>
       </Modale>
       {confirmerFermeture && <Confirmation titre="Abandonner la saisie ?" onAnnuler={() => setConfirmerFermeture(false)} onConfirmer={onFermer} libelleConfirmer="Abandonner les modifications"><p>Les modifications de ce formulaire ne sont pas encore enregistrées. Voulez-vous les abandonner ?</p></Confirmation>}
-      {masqueAConfirmer && <Confirmation titre="Remplacer les montants ?" onAnnuler={() => setMasqueAConfirmer(null)} onConfirmer={() => { appliquerMasque(masqueAConfirmer); setMasqueAConfirmer(null); }} libelleConfirmer="Appliquer le modèle"><p>Le modèle « {masqueAConfirmer.nom} » remplacera les postes et le montant unique actuellement saisis. Les autres informations sont conservées.</p></Confirmation>}
+      {masqueAConfirmer && <Confirmation titre="Appliquer ce modèle ?" onAnnuler={() => setMasqueAConfirmer(null)} onConfirmer={() => { appliquerMasque(masqueAConfirmer); setMasqueAConfirmer(null); }} libelleConfirmer="Appliquer le modèle"><p>Le modèle « {masqueAConfirmer.nom} » remplacera le libellé, les postes et le montant unique actuellement saisis. Les autres informations sont conservées.</p></Confirmation>}
     </>
   );
 }

@@ -10,9 +10,7 @@ describe('suggestions dans les modèles de saisie', () => {
     render(<GestionMasquesModal masques={[]} onSauvegarderMasques={sauvegarder} onFermer={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Nouveau modèle' }));
     await user.type(screen.getByLabelText('Nom du modèle *'), 'Recettes du jour');
-    const libelle = screen.getByLabelText('Libellé associé de l’écriture');
-    fireEvent.input(libelle, { target: { value: 'recettes journalières' }, inputType: 'insertReplacementText' });
-    expect(libelle).toHaveValue('recettes journalières');
+    expect(screen.queryByLabelText('Libellé associé de l’écriture')).not.toBeInTheDocument();
     const poste = screen.getByLabelText('Libellé', { exact: true });
     fireEvent.compositionStart(poste);
     fireEvent.input(poste, { target: { value: 'consultation' }, inputType: 'insertCompositionText', isComposing: true });
@@ -32,7 +30,7 @@ describe('suggestions dans les modèles de saisie', () => {
     await user.click(screen.getByRole('button', { name: 'Enregistrer le modèle' }));
     expect(sauvegarder).toHaveBeenCalledOnce();
     expect(sauvegarder.mock.calls[0][0]).toMatchObject([{
-      nom: 'Recettes du jour', libelle: 'RECETTES JOURNALIÈRES',
+      nom: 'Recettes du jour', libelle: 'RECETTES DU JOUR',
       lignes: [{ description: 'CONSULTATION EXTERNE' }],
     }]);
   });
