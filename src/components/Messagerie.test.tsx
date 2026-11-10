@@ -14,6 +14,8 @@ describe('messages privés', () => {
   it('envoie au destinataire, signale le message et permet de le marquer lu', async () => {
     const vue = render(<Messagerie utilisateur={admin} />);
     fireEvent.click(screen.getByRole('button', { name: 'Messages privés' }));
+    expect(screen.queryByLabelText('Destinataire')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau message' }));
     await screen.findByRole('option', { name: 'Caisse (caisse)' });
     fireEvent.change(screen.getByLabelText('Destinataire'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Bonjour' } });
@@ -28,6 +30,14 @@ describe('messages privés', () => {
     render(<Messagerie utilisateur={caisse} />);
     fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
     expect(await screen.findByText('Bonjour')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Répondre' }));
+    expect(screen.queryByLabelText('Destinataire')).not.toBeInTheDocument();
+    expect(screen.getByText('Réponse à')).toHaveTextContent('Admin');
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Bien reçu' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    await screen.findByText('Bien reçu');
+    const messages = JSON.parse(localStorage.getItem('salfa_messages_prives')!);
+    expect(messages[0]).toMatchObject({ auteurId: '2', destinataireId: '1', contenu: 'Bien reçu' });
     fireEvent.click(screen.getByRole('button', { name: 'Marquer comme lu' }));
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Marquer comme lu' })).not.toBeInTheDocument());
   });
@@ -58,4 +68,11 @@ it('notifie uniquement les nouveaux messages reçus après le chargement initial
     await waitFor(() => expect(screen.getByText('Nouveau')).toBeInTheDocument());
     expect(notifier).toHaveBeenCalledTimes(1);
   } finally { vi.unstubAllGlobals(); }
+});
+
+it('désactive la réponse lorsque l’expéditeur n’est plus actif', async () => {
+  localStorage.setItem('salfa_messages_prives', JSON.stringify([{ id: 1, auteurId: '99', destinataireId: '2', auteurNom: 'Ancien', destinataireNom: 'Caisse', contenu: 'Bonjour', creeLe: new Date().toISOString(), luLe: null }]));
+  render(<Messagerie utilisateur={caisse} />);
+  fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
+  expect(await screen.findByRole('button', { name: 'Répondre' })).toBeDisabled();
 });

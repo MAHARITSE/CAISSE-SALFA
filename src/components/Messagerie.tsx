@@ -18,6 +18,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   const [ouvert, setOuvert] = useState(false);
   const [boite, setBoite] = useState<BoiteMessages>({ comptes: [], messages: [] });
   const [dest, setDest] = useState('');
+  const [redaction, setRedaction] = useState<'nouveau' | 'reponse' | null>(null);
   const [contenu, setContenu] = useState('');
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
@@ -93,7 +94,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
         liste.unshift({ id: Math.max(0, ...liste.map(m => m.id)) + 1, auteurId: utilisateur.id, destinataireId: compte.id, auteurNom: utilisateur.nomComplet, destinataireNom: compte.nomComplet, contenu: contenu.trim(), creeLe: new Date().toISOString(), luLe: null });
         localStorage.setItem(CLE, JSON.stringify(liste)); setBoite(await boiteLocale(utilisateur));
       }
-      setContenu(''); setErreur('');
+      setContenu(''); setDest(''); setRedaction(null); setErreur('');
     } catch (e) { setErreur(e instanceof Error ? e.message : 'Envoi impossible.'); }
     finally { setOccupe(false); }
   }
@@ -116,15 +117,16 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       <div className="mb-5 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
         {permission === 'indisponible' ? <p>Notifications indisponibles. Chrome exige une connexion sécurisée HTTPS (ou localhost) pour les notifications.</p> : permission === 'denied' ? <p>Notifications bloquées. Autorisez-les dans les paramètres du site dans Chrome, puis rechargez la page.</p> : <><p>{permission === 'granted' ? 'Notifications autorisées. Ouvrez la messagerie après chaque lancement pour activer le son.' : 'Recevoir une notification Windows avec son pour les nouveaux messages.'}</p><button type="button" className="btn-secondary mt-2" onClick={() => void activerNotifications()}>{permission === 'granted' ? 'Activer le son' : 'Activer les notifications et le son'}</button></>}
       </div>
-      <form onSubmit={e => { e.preventDefault(); void envoyer(); }} className="space-y-3">
-        <label className="block text-sm font-semibold" htmlFor="dest-message">Destinataire</label><select className="field" id="dest-message" required value={dest} onChange={e => setDest(e.target.value)}><option value="">Choisir un utilisateur</option>{boite.comptes.map(c => <option key={c.id} value={c.id}>{c.nomComplet} ({c.identifiant})</option>)}</select>
-        <label className="block text-sm font-semibold" htmlFor="contenu-message">Message</label><textarea className="field" id="contenu-message" rows={3} maxLength={2000} required value={contenu} onChange={e => setContenu(e.target.value)} />
-        <button className="btn-primary" disabled={occupe || !dest || !contenu.trim()}>Envoyer</button>
-      </form>
+      {!redaction && <button type="button" className="btn-primary" onClick={() => { setDest(''); setRedaction('nouveau'); }}>Nouveau message</button>}
+      {redaction && <form onSubmit={e => { e.preventDefault(); void envoyer(); }} className="space-y-3">
+        {redaction === 'nouveau' ? <><label className="block text-sm font-semibold" htmlFor="dest-message">Destinataire</label><select className="field" id="dest-message" required value={dest} onChange={e => setDest(e.target.value)}><option value="">Choisir un utilisateur</option>{boite.comptes.map(c => <option key={c.id} value={c.id}>{c.nomComplet} ({c.identifiant})</option>)}</select></> : <p className="text-sm">Réponse à <strong>{boite.comptes.find(c => String(c.id) === dest)?.nomComplet ?? 'Utilisateur indisponible'}</strong></p>}
+        <label className="block text-sm font-semibold" htmlFor="contenu-message">Message</label><textarea className="field" id="contenu-message" rows={3} maxLength={2000} required value={contenu} onChange={e => setContenu(e.target.value)} autoFocus />
+        <div className="flex gap-2"><button className="btn-primary" disabled={occupe || !dest || !contenu.trim() || !boite.comptes.some(c => String(c.id) === dest)}>Envoyer</button><button type="button" className="btn-secondary" onClick={() => { setRedaction(null); setDest(''); setContenu(''); setErreur(''); }}>Annuler</button></div>
+      </form>}
       {erreur && <p role="alert" className="mt-3 text-sm text-rose-700">{erreur}</p>}
       <div className="mt-6 flex items-center justify-between"><h3 className="font-bold">Échanges</h3><button className="btn-secondary" onClick={() => void actualiser()}>Actualiser</button></div>
       {boite.messages.length === 0 && <p className="mt-3 text-sm text-slate-500">Aucun message.</p>}
-      <ul className="mt-3 space-y-2">{boite.messages.map(m => { const recu = String(m.destinataireId) === String(utilisateur.id); return <li key={m.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><p><strong>{recu ? `De ${m.auteurNom}` : `À ${m.destinataireNom}`}</strong> · {new Date(m.creeLe).toLocaleString('fr-FR')} {recu && !m.luLe && <strong>· Non lu</strong>}</p><p className="mt-1 whitespace-pre-wrap break-words">{m.contenu}</p>{recu && !m.luLe && <button className="mt-2 text-brand-700 underline" disabled={occupe} onClick={() => void lire(m.id)}>Marquer comme lu</button>}</li>; })}</ul>
+      <ul className="mt-3 space-y-2">{boite.messages.map(m => { const recu = String(m.destinataireId) === String(utilisateur.id); return <li key={m.id} className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><p><strong>{recu ? `De ${m.auteurNom}` : `À ${m.destinataireNom}`}</strong> · {new Date(m.creeLe).toLocaleString('fr-FR')} {recu && !m.luLe && <strong>· Non lu</strong>}</p><p className="mt-1 whitespace-pre-wrap break-words">{m.contenu}</p>{recu && <div className="mt-2 flex flex-wrap gap-4"><button type="button" className="text-brand-700 underline disabled:opacity-50" disabled={!boite.comptes.some(c => String(c.id) === String(m.auteurId))} title={boite.comptes.some(c => String(c.id) === String(m.auteurId)) ? 'Répondre à ce message' : 'Cet utilisateur est désactivé ou indisponible'} onClick={() => { setDest(String(m.auteurId)); setRedaction('reponse'); setErreur(''); }}>Répondre</button>{!m.luLe && <button className="text-brand-700 underline" disabled={occupe} onClick={() => void lire(m.id)}>Marquer comme lu</button>}</div>}</li>; })}</ul>
     </Modale>}
   </>;
 }
