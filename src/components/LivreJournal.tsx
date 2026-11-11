@@ -51,6 +51,8 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
 ) {
   /** Ligne active / sélectionnée dans le tableau */
   const [activeId, setActiveId] = useState<string | null>(null);
+  const derniereLigneRef = useRef<HTMLTableRowElement | null>(null);
+  const positionInitialeEffectuee = useRef(false);
 
   /** Tri des colonnes */
   const [sortCol, setSortCol] = useState<SortColumn | null>(null);
@@ -183,6 +185,14 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     });
   }, [lignes]);
 
+  // Attendre le premier chargement non vide (y compris une réponse API tardive),
+  // puis ne plus déplacer la vue lors des tris, filtres ou sélections de l'utilisateur.
+  useEffect(() => {
+    if (positionInitialeEffectuee.current || !lignes.length || !derniereLigneRef.current) return;
+    positionInitialeEffectuee.current = true;
+    derniereLigneRef.current.scrollIntoView?.({ behavior: 'auto', block: 'end', inline: 'nearest' });
+  }, [lignes]);
+
   const gererSupprimer = (ligne: LigneJournal) => {
     const index = lignesTriees.findIndex(l => l.id === ligne.id);
     if (index !== -1) {
@@ -294,6 +304,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
               return (
                 <tr
                   key={ligne.id}
+                  ref={ligne.id === lignes[lignes.length - 1]?.id ? derniereLigneRef : undefined}
                   onClick={() => setActiveId(ligne.id)}
                   className={`border-b transition-all duration-150 cursor-pointer ${
                     estActive
