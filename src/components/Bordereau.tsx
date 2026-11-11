@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Modale } from './Modale';
 import { createPortal } from 'react-dom';
 import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
@@ -187,37 +188,38 @@ interface ModaleBordereauProps {
  * n'imprime donc que ce bordereau, jamais le journal affiché derrière.
  */
 export function ModaleBordereau({ ligne, entete, onFermer }: ModaleBordereauProps) {
+  const [erreurImpression, setErreurImpression] = useState(false);
+  function imprimer() {
+    try {
+      setErreurImpression(false);
+      window.print();
+    } catch {
+      setErreurImpression(true);
+    }
+  }
   useEffect(() => {
     document.body.classList.add('has-print-bordereau');
-
+    // L'aperçu reste ouvert si Chrome bloque ou si l'utilisateur annule.
     const timer = setTimeout(() => {
-      try {
-        window.print();
-      } catch (_) {}
+      try { window.print(); } catch { setErreurImpression(true); }
     }, 50);
-
-    const handleAfterPrint = () => {
-      onFermer();
-    };
-
-    window.addEventListener('afterprint', handleAfterPrint);
-
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('afterprint', handleAfterPrint);
       document.body.classList.remove('has-print-bordereau');
     };
-  }, [onFermer]);
+  }, []);
 
-  return createPortal(
-    <div className="print-only print-bordereau">
-      {/* Remplacer le format par défaut pour TOUT le travail d'impression.
-          Une page nommée portrait dans un document par défaut paysage peut
-          laisser une page paysage blanche à la sortie du bordereau.
-          Cette règle disparaît avec le portail : le journal reste en paysage. */}
-      <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
-      <BordereauDocument ligne={ligne} entete={entete} />
-    </div>,
-    document.body,
-  );
+  return <>
+    <Modale titre="Bordereau imprimable" sousTitre="Vérifiez l'aperçu puis imprimez. Si la fenêtre d'impression ne s'ouvre pas, cliquez sur Imprimer." largeur="document" onFermer={onFermer}
+      pied={<div className="flex flex-wrap justify-end gap-3"><button type="button" className="btn-secondary" onClick={onFermer}>Fermer</button><button type="button" className="btn-primary" onClick={imprimer}>Imprimer</button></div>}>
+      {erreurImpression && <p role="alert" className="mb-3 text-red-700">Impossible d'ouvrir l'impression. Vérifiez le navigateur et réessayez avec le bouton Imprimer.</p>}
+      <div className="bordereau-apercu"><BordereauDocument ligne={ligne} entete={entete} /></div>
+    </Modale>
+    {createPortal(
+      <div className="print-only print-bordereau">
+        <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
+        <BordereauDocument ligne={ligne} entete={entete} />
+      </div>, document.body,
+    )}
+  </>;
 }

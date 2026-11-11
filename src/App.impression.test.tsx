@@ -1,0 +1,47 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, within, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import App from './App';
+import { CLE_LIVRE } from './utils/storage';
+
+describe('enregistrement et impression', () => {
+  it.each(['recette', 'dépense'] as const)('ouvre un bordereau pour une %s sans postes et permet de réimprimer', async sens => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await user.type(screen.getByLabelText('Identifiant'), 'admin');
+    await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
+    await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+    await screen.findByRole('heading', { name: 'Livre de caisse' });
+    await user.click(screen.getByRole('button', { name: `Nouvelle ${sens}` }));
+    const saisie = screen.getByRole('dialog', { name: `Nouvelle ${sens}` });
+    await user.type(within(saisie).getByLabelText(/Libellé de l’écriture/), 'Test impression');
+    await user.type(within(saisie).getByLabelText(/Montant total/), '5000');
+    await user.click(within(saisie).getByRole('button', { name: 'Enregistrer' }));
+    const bordereau = await screen.findByRole('dialog', { name: 'Bordereau imprimable' });
+    expect(bordereau).toHaveTextContent('TEST IMPRESSION');
+    expect(JSON.parse(localStorage.getItem(CLE_LIVRE)!).ecritures).toHaveLength(1);
+    const impression = vi.spyOn(window, 'print').mockImplementation(() => { throw new Error('indisponible'); });
+    await user.click(within(bordereau).getByRole('button', { name: 'Imprimer' }));
+    expect(within(bordereau).getByRole('alert')).toHaveTextContent("Impossible d'ouvrir l'impression");
+    impression.mockImplementation(() => {});
+    await user.click(within(bordereau).getByRole('button', { name: 'Imprimer' }));
+    expect(within(bordereau).queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent(window, new Event('afterprint'));
+    expect(bordereau).toBeInTheDocument();
+    await user.click(within(bordereau).getByRole('button', { name: 'Fermer' }));
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
+    expect(document.body).not.toHaveClass('has-print-bordereau');
+    const numero = JSON.parse(localStorage.getItem(CLE_LIVRE)!).ecritures[0].numero as string;
+    await user.click(screen.getByRole('button', { name: `Modifier ${numero}` }));
+    const edition = screen.getByRole('dialog', { name: `Modifier ${numero}` });
+    await user.clear(within(edition).getByLabelText(/Montant total/));
+    await user.type(within(edition).getByLabelText(/Montant total/), '8000');
+    await user.click(within(edition).getByRole('button', { name: 'Enregistrer' }));
+    const modifie = await screen.findByRole('dialog', { name: 'Bordereau imprimable' });
+    expect(modifie).toHaveTextContent('8 000,00');
+    await user.click(within(modifie).getByRole('button', { name: 'Fermer' }));
+    await user.click(screen.getByRole('button', { name: `Imprimer le bordereau ${numero}` }));
+    expect(await screen.findByRole('dialog', { name: 'Bordereau imprimable' })).toHaveTextContent('8 000,00');
+  });
+});

@@ -39,7 +39,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
         onOuvrirGestionCategories={vi.fn()}
@@ -60,7 +59,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
         onOuvrirGestionCategories={vi.fn()}
@@ -105,7 +103,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
         onOuvrirGestionCategories={vi.fn()}
@@ -134,7 +131,6 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
         sensInitial="RECETTE"
         exercice={2026}
         numeroSuivant={() => 'RC-2026-0001'}
-        suggestionsTiers={[]}
         masques={masquesTest}
         categories={categoriesTest}
         onOuvrirGestionCategories={vi.fn()}
@@ -177,7 +173,7 @@ describe('SaisieEcriture avec modèle et libellé associé', () => {
 
 it('demande confirmation avant de remplacer un libellé déjà saisi', async () => {
   const user = userEvent.setup();
-  render(<SaisieEcriture ecritureEnEdition={null} sensInitial="RECETTE" exercice={2026} numeroSuivant={() => 'RC-2026-0001'} suggestionsTiers={[]} masques={masquesTest} categories={categoriesTest} onOuvrirGestionCategories={vi.fn()} onOuvrirGestionMasques={vi.fn()} onEnregistrer={vi.fn()} onFermer={vi.fn()} />);
+  render(<SaisieEcriture ecritureEnEdition={null} sensInitial="RECETTE" exercice={2026} numeroSuivant={() => 'RC-2026-0001'} masques={masquesTest} categories={categoriesTest} onOuvrirGestionCategories={vi.fn()} onOuvrirGestionMasques={vi.fn()} onEnregistrer={vi.fn()} onFermer={vi.fn()} />);
   const champ = screen.getByLabelText(/Libellé de l’écriture/i);
   await user.type(champ, 'Autre libellé');
   await user.selectOptions(screen.getByRole('combobox', { name: /choisir un modèle de saisie/i }), 'modele-hopital');

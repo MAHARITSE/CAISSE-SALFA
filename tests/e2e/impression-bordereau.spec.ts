@@ -69,7 +69,7 @@ for (const sens of ['dépense', 'recette'] as const) {
     test(`imprime la ${sens} avec ${postes} poste(s) sans page supplémentaire`, async ({ page }, info) => {
       await ouvrirBordereau(page, sens, postes);
       await verifierDocumentNonTronque(page);
-      const zoneLettres = await page.locator('.bordereau-document').evaluate(feuille => {
+      const zoneLettres = await page.locator('.print-bordereau .bordereau-document').evaluate(feuille => {
         const tableau = feuille.querySelector('.bordereau-table')!.getBoundingClientRect();
         const lettres = feuille.querySelector('.bordereau-lettres')!;
         const signatures = feuille.querySelector('.bordereau-signatures')!.getBoundingClientRect();
@@ -128,7 +128,11 @@ test('les 15 postes et les signatures restent entiers', async ({ page }) => {
 
 test('le journal retrouve son format paysage après fermeture du bordereau', async ({ page }) => {
   await ouvrirBordereau(page, 'dépense', 1);
+  await page.emulateMedia({ media: 'screen' });
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await expect(page.getByRole('dialog', { name: 'Bordereau imprimable' })).toBeVisible();
+  await page.getByRole('dialog', { name: 'Bordereau imprimable' }).getByRole('button', { name: 'Fermer', exact: true }).click();
+  await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.print-bordereau')).toHaveCount(0);
   await expect(page.locator('body')).not.toHaveClass(/has-print-bordereau/);
   const pdf = await page.pdf({ preferCSSPageSize: true });
@@ -141,7 +145,7 @@ test('le CSS du paquet WAMP conserve les dimensions A4 du développement', async
   // Réutiliser exactement la même pièce, sans dépendre d'une base MySQL de test.
   // Seule la feuille de style change : celle réellement livrée avec WAMP.
   const piece = await page.locator('.print-bordereau').evaluate(el => el.outerHTML);
-  const mesurer = () => page.locator('.bordereau-document').evaluate(el => {
+  const mesurer = () => page.locator('.print-bordereau .bordereau-document').evaluate(el => {
     const mm = (px: number) => px * 25.4 / 96;
     const feuille = el.getBoundingClientRect();
     const tableau = el.querySelector('.bordereau-table')!.getBoundingClientRect();

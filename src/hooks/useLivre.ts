@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChargementLivre, DonneesCaisse, Sauvegarde } from '../types';
+import type { ChargementLivre, DonneesCaisse, Ecriture, Sauvegarde } from '../types';
 import { CLE_LIVRE, chargerLivre, sauvegarderLivre } from '../utils/storage';
 import { migrerExercicesLegacy } from '../utils/ledger';
 import { validerDonnees } from '../utils/validation';
 import { MODE_API, chargerLivreApi, mutations, normaliserLivreServeur } from '../utils/api';
 import { entetesParDefaut } from '../utils/entete';
+import { enregistrerAvecReconciliation } from '../utils/conflit-ecriture';
 import { categoriesParDefaut } from '../utils/constants';
 
 const LIVRE_VIDE: ChargementLivre = {
@@ -132,6 +133,18 @@ export function useLivre() {
     }
   }, [etat.livre.revision, appliquer]);
 
+  /** Une écriture est réessayée seulement si les changements concurrents sont compatibles. */
+  const muterEcritureEnLigne = useCallback(async (ecriture: Ecriture, originale: Ecriture | null): Promise<Sauvegarde | null> => {
+    try {
+      const livre = await enregistrerAvecReconciliation(etat.livre, ecriture, originale, mutations.ecriture, chargerLivreApi);
+      appliquer(livre);
+      return livre;
+    } catch (e) {
+      setEtat(courant => ({ ...courant, erreur: e instanceof Error ? e.message : 'Enregistrement impossible.' }));
+      return null;
+    }
+  }, [etat.livre, appliquer]);
+
   const recharger = useCallback(() => {
     if (MODE_API) {
       void chargerDepuisApi();
@@ -161,5 +174,5 @@ export function useLivre() {
     }
   }, [etat, appliquer]);
 
-  return { ...etat, messageSync, muter, muterEnLigne, recharger, rechargerApi, restaurer, chargementApi };
+  return { ...etat, messageSync, muter, muterEnLigne, muterEcritureEnLigne, recharger, rechargerApi, restaurer, chargementApi };
 }

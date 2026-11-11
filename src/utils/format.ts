@@ -56,3 +56,8 @@ export function parserMontant(saisie: string, autoriserNegatif = false): number 
 export function masqueMajuscules(texte: string): string {
   return texte.toUpperCase();
 }
+
+/** Applique à l'enregistrement la casse du masque visuel, sans modifier les autres lettres. */
+export function majusculesDebutMots(texte: string): string {
+  return texte.replace(/(^|[^\p{L}\p{M}\p{N}'’])(\p{L})/gu, (_match, separateur: string, lettre: string) => separateur + lettre.toLocaleUpperCase('fr'));
+}

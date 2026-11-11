@@ -151,3 +151,10 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(premieres).toHaveLength(5);
   });
 });
+
+describe('bénéficiaire enregistré', () => {
+  it('affiche la casse enregistrée dans l’objet du bordereau', () => {
+    render(<BordereauDocument ligne={ligne('DEPENSE', { tiers: 'Marovavy Lucia' })} entete={enteteParDefaut('depense')} />);
+    expect(screen.getByText((_, el) => el?.tagName === 'P' && (el.textContent ?? '').includes(' — Marovavy Lucia'))).toBeInTheDocument();
+  });
+});
