@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, BookOpen, ChevronLeft, ChevronRight, FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, BookOpen, FileText, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import type { Categories, Ecriture, LigneJournal, Sens } from '../types';
 import { dateFr, montantAffiche } from '../utils/format';
 import { entetesParDefaut, type EnteteDocument, type EntetesDocuments } from '../utils/entete';
@@ -41,8 +41,6 @@ export interface LivreJournalHandle {
 type SortColumn = 'date' | 'numero' | 'libelle' | 'categorie' | 'recette' | 'depense' | 'solde';
 type SortDirection = 'asc' | 'desc';
 
-const PAR_PAGE = 50;
-
 /**
  * `forwardRef` est nécessaire : l'application ouvre le bordereau d'une pièce
  * depuis l'extérieur, juste après son enregistrement.
@@ -53,7 +51,6 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
 ) {
   /** Ligne active / sélectionnée dans le tableau */
   const [activeId, setActiveId] = useState<string | null>(null);
-  const activeRowRef = useRef<HTMLTableRowElement | null>(null);
 
   /** Tri des colonnes */
   const [sortCol, setSortCol] = useState<SortColumn | null>(null);
@@ -186,31 +183,6 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
     });
   }, [lignes]);
 
-  /** Pagination calculée et calée sur la ligne active */
-  const [page, setPage] = useState(1);
-  const pages = Math.max(1, Math.ceil(lignesTriees.length / PAR_PAGE));
-
-  useEffect(() => {
-    if (!activeId || !lignesTriees.length) return;
-    const index = lignesTriees.findIndex(l => l.id === activeId);
-    if (index !== -1) {
-      const pageCible = Math.floor(index / PAR_PAGE) + 1;
-      setPage(pageCible);
-    }
-  }, [activeId, lignesTriees]);
-
-  const pageActuelle = Math.min(page, pages);
-  const debut = (pageActuelle - 1) * PAR_PAGE;
-  const fin = debut + PAR_PAGE;
-  const horsPage = (i: number) => i < debut || i >= fin;
-
-  /** Défilement vers la ligne active */
-  useEffect(() => {
-    if (activeId && activeRowRef.current && typeof activeRowRef.current.scrollIntoView === 'function') {
-      activeRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [activeId, pageActuelle]);
-
   const gererSupprimer = (ligne: LigneJournal) => {
     const index = lignesTriees.findIndex(l => l.id === ligne.id);
     if (index !== -1) {
@@ -314,7 +286,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
                 </td>
               </tr>
             )}
-            {lignesTriees.map((ligne, index) => {
+            {lignesTriees.map((ligne) => {
               const meta = [ligne.tiers, ligne.reference, ligne.observation].filter((v, i, a) => v && a.indexOf(v) === i).join(' · ');
               const estActive = activeId === ligne.id;
               const estEdition = enEditionId === ligne.id;
@@ -322,11 +294,8 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
               return (
                 <tr
                   key={ligne.id}
-                  ref={estActive ? activeRowRef : undefined}
                   onClick={() => setActiveId(ligne.id)}
                   className={`border-b transition-all duration-150 cursor-pointer ${
-                    horsPage(index) ? 'screen-page-hidden' : ''
-                  } ${
                     estActive
                       ? 'bg-emerald-50/90 dark:bg-emerald-950/60 border-l-4 border-l-emerald-600 dark:border-l-emerald-400 font-medium shadow-xs'
                       : estEdition
@@ -412,19 +381,7 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
       </div>
       <div className="no-print flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500 sm:text-sm dark:border-slate-800 dark:text-slate-400" aria-label="Pied du journal">
         <p>Le solde de clôture tient compte de toute la période, même lorsqu’elle est filtrée.</p>
-        {pages > 1 && (
-          <nav className="ml-auto flex items-center gap-2" aria-label="Pagination du journal">
-            <button className="icon-button" disabled={pageActuelle === 1} aria-label="Page précédente" onClick={() => setPage(pageActuelle - 1)}>
-              <ChevronLeft size={16} />
-            </button>
-            <span className="whitespace-nowrap tabular-nums">Page {pageActuelle} sur {pages}</span>
-            <button className="icon-button" disabled={pageActuelle === pages} aria-label="Page suivante" onClick={() => setPage(pageActuelle + 1)}>
-              <ChevronRight size={16} />
-            </button>
-          </nav>
-        )}
       </div>
-      {pages > 1 && <p className="print-only px-4 py-2 text-xs">L’impression inclut toutes les pages de la sélection.</p>}
     </section>
     {bordereau && (
       <ModaleBordereau

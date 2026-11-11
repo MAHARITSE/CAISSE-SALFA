@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { LivreJournal } from './LivreJournal';
 import { ecritureTest } from '../test/fixtures';
 
-const lignes = Array.from({ length: 51 }, (_, index) => ({
+const lignes = Array.from({ length: 120 }, (_, index) => ({
   ...ecritureTest({ id: `ligne-${index}`, numero: `RC-2026-${String(index + 1).padStart(4, '0')}` }),
   solde: (index + 1) * 10000,
 }));
@@ -16,17 +16,19 @@ const props = {
 };
 
 describe('pied du journal', () => {
-  it('conserve la note et la pagination sans actions de saisie au pied du tableau', async () => {
+  it('affiche toutes les écritures sans pagination et conserve les actions de chaque ligne', async () => {
     const user = userEvent.setup();
-    const ouvrir = vi.fn();
-    render(<LivreJournal {...props} onNouvelleEcriture={ouvrir} />);
-    const pagination = screen.getByRole('navigation', { name: 'Pagination du journal' });
-    const footer = pagination.closest<HTMLElement>('[aria-label="Pied du journal"]')!;
+    const editer = vi.fn();
+    render(<LivreJournal {...props} onEditer={editer} />);
+    const footer = screen.getByLabelText('Pied du journal');
     expect(footer).toHaveTextContent('Le solde de clôture tient compte de toute la période');
-    expect(within(footer).queryByRole('button', { name: /Nouvelle recette|Nouvelle dépense/ })).not.toBeInTheDocument();
-    await user.click(within(pagination).getByRole('button', { name: 'Page précédente' }));
-    expect(pagination).toHaveTextContent('Page 1 sur 2');
-    expect(ouvrir).not.toHaveBeenCalled();
+    expect(screen.queryByRole('navigation', { name: 'Pagination du journal' })).not.toBeInTheDocument();
+    const tableau = screen.getByRole('table', { name: /Écritures de la caisse/ });
+    expect(within(tableau).getByText('RC-2026-0001')).toBeVisible();
+    expect(within(tableau).getByText('RC-2026-0060')).toBeVisible();
+    expect(within(tableau).getByText('RC-2026-0120')).toBeVisible();
+    await user.click(within(tableau).getByRole('button', { name: 'Modifier RC-2026-0120' }));
+    expect(editer).toHaveBeenCalledWith(expect.objectContaining({ id: 'ligne-119' }));
   });
 
   it('conserve les raccourcis de saisie proposés quand le journal est vide', async () => {
@@ -40,7 +42,7 @@ describe('pied du journal', () => {
 
   it('ne montre pas les actions de saisie en lecture seule', () => {
     render(<LivreJournal {...props} peutModifier={false} />);
-    expect(screen.getByRole('navigation', { name: 'Pagination du journal' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Pagination du journal' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /bas du tableau/ })).not.toBeInTheDocument();
   });
 });

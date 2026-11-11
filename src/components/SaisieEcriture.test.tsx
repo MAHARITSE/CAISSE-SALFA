@@ -173,3 +173,30 @@ describe('saisie des postes et du libellé', () => {
     expect(within(dialogue).getByRole('combobox', { name: 'Catégorie *' })).toBeInTheDocument();
   });
 });
+
+
+describe('masque de saisie du bénéficiaire ou déposant', () => {
+  it.each(['RECETTE', 'DEPENSE'] as const)('affiche une majuscule au début des mots sans modifier le texte enregistré (%s)', async sens => {
+    const user = userEvent.setup();
+    const { dialogue, onEnregistrer } = ouvrir(sens);
+    await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'Test');
+    const tiers = within(dialogue).getByLabelText(sens === 'RECETTE' ? 'Service / déposant' : 'Bénéficiaire / fournisseur');
+    await user.type(tiers, 'mr jean de l croix');
+    expect(tiers).toHaveClass('capitalize');
+    expect(tiers).toHaveAttribute('autocapitalize', 'words');
+    expect(tiers).toHaveValue('mr jean de l croix');
+    expect(within(dialogue).queryByRole('checkbox', { name: 'Tout en majuscules' })).not.toBeInTheDocument();
+    await user.type(within(dialogue).getByLabelText('Montant total (Ar) *'), '500');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onEnregistrer).toHaveBeenCalledWith(expect.objectContaining({ tiers: 'mr jean de l croix' }));
+  });
+  it('conserve les majuscules saisies au clavier', async () => {
+    const user = userEvent.setup();
+    const { dialogue, onEnregistrer } = ouvrir('DEPENSE');
+    await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'Test');
+    await user.type(within(dialogue).getByLabelText('Bénéficiaire / fournisseur'), 'ÉCOLE JEAN');
+    await user.type(within(dialogue).getByLabelText('Montant total (Ar) *'), '500');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onEnregistrer).toHaveBeenCalledWith(expect.objectContaining({ tiers: 'ÉCOLE JEAN' }));
+  });
+});

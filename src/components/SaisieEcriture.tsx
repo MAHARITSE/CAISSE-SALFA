@@ -240,7 +240,11 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field saisie-majuscules" required maxLength={200} value={libelle} onChange={e => setLibelle(e.target.value)} autoComplete="off" placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
-            <div><label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label><input id={`${formId}-tiers`} className="field" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" /><datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist></div>
+            <div>
+              <label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label>
+              <input id={`${formId}-tiers`} className="field capitalize" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} autoCapitalize="words" list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" />
+              <datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><label className="label" htmlFor={`${formId}-reference`}>Référence de la pièce</label><input id={`${formId}-reference`} className="field" maxLength={200} value={reference} onChange={e => setReference(e.target.value)} placeholder="Facture, chèque, bordereau…" /></div>
