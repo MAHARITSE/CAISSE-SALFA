@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CLE_COMPTES, CLE_SESSION_LOCALE, LONGUEUR_MIN_MOT_DE_PASSE,
   amorcerComptesLocaux, changerMonMotDePasse, lireComptesBruts,
-  retenirSessionLocale, verifierConnexionLocale,
+  retenirSessionLocale, verifierConnexionLocale, renouvelerSessionLocale, restaurerSessionLocale,
 } from './utilisateurs';
 
 /**
@@ -84,8 +84,41 @@ describe('changement de son propre mot de passe', () => {
   it('se souvient du compte connecté et l’oublie à la déconnexion', async () => {
     await amorcerComptesLocaux();
     retenirSessionLocale({ id: 'u-1' });
-    expect(JSON.parse(localStorage.getItem(CLE_SESSION_LOCALE) ?? 'null')).toEqual({ id: 'u-1' });
+    expect(JSON.parse(localStorage.getItem(CLE_SESSION_LOCALE) ?? 'null')).toMatchObject({ id: 'u-1', derniereActivite: expect.any(Number) });
     retenirSessionLocale(null);
     expect(localStorage.getItem(CLE_SESSION_LOCALE)).toBeNull();
+  });
+});
+
+
+describe('expiration de présence locale', () => {
+  beforeEach(() => { localStorage.clear(); retenirSessionLocale(null); });
+  it('restaure une session récente et refuse sa restauration après une minute sans contact', async () => {
+    const comptes = await amorcerComptesLocaux();
+    const id = comptes[0].id;
+    const temps = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    retenirSessionLocale({ id });
+    temps.mockReturnValue(1_030_000);
+    expect(await restaurerSessionLocale()).toMatchObject({ id });
+    temps.mockReturnValue(1_090_001);
+    expect(await restaurerSessionLocale()).toBeNull();
+    expect(renouvelerSessionLocale(id)).toBe(false);
+  });
+  it('renouvelle une session partagée active, mais ne ressuscite pas une déconnexion ou un autre compte', () => {
+    const temps = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    retenirSessionLocale({ id: 'a' });
+    temps.mockReturnValue(1_050_000);
+    expect(renouvelerSessionLocale('a')).toBe(true);
+    temps.mockReturnValue(1_100_000);
+    expect(renouvelerSessionLocale('a')).toBe(true);
+    retenirSessionLocale({ id: 'b' });
+    expect(renouvelerSessionLocale('a')).toBe(false);
+    retenirSessionLocale(null);
+    expect(renouvelerSessionLocale('b')).toBe(false);
+  });
+  it('refuse les anciennes sessions sans horodatage', async () => {
+    retenirSessionLocale({ id: 'a' });
+    localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: 'a' }));
+    expect(await restaurerSessionLocale()).toBeNull();
   });
 });

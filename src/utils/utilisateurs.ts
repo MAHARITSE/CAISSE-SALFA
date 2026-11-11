@@ -239,26 +239,37 @@ export async function changerMonMotDePasse(actuel: string, nouveau: string): Pro
 }
 
 export const CLE_SESSION_LOCALE = 'salfa_session_locale_v1';
+export const DUREE_PRESENCE_LOCALE_MS = 60_000;
 
 /** Mémorise le compte connecté hors serveur, pour retrouver qui change son mot de passe. */
 export function retenirSessionLocale(compte: { id: string } | null): void {
   try {
     if (!compte) { localStorage.removeItem(CLE_SESSION_LOCALE); document.cookie = 'salfa_session_locale=; path=/; max-age=0; SameSite=Lax'; }
-    else { localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: compte.id })); document.cookie = 'salfa_session_locale=1; path=/; SameSite=Lax'; }
+    else { localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id: compte.id, derniereActivite: Date.now() })); document.cookie = 'salfa_session_locale=1; path=/; SameSite=Lax'; }
   } catch { /* stockage indisponible : la session reste en mémoire */ }
 }
 
-function lireSessionLocale(): { id: string } | null {
+function lireSessionLocale(): { id: string; derniereActivite?: number } | null {
   try {
     const brut = localStorage.getItem(CLE_SESSION_LOCALE);
-    return brut ? JSON.parse(brut) as { id: string } : null;
+    return brut ? JSON.parse(brut) as { id: string; derniereActivite?: number } : null;
   } catch { return null; }
 }
 
-/** Restaurer uniquement tant que le cookie de session du navigateur existe. */
+/** Renouvelle uniquement une session encore valide, sans ressusciter une session déconnectée. */
+export function renouvelerSessionLocale(id: string): boolean {
+  try {
+    const session = lireSessionLocale();
+    if (!document.cookie.split(';').some(c => c.trim() === 'salfa_session_locale=1') || !session || session.id !== id || typeof session.derniereActivite !== 'number' || Date.now() - session.derniereActivite > DUREE_PRESENCE_LOCALE_MS || Date.now() < session.derniereActivite) return false;
+    localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id, derniereActivite: Date.now() }));
+    return true;
+  } catch { return false; }
+}
+
+/** Restaurer uniquement tant que la session du navigateur est récente. */
 export async function restaurerSessionLocale(): Promise<Compte | null> {
   if (!document.cookie.split(';').some(c => c.trim() === 'salfa_session_locale=1')) return null;
   const session = lireSessionLocale();
-  if (!session) return null;
+  if (!session || !renouvelerSessionLocale(session.id)) return null;
   return (await listerComptes()).find(c => c.id === session.id && c.actif) ?? null;
 }

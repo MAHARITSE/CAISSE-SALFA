@@ -25,7 +25,7 @@ import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { ControlesFlottants } from './components/ControlesFlottants';
 import { MODE_API, deconnexion as deconnexionApi, exporterSql, mutations, sante as santeApi, session as sessionApi, type EtatSession } from './utils/api';
 import { enteteModifie, numeroDocument, type EnteteDocument } from './utils/entete';
-import { retenirSessionLocale, restaurerSessionLocale } from './utils/utilisateurs';
+import { retenirSessionLocale, restaurerSessionLocale, renouvelerSessionLocale } from './utils/utilisateurs';
 import { libelleRole, ongletsAutorises, peutAdministrer, peutModifierSoldeOuverture, peutSaisir, type OngletApplication, type Role } from './utils/roles';
 import { VERSION_APPLICATION } from './utils/version';
 
@@ -150,12 +150,26 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
-  // Maintient la session serveur pendant que le navigateur est ouvert.
+  // Chaque onglet ouvert renouvelle la présence ; sans contact la session expire.
   useEffect(() => {
-    if (!MODE_API || !session?.connecte) return;
-    const timer = window.setInterval(() => { void sessionApi().catch(() => {}); }, 5 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, [session?.connecte]);
+    if (!session?.connecte || !session.utilisateur) return;
+    let actif = true;
+    const id = String(session.utilisateur.id);
+    const verifier = async () => {
+      if (MODE_API) {
+        try {
+          const etat = await sessionApi();
+          if (actif && (!etat.connecte || String(etat.utilisateur?.id) !== id)) setSession({ connecte: false, utilisateur: null });
+        } catch { /* Une panne réseau n'est pas une déconnexion confirmée. */ }
+      } else if (!renouvelerSessionLocale(id) && actif) {
+        setSession({ connecte: false, utilisateur: null });
+      }
+    };
+    const timer = window.setInterval(() => { void verifier(); }, 15_000);
+    const reprise = () => { if (document.visibilityState === 'visible') void verifier(); };
+    document.addEventListener('visibilitychange', reprise);
+    return () => { actif = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', reprise); };
+  }, [session?.connecte, session?.utilisateur?.id]);
 
   // Le rôle décide de tout ce qui s'ouvre : pages, réglages et saisie.
   const role: Role = (session?.utilisateur?.role ?? 'admin') as Role;

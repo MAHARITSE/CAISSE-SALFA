@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 
 const livreIncomplet = {
   format: 'CAISSE-SALFA', version: 1, revision: 0, updatedAt: new Date().toISOString(),
@@ -19,8 +19,18 @@ vi.mock('./utils/api', () => ({
 
 // eslint-disable-next-line import/first
 import App from './App';
+import { session as sessionApi } from './utils/api';
 
 describe('mode serveur : livre incomplet', () => {
+  it('vérifie la session au retour dans l’onglet et déconnecte si elle a expiré', async () => {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Livre de caisse' });
+    const sessionMock = vi.mocked(sessionApi);
+    sessionMock.mockResolvedValueOnce({ connecte: false, utilisateur: null });
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+    expect(sessionMock).toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: /Connexion à la caisse/ })).toBeInTheDocument();
+  });
   it('affiche le journal sans planter', async () => {
     const messages: string[] = [];
     const spy = vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => { messages.push(a.map(String).join(' ')); });
