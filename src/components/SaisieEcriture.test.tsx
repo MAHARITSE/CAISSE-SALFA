@@ -12,7 +12,6 @@ function ouvrir(sens: Sens) {
     sensInitial={sens}
     exercice={new Date().getFullYear()}
     numeroSuivant={() => `${sens === 'RECETTE' ? 'RC' : 'DP'}-${new Date().getFullYear()}-0001`}
-    suggestionsTiers={['SERVICE TEST']}
     masques={[]}
     categories={categoriesParDefaut()}
     onOuvrirGestionCategories={vi.fn()}
@@ -160,7 +159,7 @@ describe('saisie des postes et du libellé', () => {
     expect(onEnregistrer).toHaveBeenCalledTimes(2);
   });
 
-  it('laisse le libellé libre sans liste déroulante et conserve les suggestions du tiers', async () => {
+  it('laisse le libellé et le tiers libres sans liste déroulante', async () => {
     const user = userEvent.setup();
     const { dialogue } = ouvrir('DEPENSE');
     const libelle = within(dialogue).getByRole('textbox', { name: /Libellé de l’écriture/ });
@@ -169,14 +168,14 @@ describe('saisie des postes et du libellé', () => {
     await user.type(libelle, 'frais de mission');
     expect(libelle).toHaveValue('frais de mission');
     expect(libelle).toHaveClass('saisie-majuscules');
-    expect(within(dialogue).getByLabelText('Bénéficiaire / fournisseur')).toHaveAttribute('list');
+    expect(within(dialogue).getByLabelText('Bénéficiaire / fournisseur')).not.toHaveAttribute('list');
     expect(within(dialogue).getByRole('combobox', { name: 'Catégorie *' })).toBeInTheDocument();
   });
 });
 
 
 describe('masque de saisie du bénéficiaire ou déposant', () => {
-  it.each(['RECETTE', 'DEPENSE'] as const)('affiche une majuscule au début des mots sans modifier le texte enregistré (%s)', async sens => {
+  it.each(['RECETTE', 'DEPENSE'] as const)('enregistre les majuscules affichées au début des mots (%s)', async sens => {
     const user = userEvent.setup();
     const { dialogue, onEnregistrer } = ouvrir(sens);
     await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'Test');
@@ -188,7 +187,7 @@ describe('masque de saisie du bénéficiaire ou déposant', () => {
     expect(within(dialogue).queryByRole('checkbox', { name: 'Tout en majuscules' })).not.toBeInTheDocument();
     await user.type(within(dialogue).getByLabelText('Montant total (Ar) *'), '500');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
-    expect(onEnregistrer).toHaveBeenCalledWith(expect.objectContaining({ tiers: 'mr jean de l croix' }));
+    expect(onEnregistrer).toHaveBeenCalledWith(expect.objectContaining({ tiers: 'Mr Jean De L Croix' }));
   });
   it('conserve les majuscules saisies au clavier', async () => {
     const user = userEvent.setup();

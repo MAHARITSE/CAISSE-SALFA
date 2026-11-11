@@ -325,3 +325,9 @@ Pour les alertes de messages, ouvrez la messagerie puis cliquez sur « Activer l
 ### Nom des modèles de saisie
 
 Le nom du modèle est utilisé comme libellé initial de l'écriture (en majuscules), que l'utilisateur peut ensuite modifier. Si un libellé est déjà saisi, une confirmation est demandée avant son remplacement. Pour les anciens modèles ayant un libellé associé différent, c'est désormais le nom qui est utilisé ; les écritures déjà enregistrées ne changent pas. L'ancien libellé reste stocké tant que le modèle n'est pas modifié.
+
+### Saisies simultanées
+
+En mode serveur, si un autre utilisateur modifie le livre pendant une saisie, l'application recharge la dernière révision et réessaie automatiquement l'enregistrement lorsque cela ne risque pas d'écraser une écriture. Si la pièce en cours de modification a elle-même changé ou a été supprimée, ou si l'exercice ou la catégorie n'est plus valide, le formulaire conserve la saisie et signale le problème ; copiez votre travail, fermez le formulaire puis rechargez le livre pour comparer les données. Une erreur réseau n'est jamais réessayée automatiquement, afin d'éviter de créer une pièce en double.
+
+Après l'enregistrement d'une écriture, l'aperçu du bordereau s'ouvre et le navigateur est sollicité pour imprimer. Si la fenêtre d'impression ne s'ouvre pas ou a été annulée, cliquez sur « Imprimer » dans l'aperçu ; l'aperçu reste ouvert jusqu'à sa fermeture. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.

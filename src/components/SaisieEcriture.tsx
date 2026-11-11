@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, ListPlus } from 'lucide-react';
 import type { Categories, Ecriture, MasqueSaisie, Sens } from '../types';
 import { MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
-import { aujourdHui, formatAr, masqueMajuscules, parserMontant } from '../utils/format';
+import { aujourdHui, formatAr, majusculesDebutMots, masqueMajuscules, parserMontant } from '../utils/format';
 import { ChampMontant } from './ChampMontant';
 import { identifiant } from '../utils/ledger';
 import { validerEcriture } from '../utils/validation';
@@ -14,7 +14,6 @@ interface SaisieEcritureProps {
   sensInitial: Sens;
   exercice: number;
   numeroSuivant: (sens: Sens, date: string) => string | null;
-  suggestionsTiers: string[];
   masques: MasqueSaisie[];
   /** Catégories gérées dans le livre, distinctes par sens. */
   categories: Categories;
@@ -32,7 +31,7 @@ function posteRempli(ligne: LigneBrouillon): boolean {
   return ligne.description.trim() !== '' && (parserMontant(ligne.montant) ?? 0) > 0;
 }
 
-export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, suggestionsTiers, masques, categories: categoriesDuLivre, onOuvrirGestionCategories, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
+export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exercice, numeroSuivant, masques, categories: categoriesDuLivre, onOuvrirGestionCategories, erreurExterne, onOuvrirGestionMasques, onEnregistrer, onFermer }: SaisieEcritureProps) {
   const sens = edition?.sens ?? sensInitial;
   const estRecette = sens === 'RECETTE';
   const formId = useId();
@@ -144,7 +143,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
       const brouillon: Ecriture = {
         id: edition?.id ?? identifiant(), numero, date, sens,
         libelle: masqueMajuscules(libelle.trim()), categorie,
-        tiers: tiers.trim() || undefined,
+        tiers: majusculesDebutMots(tiers.trim()) || undefined,
         reference: reference.trim() || undefined, observation: observation.trim() || undefined,
         montant,
         lignesDetail: detaille ? lignesRetenues.map(l => ({ id: l.id, libelle: masqueMajuscules(l.description.trim()), montant: parserMontant(l.montant)! })) : undefined,
@@ -242,8 +241,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
             <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div>
               <label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label>
-              <input id={`${formId}-tiers`} className="field capitalize" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} autoCapitalize="words" list={`${formId}-tiers-list`} placeholder="Nom ou service (facultatif)" />
-              <datalist id={`${formId}-tiers-list`}>{suggestionsTiers.map(t => <option key={t} value={t} />)}</datalist>
+              <input id={`${formId}-tiers`} className="field capitalize" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} autoCapitalize="words" autoComplete="off" placeholder="Nom ou service (facultatif)" />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

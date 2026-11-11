@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, Eye, EyeOff, HeartPulse, KeyRound, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
-import type { Ecriture, FiltresJournal, Sens } from './types';
+import type { DonneesCaisse, Ecriture, FiltresJournal, LigneJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
+import { verifierContexteEcriture } from './utils/conflit-ecriture';
 import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerCategories, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
 import { anneeCourante, dateFr, decalerMois, formatAr, libelleMois, moisCourant } from './utils/format';
 
@@ -10,7 +11,7 @@ import { exporterArchiveExercice, exporterSqlLivre, exporterSecours } from './ut
 import { Messagerie } from './components/Messagerie';
 import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
-import { LivreJournal, type LivreJournalHandle } from './components/LivreJournal';
+import { LivreJournal } from './components/LivreJournal';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
 import { GestionCategoriesModal } from './components/GestionCategoriesModal';
@@ -21,6 +22,7 @@ import { Exercices } from './components/Exercices';
 import { Connexion } from './components/Connexion';
 import { Administration } from './components/Administration';
 import { ChangerMotDePasse } from './components/ChangerMotDePasse';
+import { ModaleBordereau } from './components/Bordereau';
 import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { ControlesFlottants } from './components/ControlesFlottants';
 import { MODE_API, deconnexion as deconnexionApi, exporterSql, mutations, sante as santeApi, session as sessionApi, type EtatSession } from './utils/api';
@@ -33,8 +35,8 @@ type Onglet = OngletApplication;
 
 
 export function App() {
-  const { livre, erreur, avertissement, messageSync, muter, muterEnLigne, recharger, rechargerApi, restaurer, chargementApi } = useLivre();
-  const journalRef = useRef<LivreJournalHandle>(null);
+  const { livre, erreur, avertissement, messageSync, muter, muterEnLigne, muterEcritureEnLigne, recharger, rechargerApi, restaurer, chargementApi } = useLivre();
+  const [bordereauEnregistre, setBordereauEnregistre] = useState<LigneJournal | null>(null);
   /**
    * Hauteur réelle de la barre d'en-tête. La barre de filtres s'y accroche :
    * une valeur fixe se désaligne dès que la navigation passe sur deux lignes
@@ -217,7 +219,6 @@ export function App() {
   const cloturePossible = clotureAutorisee(exercice);
   const aCloturer = cloturePossible && anneeCourante() > exercice;
   const filtreActif = filtres.sens !== 'TOUS' || Boolean(filtres.categorie || filtres.recherche.trim());
-  const suggestionsTiers = useMemo(() => [...new Set(livre.ecritures.map(e => e.tiers).filter((t): t is string => Boolean(t)))].slice(-60), [livre.ecritures]);
   // Un livre reçu partiel (base fraîche, colonne ajoutée) ne doit pas vider l'écran.
   const categories = [...new Set([
     ...(livre.categories?.recette ?? []),
@@ -264,10 +265,14 @@ export function App() {
   }
 
   async function enregistrer(ecriture: Ecriture) {
-    const edition = livre.ecritures.some(e => e.id === ecriture.id);
-    const reussi = MODE_API
-      ? await muterEnLigne(revision => mutations.ecriture(revision, ecriture))
-      : muter(d => enregistrerEcriture(d, ecriture));
+    const edition = Boolean(saisie?.edition);
+    const livreEnregistre = MODE_API ? await muterEcritureEnLigne(ecriture, saisie?.edition ?? null) : null;
+    let donneesLocales: DonneesCaisse | null = null;
+    const reussi = MODE_API ? Boolean(livreEnregistre) : muter(d => {
+      verifierContexteEcriture(d, ecriture, saisie?.edition ?? null);
+      donneesLocales = enregistrerEcriture(d, ecriture);
+      return donneesLocales;
+    });
     if (!reussi) return false;
     setSaisie(null); setDerniereSupprimee(null); setMois(ecriture.date.slice(0, 7)); reinitialiser();
     const document = numeroDocument(ecriture.numero);
@@ -275,7 +280,14 @@ export function App() {
       ? 'Modification enregistrée. Les soldes ont été recalculés.'
       : `Écriture enregistrée avec son numéro définitif${document ? ` et son document ${document}` : ''}.`);
     // Le bordereau imprimable s'ouvre aussitôt : l'utilisateur n'a plus à le rechercher dans le journal.
-    ouvrirBordereauApresEnregistrement(ecriture);
+    try {
+      const livreResultat = livreEnregistre ?? donneesLocales;
+      const cible = livreResultat && calculerJournal(livreResultat).find(e => e.id === ecriture.id);
+      if (cible) setBordereauEnregistre(cible);
+      else setNotification('Écriture enregistrée, mais son bordereau n’a pas pu être ouvert. Retrouvez-la dans le journal pour l’imprimer.');
+    } catch {
+      setNotification('Écriture enregistrée, mais son bordereau n’a pas pu être ouvert. Retrouvez-la dans le journal pour l’imprimer.');
+    }
     return true;
   }
   async function modifierCategorieDepense(id: string, categorie: string): Promise<boolean> {
@@ -332,15 +344,6 @@ export function App() {
       return true;
     } catch (e) { throw e instanceof Error ? e : new Error('La restauration a échoué.'); }
   }
-  /**
-   * Ouvre le bordereau d'une écriture qui vient d'être enregistrée.
-   * Le numéro définitif et le solde sont relus dans le livre mis à jour.
-   */
-  function ouvrirBordereauApresEnregistrement(ecriture: Ecriture) {
-    const cible = journal.find(e => e.id === ecriture.id) ?? (ecriture.lignesDetail?.length ? { ...ecriture, solde: ecriture.montant } : null);
-    if (cible) journalRef.current?.ouvrirBordereau(cible);
-  }
-
   async function enregistrerCategoriesSaisie(sens: 'RECETTE' | 'DEPENSE', liste: string[]) {
     const reussi = MODE_API
       ? await muterEnLigne(revision => mutations.categories(revision, sens, liste))
@@ -533,7 +536,7 @@ export function App() {
               : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">{archiveConsultee ? `Exercice ${archiveConsultee.annee} clôturé : consultation en lecture seule.` : 'Consultation seule : votre rôle ne saisit pas d’écriture.'}</p>}</div>
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800"><div className="segmented" aria-label="Filtrer par type">{(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(s => <button key={s} aria-pressed={filtres.sens === s} onClick={() => modifierFiltre('sens', s)}>{s === 'TOUS' ? 'Tous' : s === 'RECETTE' ? 'Recettes' : 'Dépenses'}</button>)}</div><select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par catégorie" value={filtres.categorie} onChange={e => modifierFiltre('categorie', e.target.value)}><option value="">Toutes les catégories</option>{categories.map(c => <option key={c}>{c}</option>)}</select><div className="relative min-w-44 flex-1"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" className="field !py-2 !pl-9 !text-sm" aria-label="Rechercher dans le journal" placeholder="Rechercher une pièce, un libellé, un tiers…" value={filtres.recherche} onChange={e => modifierFiltre('recherche', e.target.value)} /></div>{filtreActif && <button className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}<span className="hidden items-center gap-1 text-xs text-slate-400 dark:text-slate-500 xl:flex"><SlidersHorizontal size={14} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span></div>
           </section></div>
-          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onDemanderPrecision={administre && !archiveConsultee ? setDemandeCible : undefined} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} ref={journalRef} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
+          {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onDemanderPrecision={administre && !archiveConsultee ? setDemandeCible : undefined} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} value={mois} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} categoriesDepense={livre.categories.depense} onModifierCategorieDepense={saisieOuverte && !archiveConsultee ? modifierCategorieDepense : undefined} raisonLectureSeule={archiveConsultee ? 'Exercice clôturé : les catégories sont en lecture seule.' : !saisieOuverte ? 'Votre rôle permet la consultation uniquement.' : undefined} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} administrateur={administre} exerciceActif={exerciceAffiche} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} onOuvrirExercice={changerExerciceConsulte} />)}
@@ -567,8 +570,9 @@ export function App() {
       </main>
     </div>
 
-    {saisie && <SaisieEcriture key={saisie.edition?.id ?? `nouveau-${saisie.sens}`} ecritureEnEdition={saisie.edition} sensInitial={saisie.sens} exercice={exercice} numeroSuivant={(sens, date) => Number(date.slice(0, 4)) === exercice ? prochainNumero(livre, sens, date) : null} suggestionsTiers={suggestionsTiers} masques={livre.masques} categories={livre.categories} onOuvrirGestionCategories={() => setCategoriesOuvertes(true)} erreurExterne={erreur} onOuvrirGestionMasques={() => setMasquesOuverts(true)} onEnregistrer={enregistrer} onFermer={() => setSaisie(null)} />}
+    {saisie && <SaisieEcriture key={saisie.edition?.id ?? `nouveau-${saisie.sens}`} ecritureEnEdition={saisie.edition} sensInitial={saisie.sens} exercice={exercice} numeroSuivant={(sens, date) => Number(date.slice(0, 4)) === exercice ? prochainNumero(livre, sens, date) : null} masques={livre.masques} categories={livre.categories} onOuvrirGestionCategories={() => setCategoriesOuvertes(true)} erreurExterne={erreur} onOuvrirGestionMasques={() => setMasquesOuverts(true)} onEnregistrer={enregistrer} onFermer={() => setSaisie(null)} />}
     {categoriesOuvertes && <GestionCategoriesModal categories={livre.categories} erreurExterne={erreur} onEnregistrer={enregistrerCategoriesSaisie} onFermer={() => setCategoriesOuvertes(false)} />}
+    {bordereauEnregistre && <ModaleBordereau ligne={bordereauEnregistre} entete={livre.entetes} onFermer={() => setBordereauEnregistre(null)} imprimerDirectement />}
     {enteteOuverte && <EnteteBordereauModal
       entetes={livre.entetes}
       onEnregistrer={entete => { void enregistrerEnteteDocument(entete); setEnteteOuverte(false); }}
