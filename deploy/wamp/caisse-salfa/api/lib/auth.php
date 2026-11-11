@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-const SALFA_DUREE_SESSION = 365 * 24 * 3600; // expiration de secours pour les sessions abandonnées
+const SALFA_DUREE_SESSION = 60; // fenêtre de présence, renouvelée par les onglets ouverts
 const SALFA_MAX_ESSAIS = 8;                 // par fenêtre et par adresse
 const SALFA_FENETRE_ESSAIS = 15 * 60;       // 15 minutes
 const SALFA_LONGUEUR_MDP = 8;
@@ -94,6 +94,14 @@ function salfa_utilisateur_courant(bool $exiger = true): ?array
         if ($exiger) {
             throw new SalFaErreur('Compte introuvable ou désactivé : reconnectez-vous.', 401, 'non_authentifie');
         }
+        return null;
+    }
+    // Le cookie Chrome peut être restauré après fermeture. Sans contact récent
+    // d'un onglet de la caisse, la session ne doit plus être réutilisable.
+    $derniere = (int) ($_SESSION['derniere_activite'] ?? 0);
+    if ($derniere <= 0 || time() - $derniere > SALFA_DUREE_SESSION) {
+        salfa_fermer_session();
+        if ($exiger) throw new SalFaErreur('Session expirée. Reconnectez-vous.', 401, 'session_expiree');
         return null;
     }
     if (salfa_session_en_base() && !salfa_session_base_valide((int) $ligne['id'], (string) $session['jeton'])) {
