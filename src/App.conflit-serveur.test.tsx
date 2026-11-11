@@ -38,8 +38,7 @@ describe('saisie en présence de modifications concurrentes', () => {
     expect(api.enregistrer.mock.calls.map(c => c[0])).toEqual([1, 2]);
     expect(api.enregistrer.mock.calls[0][1].id).toBe(api.enregistrer.mock.calls[1][1].id);
     expect(within(journal).getByText(`RC-${annee}-0002`)).toBeInTheDocument();
-    const bordereau = await screen.findByRole('dialog', { name: 'Bordereau imprimable' });
-    expect(bordereau).toHaveTextContent('NOUVELLE RECETTE');
-    expect(within(bordereau).getByRole('button', { name: 'Imprimer' })).toBeInTheDocument();
+    expect(document.querySelector('.print-bordereau')).toHaveTextContent('NOUVELLE RECETTE');
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
   });
 });

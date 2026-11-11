@@ -572,7 +572,7 @@ export function App() {
 
     {saisie && <SaisieEcriture key={saisie.edition?.id ?? `nouveau-${saisie.sens}`} ecritureEnEdition={saisie.edition} sensInitial={saisie.sens} exercice={exercice} numeroSuivant={(sens, date) => Number(date.slice(0, 4)) === exercice ? prochainNumero(livre, sens, date) : null} masques={livre.masques} categories={livre.categories} onOuvrirGestionCategories={() => setCategoriesOuvertes(true)} erreurExterne={erreur} onOuvrirGestionMasques={() => setMasquesOuverts(true)} onEnregistrer={enregistrer} onFermer={() => setSaisie(null)} />}
     {categoriesOuvertes && <GestionCategoriesModal categories={livre.categories} erreurExterne={erreur} onEnregistrer={enregistrerCategoriesSaisie} onFermer={() => setCategoriesOuvertes(false)} />}
-    {bordereauEnregistre && <ModaleBordereau ligne={bordereauEnregistre} entete={livre.entetes} onFermer={() => setBordereauEnregistre(null)} imprimerDirectement />}
+    {bordereauEnregistre && <ModaleBordereau ligne={bordereauEnregistre} entete={livre.entetes} onFermer={() => setBordereauEnregistre(null)} onErreur={() => setNotification("Impossible de confirmer l’ouverture de l’impression. Réessayez depuis la ligne de l’écriture dans le journal.")} />}
     {enteteOuverte && <EnteteBordereauModal
       entetes={livre.entetes}
       onEnregistrer={entete => { void enregistrerEnteteDocument(entete); setEnteteOuverte(false); }}

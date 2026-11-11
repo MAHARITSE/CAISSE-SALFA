@@ -302,10 +302,10 @@ export interface MessagePrive {
   auteurNom: string; destinataireNom: string; contenu: string; creeLe: string; luLe: string | null;
 }
 export interface BoiteMessages {
-  comptes: { id: number | string; nomComplet: string; identifiant: string }[];
+  comptes: { id: number | string; nomComplet: string; identifiant: string; enLigne?: boolean | number | string | null }[];
   messages: MessagePrive[];
 }
 export function lireMessages(): Promise<BoiteMessages> { return appeler('messages'); }
-export function modifierMessages(corps: { operation: 'envoyer'; destinataireId: string; contenu: string } | { operation: 'lire'; id: number }): Promise<BoiteMessages> {
+export function modifierMessages(corps: { operation: 'envoyer'; destinataireId: string; contenu: string } | { operation: 'lire'; id: number } | { operation: 'supprimer'; id: number } | { operation: 'supprimer_conversation'; correspondantId: string }): Promise<BoiteMessages> {
   return appeler('messages', { methode: 'POST', corps });
 }

@@ -94,3 +94,39 @@ describe('messagerie en conversations', () => {
     } finally { vi.unstubAllGlobals(); }
   });
 });
+
+describe('suppression individuelle', () => {
+  it('ne supprime que pour son utilisateur, par message puis conversation entière', async () => {
+    const messages = [
+      { id: 11, auteurId: '1', destinataireId: '2', auteurNom: 'Admin', destinataireNom: 'Caisse', contenu: 'Premier', creeLe: '2026-01-01T10:00:00Z', luLe: null },
+      { id: 12, auteurId: '2', destinataireId: '1', auteurNom: 'Caisse', destinataireNom: 'Admin', contenu: 'Second', creeLe: '2026-01-01T11:00:00Z', luLe: null },
+    ];
+    localStorage.setItem('salfa_messages_prives', JSON.stringify(messages));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const vue = render(<Messagerie utilisateur={caisse} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Admin.*Second/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer le message 11' }));
+    await waitFor(() => expect(screen.queryByText('Premier')).not.toBeInTheDocument());
+    expect(screen.getByText('Second')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer toute la conversation' }));
+    await screen.findByText(/Aucun message/);
+    expect(JSON.parse(localStorage.getItem('salfa_messages_prives')!)).toHaveLength(2);
+    vue.unmount();
+    render(<Messagerie utilisateur={admin} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Caisse.*Second/ }));
+    expect(screen.getByText('Premier')).toBeInTheDocument();
+    expect(screen.getByText('Second')).toBeInTheDocument();
+  });
+  it('ne supprime rien si la confirmation est annulée', async () => {
+    localStorage.setItem('salfa_messages_prives', JSON.stringify([{ id: 1, auteurId: '1', destinataireId: '2', auteurNom: 'Admin', destinataireNom: 'Caisse', contenu: 'Bonjour', creeLe: new Date().toISOString(), luLe: null }]));
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<Messagerie utilisateur={caisse} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Admin.*Bonjour/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer toute la conversation' }));
+    expect(screen.getByText('Bonjour')).toBeInTheDocument();
+    expect(localStorage.getItem('salfa_messages_suppressions')).toBeNull();
+  });
+});

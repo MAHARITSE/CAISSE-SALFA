@@ -128,11 +128,7 @@ test('les 15 postes et les signatures restent entiers', async ({ page }) => {
 
 test('le journal retrouve son format paysage après fermeture du bordereau', async ({ page }) => {
   await ouvrirBordereau(page, 'dépense', 1);
-  await page.emulateMedia({ media: 'screen' });
   await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
-  await expect(page.getByRole('dialog', { name: 'Bordereau imprimable' })).toBeVisible();
-  await page.getByRole('dialog', { name: 'Bordereau imprimable' }).getByRole('button', { name: 'Fermer', exact: true }).click();
-  await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.print-bordereau')).toHaveCount(0);
   await expect(page.locator('body')).not.toHaveClass(/has-print-bordereau/);
   const pdf = await page.pdf({ preferCSSPageSize: true });

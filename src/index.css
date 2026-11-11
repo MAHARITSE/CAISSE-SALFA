@@ -279,13 +279,6 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
  * réduite d'un seul bloc (`zoom`) pour tenir dans la fenêtre : proportions
  * et sauts de ligne restent donc rigoureusement identiques à l'impression.
  * ------------------------------------------------------------------ */
-.bordereau-apercu {
-  --echelle: 0.88;
-  display: flex;
-  justify-content: center;
-  overflow: auto;
-  padding: 4px 0 8px;
-}
 .bordereau-document {
   position: relative;
   display: flex;
@@ -301,10 +294,8 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
   font-size: 10pt;
   line-height: 1.15;
-  zoom: var(--echelle);
   box-shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 12px 28px rgba(15, 23, 42, .12);
 }
-@media (min-width: 900px) { .bordereau-apercu { --echelle: 1; } }
 
 /* En-tête : logo, textes centrés, logo. */
 .bordereau-entete { margin-bottom: 3mm; break-inside: avoid; }

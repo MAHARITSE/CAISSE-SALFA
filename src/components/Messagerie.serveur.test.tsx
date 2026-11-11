@@ -1,0 +1,42 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+const serveur = vi.hoisted(() => ({ lire: vi.fn(), modifier: vi.fn() }));
+vi.mock('../utils/api', () => ({ MODE_API: true, lireMessages: serveur.lire, modifierMessages: serveur.modifier }));
+vi.mock('../utils/utilisateurs', () => ({ listerComptes: vi.fn() }));
+import { Messagerie } from './Messagerie';
+const utilisateur = { id: 1, identifiant: 'admin', nomComplet: 'Admin', role: 'admin' as const };
+const message = { id: 7, auteurId: 2, destinataireId: 1, auteurNom: 'Caisse', destinataireNom: 'Admin', contenu: 'Bonjour', creeLe: '2026-01-01T12:00:00Z', luLe: null };
+const comptes = [{ id: 2, identifiant: 'caisse', nomComplet: 'Caisse', enLigne: 1 }, { id: 3, identifiant: 'autre', nomComplet: 'Autre', enLigne: 0 }];
+afterEach(() => { serveur.lire.mockReset(); serveur.modifier.mockReset(); vi.unstubAllGlobals(); });
+describe('messagerie serveur', () => {
+  it('affiche les personnes en ligne même sans conversation et transmet les suppressions', async () => {
+    serveur.lire.mockResolvedValue({ comptes, messages: [message] });
+    serveur.modifier.mockResolvedValue({ comptes, messages: [] });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<Messagerie utilisateur={utilisateur} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Messages privés, 1 non lus/ }));
+    expect(within(screen.getByLabelText('Utilisateurs en ligne')).getByText(/Caisse/)).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Utilisateurs en ligne')).queryByText(/Autre/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Caisse.*Bonjour/ }));
+    expect(screen.getByText('● En ligne')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer toute la conversation' }));
+    await waitFor(() => expect(serveur.modifier).toHaveBeenCalledWith({ operation: 'supprimer_conversation', correspondantId: '2' }));
+    await screen.findByText(/Aucun message/);
+  });
+  it('joue le son des nouveaux messages même sans permission de notification système', async () => {
+    const demarrer = vi.fn();
+    const audio = { state: 'running', currentTime: 0, destination: {}, close: vi.fn().mockResolvedValue(undefined), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), start: demarrer, stop: vi.fn() }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }) };
+    vi.stubGlobal('AudioContext', vi.fn(function () { return audio; }));
+    vi.stubGlobal('Notification', undefined);
+    serveur.lire.mockResolvedValue({ comptes, messages: [] });
+    render(<Messagerie utilisateur={utilisateur} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Messages privés' }));
+    await screen.findByText('Son activé pour cet onglet.');
+    serveur.lire.mockResolvedValue({ comptes, messages: [message] });
+    fireEvent.click(screen.getByRole('button', { name: 'Actualiser' }));
+    await waitFor(() => expect(demarrer).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Actualiser' }));
+    await waitFor(() => expect(serveur.lire).toHaveBeenCalled());
+    expect(demarrer).toHaveBeenCalledTimes(1);
+  });
+});
