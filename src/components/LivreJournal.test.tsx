@@ -46,3 +46,24 @@ describe('pied du journal', () => {
     expect(screen.queryByRole('button', { name: /bas du tableau/ })).not.toBeInTheDocument();
   });
 });
+
+describe('position initiale du journal', () => {
+  it('se place sur la dernière écriture après chargement, sans redéfiler lors des changements suivants', async () => {
+    const defiler = vi.fn();
+    Object.defineProperty(HTMLTableRowElement.prototype, 'scrollIntoView', { configurable: true, value: defiler });
+    try {
+      const { rerender } = render(<LivreJournal {...props} lignes={[]} />);
+      expect(defiler).not.toHaveBeenCalled();
+      rerender(<LivreJournal {...props} />);
+      expect(defiler).toHaveBeenCalledTimes(1);
+      expect(defiler.mock.instances[0]).toHaveTextContent('RC-2026-0120');
+      expect(defiler).toHaveBeenCalledWith({ behavior: 'auto', block: 'end', inline: 'nearest' });
+      const user = userEvent.setup();
+      await user.click(screen.getByRole('button', { name: 'Date' }));
+      rerender(<LivreJournal {...props} lignes={lignes.slice(0, 60)} />);
+      expect(defiler).toHaveBeenCalledTimes(1);
+    } finally {
+      delete (HTMLTableRowElement.prototype as Partial<HTMLTableRowElement>).scrollIntoView;
+    }
+  });
+});
