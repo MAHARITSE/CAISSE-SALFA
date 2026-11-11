@@ -88,9 +88,8 @@ garder les versions verrouillées par `package-lock.json`.
   auxquelles s’ajoute le Demandeur pour une dépense.
   Les cotes sont celles des modèles, relevées en millimètres sur une page A4 :
   marges de 7,6 mm, colonnes de 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de
-  11,6 mm. À l’écran, la feuille est réduite d’un seul bloc, si bien que
-  l’aperçu montre exactement ce qui sortira de l’imprimante : une page A4
-  portrait. Les montants portent deux décimales (2 657 400,00).
+  11,6 mm. Le document est envoyé à la fenêtre d’impression du navigateur
+  au format A4 portrait. Les montants portent deux décimales (2 657 400,00).
 - **Masques de saisie** : les montants s’écrivent avec séparation des milliers
   (1 250 000) et un curseur stable ; les libellés et les postes sont saisis en
   majuscules, comme les catégories nouvellement saisies ou renommées. Les données
@@ -114,8 +113,8 @@ garder les versions verrouillées par `package-lock.json`.
   seule fois depuis le bouton « En-tête ». Chaque ligne se met en forme comme
   dans un traitement de texte — police, taille au demi-point, gras, italique,
   souligné, alignement — et l’on ajoute, réordonne ou supprime des lignes.
-  L’aperçu du bordereau et son impression conservent la casse et la mise en
-  forme choisies dans l’éditeur, ainsi que les positions des images.
+  Le bordereau imprimé conserve la casse et la mise en forme choisies dans
+  l’éditeur, ainsi que les positions des images.
   Les images se **glissent librement sur la feuille A4** : on les dépose, on les
   déplace à la souris ou au doigt, puis on les règle au millimètre (position et
   largeur). L’aperçu montre la feuille entière. « Restaurer l’en-tête fourni »
@@ -330,4 +329,12 @@ Le nom du modèle est utilisé comme libellé initial de l'écriture (en majuscu
 
 En mode serveur, si un autre utilisateur modifie le livre pendant une saisie, l'application recharge la dernière révision et réessaie automatiquement l'enregistrement lorsque cela ne risque pas d'écraser une écriture. Si la pièce en cours de modification a elle-même changé ou a été supprimée, ou si l'exercice ou la catégorie n'est plus valide, le formulaire conserve la saisie et signale le problème ; copiez votre travail, fermez le formulaire puis rechargez le livre pour comparer les données. Une erreur réseau n'est jamais réessayée automatiquement, afin d'éviter de créer une pièce en double.
 
-Après l'enregistrement d'une écriture, l'aperçu du bordereau s'ouvre et le navigateur est sollicité pour imprimer. Si la fenêtre d'impression ne s'ouvre pas ou a été annulée, cliquez sur « Imprimer » dans l'aperçu ; l'aperçu reste ouvert jusqu'à sa fermeture. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
+Après l'enregistrement d'une écriture, la fenêtre d'impression du navigateur est sollicitée directement, sans écran d'aperçu dans l'application. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
+
+### Messages privés, son et présence
+
+Ouvrez « Messages privés », puis cliquez sur **Activer et tester le son** après chaque ouverture de la caisse. Laissez cet onglet connecté et le son de Chrome et de Windows activé. Un nouveau message reçu déclenche un son dans cet onglet, même sans notification système ; la recherche se fait environ toutes les 15 secondes. Chrome peut suspendre l'onglet ou bloquer le son tant qu'il n'y a pas eu d'interaction. L'application ne peut pas sonner si le navigateur est fermé.
+
+Pour les notifications Windows, autorisez aussi les notifications de ce site dans Chrome et dans Windows. Sur un autre ordinateur, Chrome exige une adresse **HTTPS reconnue** ; sur une adresse réseau HTTP, l'autorisation peut être indisponible. Le son de l'application peut être activé séparément, sous réserve des réglages du navigateur.
+
+Le point vert indique une activité récente dans la messagerie du serveur : le statut est approximatif, avec une expiration après environ 60 secondes sans contact. Il ne prouve pas que la personne est devant son poste. Cette présence n'est pas partagée entre ordinateurs en mode local de démonstration. Une suppression, individuelle ou de toute une conversation, ne retire les messages que de votre propre messagerie : le correspondant conserve sa copie. Les messages et leurs suppressions sont conservés dans des tables MySQL séparées des sauvegardes du livre ; sauvegardez aussi la base complète.

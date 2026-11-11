@@ -20,6 +20,7 @@ async function ouvrirSession(page: Page, identifiant = 'admin', motDePasse = 'ad
 }
 
 test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dialogue accessible', async ({ page }) => {
+  await page.addInitScript(() => { window.print = () => {}; });
   const erreurs: string[] = [];
   page.on('pageerror', e => erreurs.push(e.message));
   await page.goto('/');
@@ -44,11 +45,11 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   expect(await page.evaluate(() => Boolean(document.activeElement?.closest('dialog')))).toBe(true);
   await dialog.getByRole('button', { name: 'Enregistrer', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  // Le bordereau de la pièce enregistrée s'ouvre automatiquement : on le ferme.
-  const autoBordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
-  await expect(autoBordereau).toBeVisible();
-  await autoBordereau.getByRole('button', { name: 'Fermer', exact: true }).click();
-  await expect(autoBordereau).toHaveCount(0);
+  // L'impression est lancée sans dialogue interne ; sa copie est nettoyée après impression.
+  await expect(page.locator('.print-bordereau')).toHaveCount(1);
+  await expect(page.getByRole('dialog', { name: 'Bordereau imprimable' })).toHaveCount(0);
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await expect(page.locator('.print-bordereau')).toHaveCount(0);
   await expect(page.getByRole('cell', { name: 'Recettes journalières', exact: false }).first()).toBeVisible();
   await page.reload();
   await ouvrirSession(page);
@@ -68,14 +69,12 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   expect(csv).toContain('CONSULTATION');
 
   await page.getByRole('button', { name: /^Imprimer le bordereau RC-/ }).first().click();
-  const bordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
-  await expect(bordereau.getByText('Total des recettes', { exact: true })).toBeVisible();
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.print-bordereau')).toBeVisible();
   await expect(page.locator('.app-shell')).toBeHidden();
-  await expect(bordereau).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Bordereau imprimable' })).toHaveCount(0);
   await page.emulateMedia({ media: 'screen' });
-  await bordereau.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
 
   // Fermer un formulaire modifié demande confirmation.
   await page.getByRole('button', { name: 'Nouvelle dépense', exact: true }).click();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { BordereauDocument, ModaleBordereau } from './Bordereau';
 import { EnteteBordereauModal } from './EnteteBordereauModal';
 import { enteteParDefaut } from '../utils/entete';
@@ -156,5 +156,33 @@ describe('bénéficiaire enregistré', () => {
   it('affiche la casse enregistrée dans l’objet du bordereau', () => {
     render(<BordereauDocument ligne={ligne('DEPENSE', { tiers: 'Marovavy Lucia' })} entete={enteteParDefaut('depense')} />);
     expect(screen.getByText((_, el) => el?.tagName === 'P' && (el.textContent ?? '').includes(' — Marovavy Lucia'))).toBeInTheDocument();
+  });
+});
+
+
+describe('impression directe sans aperçu', () => {
+  it('ferme la copie après impression et signale une erreur du navigateur', () => {
+    vi.useFakeTimers();
+    const fermer = vi.fn();
+    const erreur = vi.fn();
+    const impression = vi.spyOn(window, 'print').mockImplementation(() => { throw new Error('bloqué'); });
+    const { unmount } = render(<ModaleBordereau ligne={ligne('DEPENSE')} entete={enteteParDefaut()} onFermer={fermer} onErreur={erreur} />);
+    expect(screen.queryByRole('dialog', { name: 'Bordereau imprimable' })).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(50));
+    expect(impression).toHaveBeenCalledOnce();
+    expect(erreur).toHaveBeenCalledOnce();
+    expect(fermer).toHaveBeenCalledOnce();
+    unmount();
+    expect(document.body).not.toHaveClass('has-print-bordereau');
+  });
+  it('ne laisse pas le document bloquer le journal si afterprint ne survient pas', () => {
+    vi.useFakeTimers();
+    vi.spyOn(window, 'print').mockImplementation(() => {});
+    const fermer = vi.fn();
+    const erreur = vi.fn();
+    render(<ModaleBordereau ligne={ligne('RECETTE')} entete={enteteParDefaut()} onFermer={fermer} onErreur={erreur} />);
+    act(() => vi.advanceTimersByTime(30050));
+    expect(erreur).toHaveBeenCalledOnce();
+    expect(fermer).toHaveBeenCalledOnce();
   });
 });

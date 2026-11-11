@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { Modale } from './Modale';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
@@ -175,51 +174,47 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
 interface ModaleBordereauProps {
   ligne: LigneJournal;
   entete: EnteteDocument;
-  /** Absent : le bouton « Modifier l'en-tête » est masqué. */
-  onModifierEntete?: () => void;
   onFermer: () => void;
-  /** Juste après un enregistrement : l'intention d'imprimer est annoncée. */
-  imprimerDirectement?: boolean;
+  onErreur?: () => void;
 }
 
-/**
- * Bordereau dans une boîte de dialogue, avec une copie réservée à l'impression.
- * La copie n'est montée qu'à l'ouverture de la modale : `window.print()`
- * n'imprime donc que ce bordereau, jamais le journal affiché derrière.
- */
-export function ModaleBordereau({ ligne, entete, onFermer }: ModaleBordereauProps) {
-  const [erreurImpression, setErreurImpression] = useState(false);
-  function imprimer() {
-    try {
-      setErreurImpression(false);
-      window.print();
-    } catch {
-      setErreurImpression(true);
-    }
-  }
+/** Copie uniquement imprimable, sans écran d'aperçu intermédiaire. */
+export function ModaleBordereau({ ligne, entete, onFermer, onErreur }: ModaleBordereauProps) {
+  const callbacks = useRef({ onFermer, onErreur });
+  callbacks.current = { onFermer, onErreur };
   useEffect(() => {
     document.body.classList.add('has-print-bordereau');
-    // L'aperçu reste ouvert si Chrome bloque ou si l'utilisateur annule.
-    const timer = setTimeout(() => {
-      try { window.print(); } catch { setErreurImpression(true); }
+    let termine = false;
+    let secours: ReturnType<typeof setTimeout> | undefined;
+    const finir = (erreur: boolean) => {
+      if (termine) return;
+      termine = true;
+      if (secours) clearTimeout(secours);
+      if (erreur) callbacks.current.onErreur?.();
+      callbacks.current.onFermer();
+    };
+    const apresImpression = () => finir(false);
+    window.addEventListener('afterprint', apresImpression);
+    const lancement = setTimeout(() => {
+      try {
+        window.print();
+        // Certains navigateurs ne déclenchent pas afterprint quand ils bloquent
+        // l'impression. Libérer le document pour ne pas bloquer le journal.
+        if (!termine) secours = setTimeout(() => finir(true), 30000);
+      } catch { finir(true); }
     }, 50);
     return () => {
-      clearTimeout(timer);
+      clearTimeout(lancement);
+      if (secours) clearTimeout(secours);
+      window.removeEventListener('afterprint', apresImpression);
       document.body.classList.remove('has-print-bordereau');
     };
   }, []);
 
-  return <>
-    <Modale titre="Bordereau imprimable" sousTitre="Vérifiez l'aperçu puis imprimez. Si la fenêtre d'impression ne s'ouvre pas, cliquez sur Imprimer." largeur="document" onFermer={onFermer}
-      pied={<div className="flex flex-wrap justify-end gap-3"><button type="button" className="btn-secondary" onClick={onFermer}>Fermer</button><button type="button" className="btn-primary" onClick={imprimer}>Imprimer</button></div>}>
-      {erreurImpression && <p role="alert" className="mb-3 text-red-700">Impossible d'ouvrir l'impression. Vérifiez le navigateur et réessayez avec le bouton Imprimer.</p>}
-      <div className="bordereau-apercu"><BordereauDocument ligne={ligne} entete={entete} /></div>
-    </Modale>
-    {createPortal(
-      <div className="print-only print-bordereau">
-        <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
-        <BordereauDocument ligne={ligne} entete={entete} />
-      </div>, document.body,
-    )}
-  </>;
+  return createPortal(
+    <div className="print-only print-bordereau">
+      <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
+      <BordereauDocument ligne={ligne} entete={entete} />
+    </div>, document.body,
+  );
 }

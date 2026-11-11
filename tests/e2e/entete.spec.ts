@@ -22,6 +22,7 @@ function positionsProches(a: { x: number; y: number; width: number; height: numb
 }
 
 test('le bordereau reprend la casse, la mise en forme et les positions de l’éditeur', async ({ page }) => {
+  await page.addInitScript(() => { window.print = () => {}; });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
   await page.locator('#identifiant').fill('admin');
@@ -55,20 +56,12 @@ test('le bordereau reprend la casse, la mise en forme et les positions de l’é
   await editeur.getByRole('button', { name: 'Enregistrer l’en-tête' }).click();
   await page.getByRole('button', { name: 'Livre journal' }).click();
   await page.getByRole('button', { name: /^Imprimer le bordereau DP-/ }).first().click();
-  const bordereau = page.getByRole('dialog', { name: 'Bordereau imprimable' });
-  const ligne = bordereau.locator('.bordereau-ligne-entete').nth(6);
-  await expect(ligne).toHaveText('E-mail : Contact.Salfa@example.org');
-  const styleBordereau = await ligne.evaluate(el => {
-    const c = getComputedStyle(el);
-    return { fontFamily: c.fontFamily, fontSize: c.fontSize, fontWeight: c.fontWeight, fontStyle: c.fontStyle, textAlign: c.textAlign, textDecorationLine: c.textDecorationLine, fontVariant: c.fontVariant, textTransform: c.textTransform };
-  });
-  expect(styleBordereau).toEqual(styleEditeur);
-  const positionsEcran = await mesurer(page, '.bordereau-apercu .bordereau-document', '.bordereau-ligne-entete', '.bordereau-entete__image-libre');
-  positionsEditeur.lignes.forEach((position, index) => positionsProches(position, positionsEcran.lignes[index]));
-  positionsProches(positionsEditeur.image, positionsEcran.image);
   await page.emulateMedia({ media: 'print' });
   const imprime = page.locator('.print-bordereau .bordereau-ligne-entete').nth(6);
   await expect(imprime).toBeVisible();
+  await expect(imprime).toHaveText('E-mail : Contact.Salfa@example.org');
+  const styleBordereau = await imprime.evaluate(el => { const c = getComputedStyle(el); return { fontFamily: c.fontFamily, fontSize: c.fontSize, fontWeight: c.fontWeight, fontStyle: c.fontStyle, textAlign: c.textAlign, textDecorationLine: c.textDecorationLine, fontVariant: c.fontVariant, textTransform: c.textTransform }; });
+  expect(styleBordereau).toEqual(styleEditeur);
   await expect(imprime).toHaveCSS('text-transform', 'none');
   await expect(imprime).toHaveCSS('font-variant', 'normal');
   const positionsImprimees = await mesurer(page, '.print-bordereau .bordereau-document', '.bordereau-ligne-entete', '.bordereau-entete__image-libre');

@@ -65,16 +65,17 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
   const enteteCourant = entetes ?? entetesParDefaut();
   const [numeroBordereau, setNumeroBordereau] = useState<string | null>(null);
   const bordereau = numeroBordereau ? lignes.find(l => l.numero === numeroBordereau) ?? null : null;
-  const [bordereauApresEnregistrement, setBordereauApresEnregistrement] = useState(false);
+  const [erreurImpression, setErreurImpression] = useState(false);
 
   const ouvrirBordereau = (ligne: LigneJournal) => {
+    setErreurImpression(false);
     setActiveId(ligne.id);
     setNumeroBordereau(ligne.numero);
   };
 
   useImperativeHandle(ref, () => ({
     ouvrirBordereau: (ligne: LigneJournal) => {
-      setBordereauApresEnregistrement(true);
+      setErreurImpression(false);
       setActiveId(ligne.id);
       setNumeroBordereau(ligne.numero);
     },
@@ -82,7 +83,6 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
 
   const [entetesOuverts, setEntetesOuverts] = useState(false);
   const [categoriesOuvertes, setCategoriesOuvertes] = useState(false);
-  const ouvrirEntetes = () => setEntetesOuverts(true);
 
   /** Tri des lignes */
   const changerTri = (col: SortColumn) => {
@@ -394,13 +394,13 @@ export const LivreJournal = forwardRef<LivreJournalHandle, LivreJournalProps>(fu
         <p>Le solde de clôture tient compte de toute la période, même lorsqu’elle est filtrée.</p>
       </div>
     </section>
+    {erreurImpression && <p role="alert" className="no-print p-3 text-sm text-red-700">Impossible de confirmer l’ouverture de l’impression. Réessayez avec le bouton d’impression de la ligne.</p>}
     {bordereau && (
       <ModaleBordereau
         ligne={bordereau}
         entete={enteteCourant}
-        onModifierEntete={onEnregistrerEntete ? () => ouvrirEntetes() : undefined}
-        onFermer={() => { setNumeroBordereau(null); setBordereauApresEnregistrement(false); }}
-        imprimerDirectement={bordereauApresEnregistrement}
+        onFermer={() => setNumeroBordereau(null)}
+        onErreur={() => setErreurImpression(true)}
       />
     )}
     {categoriesOuvertes && categories && onEnregistrerCategories && (
