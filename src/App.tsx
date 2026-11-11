@@ -79,7 +79,7 @@ export function App() {
     return es.length && !es.some(e => e.date.startsWith(moisCourant())) ? [...es].sort((a, b) => a.date.localeCompare(b.date))[es.length - 1].date.slice(0, 7) : moisCourant();
   });
   const [filtres, setFiltres] = useState<Omit<FiltresJournal, 'mois' | 'toutAfficher'>>({ sens: 'TOUS', categorie: '', recherche: '' });
-  const [toutAfficher, setToutAfficher] = useState(false);
+  const [toutAfficher, setToutAfficher] = useState(true);
   const [demandeCible, setDemandeCible] = useState<Ecriture | null>(null);
   const [saisie, setSaisie] = useState<{ sens: Sens; edition: Ecriture | null } | null>(null);
   const [masquesOuverts, setMasquesOuverts] = useState(false);
@@ -248,7 +248,7 @@ export function App() {
         ? [...es].sort((a, b) => a.date.localeCompare(b.date))[es.length - 1].date.slice(0, 7)
         : `${exercice}-${moisCourant().slice(5, 7)}`;
       setMois(dernierMois);
-      setToutAfficher(false);
+      setToutAfficher(true);
       return;
     }
     const archive = livre.exercicesClotures.find(c => c.annee === anneeCible);
@@ -269,7 +269,7 @@ export function App() {
       ? await muterEnLigne(revision => mutations.ecriture(revision, ecriture))
       : muter(d => enregistrerEcriture(d, ecriture));
     if (!reussi) return false;
-    setSaisie(null); setDerniereSupprimee(null); setMois(ecriture.date.slice(0, 7)); setToutAfficher(false); reinitialiser();
+    setSaisie(null); setDerniereSupprimee(null); setMois(ecriture.date.slice(0, 7)); reinitialiser();
     const document = numeroDocument(ecriture.numero);
     setNotification(edition
       ? 'Modification enregistrée. Les soldes ont été recalculés.'

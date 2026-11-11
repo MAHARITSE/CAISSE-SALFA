@@ -433,7 +433,6 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 .bordereau-document { max-width: 100%; }
 
 .print-only { display: none; }
-@media screen { .screen-page-hidden { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -453,7 +452,6 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   thead { display: table-header-group; }
   tfoot { display: table-row-group; }
   tr { break-inside: avoid; }
-  .screen-page-hidden { display: table-row !important; }
   body.has-print-bordereau #root,
   body:has(.print-bordereau) #root,
   body:has(.print-bordereau) .app-shell { display: none !important; }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import type { Sauvegarde } from './types';
@@ -579,5 +579,25 @@ describe('mise en page', () => {
     // exactement les marges de l'en-tête, d'un bord à l'autre de l'écran.
     expect(principal!.className).toContain('w-full');
     expect(principal!.className).not.toContain('max-w-');
+  });
+});
+
+describe('affichage continu du journal', () => {
+  it('affiche par défaut les mois de l’exercice et conserve le filtre par mois', async () => {
+    const anneeCourante = new Date().getFullYear();
+    let donnees = enregistrerEcriture(livreTest({ parametres: parametresTest({ exercice: anneeCourante }) }), ecritureTest({ id: 'janvier', numero: `RC-${anneeCourante}-0001`, date: `${anneeCourante}-01-15`, libelle: 'RECETTE JANVIER' }));
+    donnees = enregistrerEcriture(donnees, ecritureTest({ id: 'fevrier', numero: `RC-${anneeCourante}-0002`, date: `${anneeCourante}-02-15`, libelle: 'RECETTE FEVRIER' }));
+    sauvegarderLivre(livreTest(donnees), 0);
+    const user = userEvent.setup();
+    render(<App />);
+    await ouvrirSession(user);
+    expect(screen.getByText('RECETTE JANVIER')).toBeVisible();
+    expect(screen.getByText('RECETTE FEVRIER')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Tout afficher' })).toHaveAttribute('aria-pressed', 'true');
+    const mois = screen.getByLabelText('Mois affiché');
+    fireEvent.change(mois, { target: { value: `${anneeCourante}-01` } });
+    const journal = screen.getByRole('table', { name: /Écritures de la caisse/ });
+    expect(within(journal).getByText('RECETTE JANVIER')).toBeVisible();
+    expect(within(journal).queryByText('RECETTE FEVRIER')).not.toBeInTheDocument();
   });
 });
