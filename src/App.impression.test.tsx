@@ -9,7 +9,7 @@ describe('enregistrement et impression directe', () => {
     const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
     await user.type(screen.getByLabelText('Identifiant'), 'admin');
     await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
     await user.click(screen.getByRole('button', { name: /Se connecter/ }));
@@ -47,7 +47,7 @@ describe('ordre de virement : réimpression depuis le registre', () => {
     const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
     const user = userEvent.setup();
     render(<App />);
-    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
     await user.type(screen.getByLabelText('Identifiant'), 'comptable');
     await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
     await user.click(screen.getByRole('button', { name: /Se connecter/ }));

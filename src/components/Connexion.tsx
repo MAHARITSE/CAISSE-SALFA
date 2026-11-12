@@ -135,12 +135,12 @@ export function Connexion({ erreurInitiale, motif, onConnecte }: {
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm dark:bg-brand-600"><HeartPulse size={23} strokeWidth={2} /></span>
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-none tracking-tight text-brand-950 dark:text-brand-300">SALFA</p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Caisse principale · Gestion de caisse</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Caisse et Trésorerie · SALFA</p>
           </div>
         </div>
 
         <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à la caisse</h1>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à Caisse et Trésorerie</h1>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
 

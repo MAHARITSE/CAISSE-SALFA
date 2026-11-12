@@ -20,7 +20,7 @@ const annee = aujourdHui().slice(0, 4);
  * administrateur de démonstration, sauf pour les tests qui éprouvent les rôles.
  */
 async function ouvrirSession(user: ReturnType<typeof userEvent.setup>, identifiant = 'admin', motDePasse = 'admin1234') {
-  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
   await user.type(screen.getByLabelText('Identifiant'), identifiant);
   await user.type(screen.getByLabelText('Mot de passe'), motDePasse);
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));
@@ -387,7 +387,7 @@ describe('parcours de caisse', () => {
     const user = userEvent.setup();
     render(<App />);
     // Aucun écran de caisse avant la connexion.
-    expect(screen.getByRole('heading', { name: /Connexion à la caisse/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Connexion à Caisse et Trésorerie/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Identifiant'), 'admin');

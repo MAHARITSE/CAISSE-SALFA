@@ -7,7 +7,7 @@ import { CLE_LIVRE } from './utils/storage';
 it('le comptable saisit un virement sans modifier les espèces', async () => {
   const user = userEvent.setup();
   render(<App />);
-  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
   await user.type(screen.getByLabelText('Identifiant'), 'comptable');
   await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));
@@ -38,7 +38,7 @@ it('le comptable saisit un virement sans modifier les espèces', async () => {
 it('prépare BNI/C et BNI/D séparément et complète le numéro plus tard', async () => {
   const user = userEvent.setup();
   render(<App />);
-  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
   await user.type(screen.getByLabelText('Identifiant'), 'comptable');
   await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));
@@ -71,7 +71,7 @@ it('imprime l’ordre de virement sur demi-A4 après toute autorisation de dépe
   const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
   const user = userEvent.setup();
   render(<App />);
-  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
   await user.type(screen.getByLabelText('Identifiant'), 'comptable');
   await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));

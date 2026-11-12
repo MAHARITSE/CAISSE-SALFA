@@ -29,7 +29,7 @@ describe('mode serveur : livre incomplet', () => {
     sessionMock.mockResolvedValue({ connecte: false, utilisateur: null });
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
     expect(sessionMock).toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: /Connexion à la caisse/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Connexion à Caisse et Trésorerie/ })).toBeInTheDocument();
     // L'utilisateur sait pourquoi la caisse s'est refermée, au lieu de le deviner.
     expect(screen.getByRole('status')).toHaveTextContent(/session/i);
     sessionMock.mockReset();
@@ -58,7 +58,7 @@ describe('mode serveur : livre incomplet', () => {
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
     expect(sessionMock.mock.calls.length).toBeGreaterThan(1);
     expect(screen.getByRole('heading', { name: 'Livre de caisse' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Connexion à la caisse/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Connexion à Caisse et Trésorerie/ })).not.toBeInTheDocument();
   });
   it('affiche le journal sans planter', async () => {
     const messages: string[] = [];
