@@ -20,6 +20,13 @@ function salfa_valider_registre_virements(mixed $brut): array
     foreach ($brut['comptes'] as $c) {
         if (!is_array($c)) throw new SalFaErreur('Compte bancaire invalide.', 400, 'virements_invalides');
         $compte = ['id' => salfa_champ($c, 'id', 120), 'banque' => salfa_champ($c, 'banque', 120), 'numeroCompte' => salfa_champ($c, 'numeroCompte', 120, false)];
+        // Identité imprimée sur l'ordre de virement : absente des livres antérieurs.
+        foreach (['titulaire' => 200, 'adresse' => 200, 'codeBanque' => 5] as $cle => $max) {
+            $valeur = salfa_champ($c, $cle, $max, false);
+            if ($valeur === '') continue;
+            if ($cle === 'codeBanque' && !preg_match('/^\d{5}$/', $valeur)) throw new SalFaErreur('Code banque : cinq chiffres attendus.', 400, 'virements_invalides');
+            $compte[$cle] = $valeur;
+        }
         $cle = mb_strtolower($compte['banque']) . "\0" . mb_strtolower($compte['numeroCompte']);
         if (isset($idsComptes[$compte['id']]) || isset($clesComptes[$cle])) throw new SalFaErreur('Compte bancaire en double.', 400, 'doublon');
         $idsComptes[$compte['id']] = true; $clesComptes[$cle] = true; $comptes[] = $compte;
@@ -48,6 +55,12 @@ function salfa_valider_registre_virements(mixed $brut): array
             if (!salfa_horodatage_valide($modifie)) throw new SalFaErreur('Date de modification invalide.', 400, 'virements_invalides');
             $e['updatedAt'] = $modifie;
         }
+        // Mentions de l'ordre de virement remis à la banque, facultatives.
+        foreach (['beneficiaireAdresse', 'beneficiaireBanque', 'beneficiaireCompte'] as $cle) {
+            $valeur = salfa_champ($v, $cle, 200, false);
+            if ($valeur !== '') $e[$cle] = $valeur;
+        }
+        if (($v['permanent'] ?? false) === true) $e['permanent'] = true;
         $ecritures[] = $e;
     }
     $compteurs = [];

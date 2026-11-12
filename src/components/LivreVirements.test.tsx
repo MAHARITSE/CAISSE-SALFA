@@ -38,6 +38,67 @@ describe('livre des virements', () => {
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({ sens: 'DEPENSE', montant: 5000, compteId: 'banque', libelle: 'Facture' }) });
   });
+  it('imprime l’ordre de virement dès qu’une DED par virement est enregistrée, jamais pour une recette', async () => {
+    const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const onMutation = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    const props = { categories: categoriesParDefaut(), entete: entetesParDefaut(), onMutation, erreurExterne: null };
+    const { rerender } = render(<LivreVirements {...props} registre={registre} />);
+
+    // Une recette ne produit pas d'ordre de virement : rien à envoyer à la banque.
+    await user.click(screen.getByRole('button', { name: /Nouvelle recette/ }));
+    let dialogue = screen.getByRole('dialog', { name: 'Nouvelle recette par virement' });
+    await user.type(within(dialogue).getByLabelText('Libellé'), 'Cotisation reçue');
+    await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '1000');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    expect(onMutation).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nouvelle recette par virement' })).not.toBeInTheDocument());
+    expect(document.querySelector('.print-ordre-virement')).toBeNull();
+
+    // Une DED par virement imprime aussitôt son ordre de virement sur demi-A4.
+    await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
+    dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
+    await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
+    await user.type(within(dialogue).getByLabelText('Tiers / bénéficiaire'), 'SOCIETE OXYGENE');
+    await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
+    await user.type(within(dialogue).getByLabelText('Compte ou RIB du bénéficiaire'), '00004 123');
+    await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+    const feuille = document.querySelector('.print-ordre-virement');
+    expect(feuille).not.toBeNull();
+    expect(feuille).toHaveTextContent('ORDRE DE VIREMENT');
+    expect(feuille).toHaveTextContent('SOCIETE OXYGENE');
+    // Le numéro définitif du serveur figure sur l'ordre : VD-2026-0001.
+    expect(feuille).toHaveTextContent(`Pièce VD-${new Date().getFullYear()}-0001`);
+    expect(feuille).toHaveTextContent('00004 123');
+    expect(feuille?.querySelectorAll('.ordre-virement')).toHaveLength(2);
+    expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
+      sens: 'DEPENSE', montant: 5000, beneficiaireCompte: '00004 123', tiers: 'SOCIETE OXYGENE',
+    }) });
+    // La fin de l'impression rend le registre.
+    fireEvent(window, new Event('afterprint'));
+    expect(document.querySelector('.print-ordre-virement')).toBeNull();
+    rerender(<LivreVirements {...props} registre={registre} />);
+  });
+
+  it('réimprime l’ordre de virement d’une DED depuis le registre', async () => {
+    const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const user = userEvent.setup();
+    const avecDepense = ajouterVirement(registre, {
+      id: 'v2', compteId: compte.id, date: '2026-05-12', sens: 'DEPENSE', libelle: 'Oxygène',
+      categorie: 'Divers', tiers: 'OXYGENE MADA', reference: '', observation: '', montant: 5000,
+      createdAt: '2026-05-12T12:00:00Z', beneficiaireBanque: 'BOA',
+    });
+    render(<LivreVirements registre={avecDepense} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);
+    await user.click(screen.getByRole('button', { name: `Imprimer l’ordre de virement ${avecDepense.ecritures[1].numero}` }));
+    await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('OXYGENE MADA');
+    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('BOA');
+    fireEvent(window, new Event('afterprint'));
+    // Les boutons de réimpression n'existent que pour les dépenses.
+    expect(screen.queryByRole('button', { name: 'Imprimer l’ordre de virement VR-2026-0001' })).not.toBeInTheDocument();
+  });
+
   it('filtre et imprime la sélection avec le compte, sans solde bancaire', async () => {
     const user = userEvent.setup();
     render(<LivreVirements registre={registre} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);

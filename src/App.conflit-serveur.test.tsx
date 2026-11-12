@@ -8,7 +8,7 @@ import type { Ecriture, Sauvegarde } from './types';
 const api = vi.hoisted(() => ({ charger: vi.fn(), enregistrer: vi.fn() }));
 vi.mock('./utils/api', () => ({
   MODE_API: true, ErreurApi: class extends Error {},
-  sante: vi.fn(async () => ({ revision: 1, versionApi: '1.3.0' })),
+  sante: vi.fn(async () => ({ revision: 1, versionApi: '1.4.0' })),
   session: vi.fn(async () => ({ connecte: true, utilisateur: { id: 1, identifiant: 'admin', nomComplet: 'Administrateur', role: 'admin' } })),
   chargerLivreApi: api.charger, normaliserLivreServeur: (livre: Sauvegarde) => livre,
   lireMessages: vi.fn(async () => ({ comptes: [], messages: [] })), lireDemandes: vi.fn(async () => []),

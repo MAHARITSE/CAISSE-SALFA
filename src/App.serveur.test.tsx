@@ -10,7 +10,7 @@ const livreIncomplet = {
 vi.mock('./utils/api', () => ({
   MODE_API: true,
   ErreurApi: class extends Error {},
-  sante: vi.fn(() => Promise.resolve({ revision: 0, exercice: 2026, versionApi: '1.3.0' })),
+  sante: vi.fn(() => Promise.resolve({ revision: 0, exercice: 2026, versionApi: '1.4.0' })),
   session: vi.fn(() => Promise.resolve({ connecte: true, utilisateur: { id: 1, identifiant: 'admin', nomComplet: 'Administrateur', role: 'admin' } })),
   chargerLivreApi: vi.fn(() => Promise.resolve(livreIncomplet)),
   deconnexion: vi.fn(), exporterSql: vi.fn(), configurerServeur: vi.fn(), connexion: vi.fn(),

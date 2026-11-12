@@ -423,6 +423,250 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
 .bordereau-signature__titre { margin: 0; text-align: center; font-weight: 700; text-decoration: underline; }
 .bordereau-document { max-width: 100%; }
 
+
+/* ==================================================================
+ * ORDRE DE VIREMENT BANCAIRE (formulaire BNI 114018)
+ *
+ * Le modèle est conçu pour la moitié haute d'une feuille A4. La feuille est
+ * remplie jusqu'à 140 mm, un trait de découpe la sépare, et la moitié basse
+ * répète le même ordre : la banque reçoit une pièce complète quelle que soit
+ * la moitié détachée, et le dossier garde sa souche.
+ *
+ * Toutes les cotes sont en millimètres et les interlignes sont fixes : la
+ * géométrie du document ne dépend ni du zoom du navigateur ni de la taille de
+ * police de l'application. La hauteur du bloc (126 mm) est verrouillée par un
+ * test de géométrie : une ligne de plus doit être répartie, jamais ajoutée.
+ * ------------------------------------------------------------------ */
+/* Les cotes sont fournies par `COTES_ORDRE_VIR` (OrdreVirement.tsx) : le calcul
+   qui garantit une seule page et la mise en page réelle ne peuvent pas diverger. */
+.ordre-virement-feuille {
+  position: relative;
+  width: var(--ordre-largeur, 210mm);
+  height: var(--ordre-hauteur-feuille, 297mm);
+  padding: var(--ordre-marge, 5mm) 8mm;
+  box-sizing: border-box;
+  /* Une feuille ne déborde jamais : aucune seconde page presque vide. */
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+  font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
+  font-size: 8pt;
+  line-height: 1.15;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Une moitié de la feuille : l'ordre lui-même, marges comprises. */
+.ordre-virement-feuille__moitie {
+  height: var(--ordre-hauteur-moitie, 135mm);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Bloc de l'ordre : hauteur fixe, filets du modèle. */
+/*
+ * Barème vertical d'un ordre de virement, en millimètres. Les bandes souples
+ * (client, instruction, signatures) prennent la hauteur restante ; les bandes
+ * fixes gardent leur cote pour que le montant, le total et la date restent
+ * lisibles. Le total est vérifié par un test de géométrie.
+ */
+.ordre-virement {
+  --ordre-entete: 15mm;
+  --ordre-beneficiaire: 23mm;
+  --ordre-total: 12mm;
+  --ordre-observations: 12mm;
+  --ordre-date: 5mm;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* Toute la hauteur de la moitié : la feuille impose la cote, le bloc suit. */
+  height: 100%;
+  padding: 2.5mm 2.5mm;
+  border: 1px solid #000;
+  overflow: hidden;
+}
+.ordre-virement__entete { flex: 0 0 var(--ordre-entete); }
+.ordre-virement__client { flex: 1 1 21mm; }
+.ordre-virement__instruction { flex: 0 1 auto; }
+.ordre-virement__debiter { flex: 0 1 auto; }
+.ordre-virement__beneficiaire { flex: 0 0 var(--ordre-beneficiaire); }
+.ordre-virement__total { flex: 0 0 var(--ordre-total); }
+.ordre-virement__signature { flex: 1 1 24mm; }
+.ordre-virement__observations { flex: 0 0 var(--ordre-observations); }
+.ordre-virement__date { flex: 0 0 var(--ordre-date); }
+.ordre-virement * { margin: 0; }
+.ordre-virement p { line-height: 1.18; }
+.ordre-virement__etiquette { font-weight: 700; }
+.ordre-virement__valeur {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Trait de saisie du modèle : la case reste vide si l'information manque. */
+  border-bottom: 1px solid #000;
+  padding: 0 1mm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* En-tête : logo BNI à gauche, titre au centre, références du formulaire à droite. */
+.ordre-virement__entete {
+  display: grid;
+  grid-template-columns: 34mm 1fr 34mm;
+  align-items: center;
+  gap: 2mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__logo { width: 32mm; height: auto; object-fit: contain; }
+.ordre-virement__titre { text-align: center; font-weight: 700; font-size: 10pt; }
+.ordre-virement__titre p { text-align: center; }
+.ordre-virement__titre-client { font-size: 7.5pt; margin-top: 1mm !important; }
+.ordre-virement__modele { text-align: right; font-size: 6.5pt; }
+.ordre-virement__modele p { text-align: right; }
+.ordre-virement__souche-marque { font-weight: 700; }
+.ordre-virement__piece { font-family: 'Courier New', monospace; }
+
+/* Client donneur d'ordre : nom, adresse, RIB. */
+.ordre-virement__client { padding: 1.5mm 0; border-bottom: 1px solid #000; }
+.ordre-virement__sous-titre { font-weight: 700; font-size: 7.5pt; }
+.ordre-virement__ligne { display: flex; align-items: baseline; gap: 1.5mm; margin-top: 0.8mm !important; }
+.ordre-virement__ligne .ordre-virement__etiquette { flex: 0 0 auto; }
+.ordre-virement__rib { display: flex; align-items: baseline; gap: 1.5mm; margin-top: 0.8mm; }
+.ordre-virement__code {
+  border: 1px solid #000;
+  padding: 0 1.5mm;
+  font-weight: 700;
+  letter-spacing: 0.3mm;
+}
+
+/* Instruction d'exécution : cases permanentes ou occasionnelles. */
+.ordre-virement__instruction {
+  padding: 1.5mm 0;
+  font-weight: 700;
+  text-align: justify;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__case { white-space: nowrap; font-weight: 700; }
+.ordre-virement__case-carre {
+  display: inline-block;
+  width: 3mm;
+  height: 3mm;
+  line-height: 2.8mm;
+  text-align: center;
+  border: 1px solid #000;
+  font-size: 7pt;
+  vertical-align: -0.4mm;
+}
+.ordre-virement__reference { display: inline-block; margin-left: 3mm; font-weight: 700; }
+
+/* Compte à débiter. */
+.ordre-virement__debiter {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+  padding: 1.5mm 0;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__banque { font-weight: 700; white-space: nowrap; }
+
+/* Bénéficiaire : identité, banque, compte, montant. */
+.ordre-virement__beneficiaire {
+  display: grid;
+  grid-template-columns: 5mm 1fr 42mm;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__rang {
+  border-right: 1px solid #000;
+  text-align: center;
+  font-weight: 700;
+  font-size: 11pt;
+  padding-top: 1mm;
+}
+.ordre-virement__beneficiaire-corps { padding: 1.5mm 2.5mm; }
+.ordre-virement__montant {
+  border-left: 1px solid #000;
+  padding: 1.5mm 2.5mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ordre-virement__montant .ordre-virement__sous-titre { text-align: center; }
+.ordre-virement__montant-valeur {
+  text-align: right;
+  font-weight: 700;
+  font-size: 11pt;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ordre-virement__devise { text-align: right; font-weight: 700; font-size: 7pt; }
+
+/* Total en lettres et en chiffres. */
+.ordre-virement__total {
+  display: grid;
+  grid-template-columns: 1fr 42mm;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__total > div:first-child { padding: 1.5mm 0; }
+.ordre-virement__total-chiffres {
+  border-left: 1px solid #000;
+  padding: 1.5mm 2.5mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.ordre-virement__total-chiffres .ordre-virement__sous-titre { text-align: center; }
+/* Montant en lettres : deux lignes au plus, puis ellipsis ; le chiffre fait foi. */
+.ordre-virement__lettres {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 8.5pt;
+}
+
+/* Signatures et observations. */
+.ordre-virement__signature {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5mm 0 0;
+  border-bottom: 1px solid #000;
+}
+.ordre-virement__signature-nom { font-size: 7pt; font-style: italic; }
+.ordre-virement__observations {
+  padding: 1mm 0 0;
+  border-bottom: 1px solid #000;
+  overflow: hidden;
+}
+.ordre-virement__observation {
+  font-size: 7.5pt;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ordre-virement__date { padding-top: 1.2mm; font-size: 7.5pt; }
+
+/* Trait de découpe : le repère qui transforme la page en deux demi-A4. */
+.ordre-virement__decoupe {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  height: var(--ordre-hauteur-decoupe, 10mm);
+  font-size: 6.5pt;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.15mm;
+}
+.ordre-virement__decoupe-trait {
+  flex: 1 1 auto;
+  border-top: 1px dashed #94a3b8;
+}
+.ordre-virement__decoupe-texte { white-space: nowrap; }
+
+/* Souche : même document, rappel discret pour éviter de l'envoyer par erreur. */
+.ordre-virement--souche .ordre-virement__modele { color: #334155; }
+
 .print-only { display: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -467,6 +711,24 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
     break-after: avoid !important;
     page-break-after: avoid !important;
   }
+  /* Ordre de virement : le registre disparaît, la feuille A4 seule est imprimée.
+     Aucune règle d'échelle ni de hauteur minimale : les deux moitiés de 140 mm
+     doivent tenir exactement sur 297 mm, sans page supplémentaire. */
+  body.has-print-ordre-virement #root,
+  body:has(.print-ordre-virement) #root,
+  body:has(.print-ordre-virement) .app-shell { display: none !important; }
+  body.has-print-ordre-virement,
+  body:has(.print-ordre-virement) { margin: 0 !important; padding: 0 !important; }
+  .print-ordre-virement { margin: 0 !important; padding: 0 !important; }
+  .print-ordre-virement .ordre-virement-feuille {
+    box-shadow: none;
+    zoom: 1 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+  }
+  /* Repère de découpe invisible sur le papier timbré : il sert de repère. */
+  .ordre-virement__decoupe { break-inside: avoid; }
   @page { size: A4 landscape; margin: 12mm; }
   /* Le portail du bordereau remplace temporairement ce format par du portrait,
      sans page nommée ni changement de format en fin de document. */

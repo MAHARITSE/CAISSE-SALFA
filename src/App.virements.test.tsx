@@ -1,5 +1,5 @@
-import { it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { CLE_LIVRE } from './utils/storage';
@@ -64,4 +64,60 @@ it('prépare BNI/C et BNI/D séparément et complète le numéro plus tard', asy
   expect(livre.virements.ecritures[0].compteId).toBe(livre.virements.comptes[0].id);
   expect(livre.virements.comptes[1].numeroCompte).toBe('');
   expect(livre.ecritures).toEqual([]);
+});
+
+
+it('imprime l’ordre de virement sur demi-A4 après toute autorisation de dépense par virement', async () => {
+  const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await user.type(screen.getByLabelText('Identifiant'), 'comptable');
+  await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
+  await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+  await screen.findByRole('heading', { name: 'Livre de caisse' });
+  await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
+
+  // Compte bancaire de l'hôpital : titulaire, adresse et code banque du RIB.
+  await user.click(screen.getByRole('button', { name: /Ajouter un compte bancaire/ }));
+  let dialogue = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
+  await user.type(within(dialogue).getByLabelText('Banque'), 'BNI/C');
+  await user.type(within(dialogue).getByLabelText('Numéro de compte'), '00005 12345678901');
+  await user.type(within(dialogue).getByLabelText(/Titulaire du compte/), 'SALFA TOLIARA');
+  await user.type(within(dialogue).getByLabelText(/Adresse du titulaire/), 'BP 99 Toliara');
+  await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer le compte' }));
+
+  await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
+  dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
+  await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
+  await user.type(within(dialogue).getByLabelText('Tiers / bénéficiaire'), 'OXYGENE MADA');
+  await user.type(within(dialogue).getByLabelText(/Établissement bancaire du bénéficiaire/), 'BOA');
+  await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
+  await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+
+  // L'impression part seule : rien à cliquer dans le registre.
+  await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+  const feuille = document.querySelector('.print-ordre-virement')!;
+  expect(feuille).toHaveTextContent('ORDRE DE VIREMENT');
+  expect(feuille).toHaveTextContent('EXEMPLAIRE BANQUE');
+  expect(feuille).toHaveTextContent('SOUCHE — à conserver');
+  expect(feuille).toHaveTextContent('OXYGENE MADA');
+  expect(feuille).toHaveTextContent('BOA');
+  // Le donneur d'ordre et le RIB viennent du compte bancaire enregistré.
+  expect(feuille).toHaveTextContent('SALFA TOLIARA');
+  expect(feuille).toHaveTextContent('00005 12345678901');
+  expect(feuille).toHaveTextContent('5 000,00');
+  expect(feuille).toHaveTextContent('cinq mille Ariary');
+  expect(feuille).toHaveTextContent(/Pièce VD-\d{4}-0001/);
+  fireEvent(window, new Event('afterprint'));
+  expect(document.querySelector('.print-ordre-virement')).toBeNull();
+  expect(document.body).not.toHaveClass('has-print-ordre-virement');
+
+  // Le virement est enregistré tel quel : aucune écriture de caisse en espèces.
+  const livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
+  expect(livre.ecritures).toEqual([]);
+  expect(livre.virements.ecritures[0]).toMatchObject({
+    sens: 'DEPENSE', montant: 5000, tiers: 'OXYGENE MADA', beneficiaireBanque: 'BOA',
+  });
+  expect(livre.virements.comptes[0]).toMatchObject({ titulaire: 'SALFA TOLIARA', adresse: 'BP 99 Toliara' });
 });

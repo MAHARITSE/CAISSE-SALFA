@@ -6,8 +6,14 @@ import type { Role } from './roles';
 /** Registre distinct : ces montants ne font pas partie du solde en espèces. */
 export interface CompteVirement {
   id: string;
+  /** Banque de l'établissement, telle qu'imprimée (« BNI », « BNI/C »…). */
   banque: string;
   numeroCompte: string;
+  /** Identité imprimée sur l'ordre de virement remis à la banque. */
+  titulaire?: string;
+  adresse?: string;
+  /** Code établissement du RIB (5 chiffres à la BNI Madagascar). */
+  codeBanque?: string;
 }
 
 export interface Virement {
@@ -24,6 +30,18 @@ export interface Virement {
   montant: number;
   createdAt: string;
   updatedAt?: string;
+  /**
+   * Mentions de l'ordre de virement remis à la banque (formulaire BNI 114018).
+   * Facultatives : une ligne vide reste en blanc sur le papier, à remplir à la
+   * main, pour ne jamais bloquer l'enregistrement d'un virement.
+   */
+  beneficiaireAdresse?: string;
+  /** Établissement bancaire ou CCP du bénéficiaire. */
+  beneficiaireBanque?: string;
+  /** Compte ou RIB du bénéficiaire (indépendant du compte débité). */
+  beneficiaireCompte?: string;
+  /** Ordre permanent : la banque exécute le virement à chaque échéance. */
+  permanent?: boolean;
 }
 
 export interface RegistreVirements {
@@ -41,12 +59,28 @@ export function registreVirementsVide(): RegistreVirements {
   return { comptes: [], ecritures: [], compteurs: {} };
 }
 
+/** Mention facultative de l'ordre de virement : absente plutôt que vide. */
+function optionnel(valeur: unknown): string | undefined {
+  if (valeur === undefined || valeur === null || valeur === '') return undefined;
+  return texte(valeur, 'Mention de l’ordre de virement', 200) || undefined;
+}
+
 function compteValide(valeur: unknown): CompteVirement {
   const compte = objet(valeur, 'Compte bancaire');
+  const nom = texte(compte.banque, 'Banque', 120, true);
+  const numero = texte(compte.numeroCompte, 'Numéro de compte', 120);
+  const titulaire = compte.titulaire == null ? '' : texte(compte.titulaire, 'Titulaire du compte', 200);
+  const adresse = compte.adresse == null ? '' : texte(compte.adresse, 'Adresse du compte', 200);
+  const code = compte.codeBanque == null ? '' : texte(compte.codeBanque, 'Code banque', 5);
+  exiger(!code || /^\d{5}$/.test(code), 'Code banque : cinq chiffres attendus.');
   return {
     id: texte(compte.id, 'Identifiant du compte', 120, true),
-    banque: texte(compte.banque, 'Banque', 120, true),
-    numeroCompte: texte(compte.numeroCompte, 'Numéro de compte', 120),
+    banque: nom,
+    numeroCompte: numero,
+    // Facultatif : le titulaire par défaut est celui de l'hôpital.
+    titulaire: titulaire || undefined,
+    adresse: adresse || undefined,
+    codeBanque: code || undefined,
   };
 }
 
@@ -73,6 +107,10 @@ function virementValide(valeur: unknown): Virement {
     montant,
     createdAt: horodatage(v.createdAt, 'Date de création'),
     ...(v.updatedAt == null ? {} : { updatedAt: horodatage(v.updatedAt, 'Date de modification') }),
+    ...(optionnel(v.beneficiaireAdresse) ? { beneficiaireAdresse: optionnel(v.beneficiaireAdresse) } : {}),
+    ...(optionnel(v.beneficiaireBanque) ? { beneficiaireBanque: optionnel(v.beneficiaireBanque) } : {}),
+    ...(optionnel(v.beneficiaireCompte) ? { beneficiaireCompte: optionnel(v.beneficiaireCompte) } : {}),
+    ...(v.permanent === true ? { permanent: true } : {}),
   };
 }
 
