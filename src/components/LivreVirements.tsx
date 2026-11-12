@@ -1,9 +1,12 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { Plus, Printer, Pencil, Landmark } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Eye, EyeOff, Landmark, Pencil, Plus, Printer,
+  Search, SlidersHorizontal, X,
+} from 'lucide-react';
 import type { Categories, LigneJournal, Sens } from '../types';
 import type { ActionVirement } from '../utils/api';
 import type { EnteteDocument } from '../utils/entete';
-import { aujourdHui, dateFr, montantAffiche, parserMontant } from '../utils/format';
+import { aujourdHui, dateFr, formatAr, moisCourant, montantAffiche, parserMontant } from '../utils/format';
 import { identifiant } from '../utils/ledger';
 import type { CompteVirement, RegistreVirements, Virement } from '../utils/virements';
 import { ajouterVirement, ribComplet } from '../utils/virements';
@@ -36,8 +39,12 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [filtreCompte, setFiltreCompte] = useState('');
   const [filtreSens, setFiltreSens] = useState<'TOUS' | Sens>('TOUS');
-  const [filtreMois, setFiltreMois] = useState('');
+  /** Période affichée : un mois précis, ou tout l'historique du registre. */
+  const [toutAfficher, setToutAfficher] = useState(true);
+  const [filtreMois, setFiltreMois] = useState(moisCourant());
   const [recherche, setRecherche] = useState('');
+  /** Les cartes de synthèse se replient, comme celles du livre journal. */
+  const [afficherSynthese, setAfficherSynthese] = useState(true);
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
   const soumission = useRef(false);
@@ -49,11 +56,39 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const lignes = useMemo(() => registre.ecritures.filter(v => {
     if (filtreCompte && v.compteId !== filtreCompte) return false;
     if (filtreSens !== 'TOUS' && v.sens !== filtreSens) return false;
-    if (filtreMois && !v.date.startsWith(filtreMois)) return false;
+    if (!toutAfficher && !v.date.startsWith(filtreMois)) return false;
     const q = recherche.trim().toLocaleLowerCase('fr');
     return !q || [v.numero, v.libelle, v.categorie, v.tiers, v.reference, comptes.get(v.compteId)?.banque, comptes.get(v.compteId)?.numeroCompte].some(t => t?.toLocaleLowerCase('fr').includes(q));
-  }).slice().sort((a, b) => b.date.localeCompare(a.date) || b.numero.localeCompare(a.numero)), [registre, filtreCompte, filtreSens, filtreMois, recherche, comptes]);
+  }).slice().sort((a, b) => b.date.localeCompare(a.date) || b.numero.localeCompare(a.numero)), [registre, filtreCompte, filtreSens, toutAfficher, filtreMois, recherche, comptes]);
+  /** Totaux de la sélection affichée : ils suivent les filtres, comme au journal. */
   const total = (sens: Sens) => lignes.filter(v => v.sens === sens).reduce((s, v) => s + v.montant, 0);
+  const recettes = total('RECETTE');
+  const depenses = total('DEPENSE');
+  const filtreActif = Boolean(filtreCompte || filtreSens !== 'TOUS' || recherche.trim() || !toutAfficher);
+  const periode = toutAfficher ? 'Toutes périodes' : moisLisible(filtreMois);
+
+  function moisLisible(mois: string): string {
+    const [annee, moisNum] = mois.split('-').map(Number);
+    if (!annee || !moisNum) return 'Toutes périodes';
+    return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(annee, moisNum - 1, 1));
+  }
+  /** Mois voisin : la barre de période se parcourt comme celle du livre journal. */
+  function decalerMois(valeur: string, pas: number): string {
+    const [annee, moisNum] = valeur.split('-').map(Number);
+    if (!annee || !moisNum) return valeur;
+    const d = new Date(annee, moisNum - 1 + pas, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  function changerMois(valeur: string) {
+    if (!valeur) return;
+    setFiltreMois(valeur);
+    setToutAfficher(false);
+  }
+  function reinitialiser() {
+    setFiltreCompte(''); setFiltreSens('TOUS'); setRecherche(''); setToutAfficher(true);
+  }
+  /** La saisie reste fermée tant qu'aucun compte n'est réglé (Administration). */
+  const saisiePossible = registre.comptes.length > 0;
 
   function nouveau(sens: Sens) {
     setEdition(null); setErreur('');
@@ -173,28 +208,71 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
         if (!compte) throw new Error('Un compte bancaire est introuvable.');
         return { ...v, libelle: `${v.libelle}\nBanque : ${compte.banque} · Compte : ${compte.numeroCompte || 'non renseigné'}`, solde: 0 };
       });
-      ouvrirEtatPourImpression(selection, entete, filtreMois || 'Toutes périodes', fenetre, true);
+      // La période imprimée est celle de la sélection, pas un mois par défaut.
+      ouvrirEtatPourImpression(selection, entete, periode, fenetre, true);
     } catch (e) { fenetre.close(); setErreur(e instanceof Error ? e.message : 'Impression impossible.'); }
   }
   const libelleCompte = (c: CompteVirement) => `${c.banque} — ${c.numeroCompte || 'numéro non renseigné'}`;
   const listeCategories = formulaire ? (formulaire.sens === 'RECETTE' ? categories.recette : categories.depense) : [];
 
-  return <section className="space-y-4" aria-label="Livre des virements">
-    <div className="card space-y-3 p-4">
+  return <section className="space-y-5" aria-label="Livre des virements">
+    {/* Barre d'action : les mêmes gestes que le livre journal, à la même place. */}
+    <div className="no-print flex flex-wrap items-center justify-between gap-4">
+      <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        Recettes et dépenses par virement, sur les comptes réglés dans Administration.
+      </p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-primary" disabled={!registre.comptes.length} onClick={() => nouveau('RECETTE')}><Plus size={16} />Nouvelle recette par virement</button>
-        <button type="button" className="btn-danger" disabled={!registre.comptes.length} onClick={() => nouveau('DEPENSE')}><Plus size={16} />Nouvelle DED par virement</button>
-        <button type="button" className="btn-secondary" disabled={!lignes.length} onClick={() => void imprimerEtat()}><Printer size={16} />Imprimer l’état des virements</button>
+        <button type="button" className={`btn-secondary ${!afficherSynthese ? '!border-slate-300 dark:!border-slate-700' : ''}`} aria-expanded={afficherSynthese} aria-label={afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'} title={afficherSynthese ? 'Masquer les cartes de synthèse' : 'Afficher les cartes de synthèse'} onClick={() => setAfficherSynthese(v => !v)}>
+          {afficherSynthese ? <EyeOff size={16} /> : <Eye size={16} />}<span>{afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'}</span>
+        </button>
+        <button type="button" className="btn-secondary" disabled={!lignes.length} title={lignes.length ? 'Imprimer les virements affichés' : 'Aucun virement à imprimer'} onClick={() => void imprimerEtat()}><Printer size={16} />Imprimer</button>
       </div>
-      {!registre.comptes.length && <p className="text-sm text-slate-500">Aucun compte bancaire : un administrateur doit d’abord le créer dans <strong>Administration</strong>.</p>}
-      <div className="flex flex-wrap gap-2">
-        <label className="text-sm">Compte<select className="field" value={filtreCompte} onChange={e => setFiltreCompte(e.target.value)}><option value="">Tous les comptes</option>{registre.comptes.map(c => <option key={c.id} value={c.id}>{libelleCompte(c)}</option>)}</select></label>
-        <label className="text-sm">Type<select className="field" value={filtreSens} onChange={e => setFiltreSens(e.target.value as 'TOUS' | Sens)}><option value="TOUS">Tous</option><option value="RECETTE">Recettes</option><option value="DEPENSE">DED / dépenses</option></select></label>
-        <label className="text-sm">Mois<input className="field" type="month" value={filtreMois} onChange={e => setFiltreMois(e.target.value)} /></label>
-        <label className="text-sm">Rechercher<input className="field" type="search" value={recherche} onChange={e => setRecherche(e.target.value)} /></label>
-      </div>
-      <p className="text-sm">{lignes.length} virement(s) · Recettes : {montantAffiche(total('RECETTE'))} Ar · Dépenses : {montantAffiche(total('DEPENSE'))} Ar</p>
     </div>
+
+    {/* Synthèse de la période : recettes, dépenses, mouvement net, comptes bancaires. */}
+    {afficherSynthese && <section className="no-print grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label={`Synthèse des virements · ${periode}`}>
+      <article className="summary-card"><div className="flex items-center justify-between"><span className="summary-label">Recettes par virement</span><span className="summary-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"><ArrowDownLeft size={19} /></span></div><p className="summary-value text-emerald-700 dark:text-emerald-400">{formatAr(recettes)}</p><p className="summary-note">Encaissements bancaires · {periode}</p></article>
+      <article className="summary-card"><div className="flex items-center justify-between"><span className="summary-label">Dépenses par virement</span><span className="summary-icon bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"><ArrowUpRight size={19} /></span></div><p className="summary-value text-rose-700 dark:text-rose-400">{formatAr(depenses)}</p><p className="summary-note">DED payées par virement · {periode}</p></article>
+      <article className="summary-card border-brand-200/80 bg-brand-50/40 dark:border-brand-900/60 dark:bg-brand-950/40"><div className="flex items-center justify-between"><span className="summary-label">Comptes bancaires</span><span className="summary-icon bg-brand-100 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"><Landmark size={19} /></span></div>
+        <p className="summary-value">{registre.comptes.length}</p>
+        <p className="summary-note">{[...new Set(registre.comptes.map(c => c.banque))].join(' · ') || 'Aucun compte réglé'} · {lignes.length} virement(s)</p></article>
+    </section>}
+
+    {/* Période, filtres et nouvelles pièces, dans une barre unique comme au journal. */}
+    <section className="card space-y-3 p-4" aria-label="Période, filtres et nouvelles pièces">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+            <button type="button" className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(filtreMois, -1))}><ChevronLeft size={16} /></button>
+            <input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois des virements" value={filtreMois} onChange={e => changerMois(e.target.value)} />
+            <button type="button" className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(filtreMois, 1))}><ChevronRight size={16} /></button>
+          </div>
+          <button type="button" className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Tout afficher</button>
+        </div>
+        {saisiePossible
+          ? <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-primary" onClick={() => nouveau('RECETTE')}><Plus size={16} />Nouvelle recette par virement</button>
+            <button type="button" className="btn-danger" onClick={() => nouveau('DEPENSE')}><Plus size={16} />Nouvelle DED par virement</button>
+          </div>
+          : <p className="text-xs font-medium text-slate-500 sm:text-sm dark:text-slate-400">Aucun compte bancaire : un administrateur doit d’abord en créer un dans Administration.</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <div className="segmented" aria-label="Filtrer les virements par type">
+          {(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(sens => <button key={sens} type="button" aria-pressed={filtreSens === sens} onClick={() => setFiltreSens(sens)}>{sens === 'TOUS' ? 'Tous' : sens === 'RECETTE' ? 'Recettes' : 'DED / dépenses'}</button>)}
+        </div>
+        <select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par compte" value={filtreCompte} onChange={e => setFiltreCompte(e.target.value)}>
+          <option value="">Tous les comptes</option>
+          {registre.comptes.map(c => <option key={c.id} value={c.id}>{libelleCompte(c)}</option>)}
+        </select>
+        <div className="relative min-w-44 flex-1">
+          <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+          <input type="search" className="field !py-2 !pl-9 !text-sm" aria-label="Rechercher dans les virements" placeholder="Rechercher une pièce, un libellé, un bénéficiaire…" value={recherche} onChange={e => setRecherche(e.target.value)} />
+        </div>
+        {filtreActif && <button type="button" className="icon-button" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres" onClick={reinitialiser}><X size={16} /></button>}
+        <span className="hidden items-center gap-1 text-xs text-slate-400 dark:text-slate-500 xl:flex"><SlidersHorizontal size={14} />{filtreActif ? 'Filtres actifs' : 'Aucun filtre'}</span>
+      </div>
+    </section>
+
     {erreur && !formulaire && <p role="alert" className="text-sm text-rose-700">{erreur}</p>}
     <div className="card overflow-x-auto"><table className="w-full text-left text-sm" aria-label="Virements enregistrés"><thead><tr>{['Date', 'N°', 'Compte bancaire', 'Type', 'Libellé', 'Catégorie', 'Montant', 'Actions'].map(x => <th key={x} className="border-b p-3">{x}</th>)}</tr></thead><tbody>
       {lignes.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-slate-500">Aucun virement pour cette sélection.</td></tr>}

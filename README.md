@@ -125,6 +125,10 @@ garder les versions verrouillées par `package-lock.json`.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
+- **Deux livres, deux jeux de réglages** : Administration range d’un côté le
+  **livre de caisse** (modèles de saisie, catégories, en-tête des bordereaux) et
+  de l’autre le **livre des virements** (comptes bancaires et RIB). Aucun réglage
+  d’un livre ne se règle dans la section de l’autre.
 - **Comptes bancaires et RIB, réglés dans Administration** : la section
   « Comptes bancaires et RIB » liste les comptes de l’hôpital et permet de les
   **ajouter**, de les **modifier** ou de les **supprimer** (banque, numéro de
@@ -197,6 +201,12 @@ garder les versions verrouillées par `package-lock.json`.
   exécuté par l’application. Un export brut SQL sert au diagnostic local.
 - **Onglet Exercices & clôtures** : exercice en cours, solde reporté, historique
   des clôtures et téléchargement d’une archive autonome par exercice.
+- **Exemples de démonstration** : sur un livre encore vide, « Données &
+  sauvegardes » propose de charger un jeu d’exemples — écritures de caisse avec
+  leurs lignes de détail, deux comptes BNI avec leur RIB, clients, fournisseurs et
+  virements datés de l’année en cours. Le chargement demande une confirmation et
+  télécharge la sauvegarde SQL du livre en place ; il disparaît dès la première
+  pièce enregistrée.
 - **Livres antérieurs** : un livre créé avant cette version reste lisible ; il
   est converti à l’ouverture, les années passées étant archivées et l’année
   courante ouverte, avec un avertissement explicite.

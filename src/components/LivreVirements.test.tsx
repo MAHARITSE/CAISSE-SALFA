@@ -51,9 +51,9 @@ describe('livre des virements', () => {
     expect(screen.queryByRole('button', { name: /Préparer BNI/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Modifier le compte/ })).toBeNull();
     // La saisie reste fermée tant qu'aucun compte n'existe, et l'écran dit où le créer.
-    expect(screen.getByRole('button', { name: /Nouvelle recette/ })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Nouvelle DED/ })).toBeDisabled();
-    expect(screen.getByText(/un administrateur doit d’abord le créer dans/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nouvelle recette/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Nouvelle DED/ })).toBeNull();
+    expect(screen.getByText(/un administrateur doit d’abord en créer un dans Administration/)).toBeInTheDocument();
   });
   it('imprime l’ordre de virement dès qu’une DED par virement est enregistrée, jamais pour une recette', async () => {
     const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
@@ -122,14 +122,52 @@ describe('livre des virements', () => {
     expect(screen.getByText('VR-2026-0001')).toBeInTheDocument();
     const fenetre = { close: vi.fn() } as unknown as Window;
     const ouvrir = vi.spyOn(window, 'open').mockReturnValue(fenetre);
-    await user.click(screen.getByRole('button', { name: /Imprimer l’état/ }));
+    await user.click(screen.getByRole('button', { name: 'Imprimer' }));
     await waitFor(() => expect(impression).toHaveBeenCalled());
     expect(impression.mock.calls.at(-1)?.[0][0].libelle).toContain('BNI · Compte : 001234');
     expect(impression.mock.calls.at(-1)?.[4]).toBe(true);
-    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'DEPENSE' } });
+    await user.click(screen.getByRole('button', { name: 'DED / dépenses' }));
     expect(screen.getByText(/Aucun virement pour cette sélection/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Imprimer l’état/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Imprimer' })).toBeDisabled();
     ouvrir.mockRestore();
+  });
+  it('présente la même synthèse et la même barre de période que le livre journal', async () => {
+    const user = userEvent.setup();
+    const annee = new Date().getFullYear();
+    render(<LivreVirements registre={registre} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);
+    // Trois cartes chiffrées et la carte des comptes, comme la synthèse du journal.
+    const synthese = screen.getByRole('region', { name: /Synthèse des virements/ });
+    expect(within(synthese).getByText('Recettes par virement')).toBeInTheDocument();
+    expect(within(synthese).getByText('Dépenses par virement')).toBeInTheDocument();
+    expect(within(synthese).getByText('Comptes bancaires')).toBeInTheDocument();
+    // Pas de « mouvement net » : le livre des virements ne calcule aucun solde.
+    expect(within(synthese).queryByText('Mouvement net')).toBeNull();
+    // 1 000 Ar de recette, rien en dépense.
+    expect(within(synthese).getByText('1 000,00 Ar')).toBeInTheDocument();
+    expect(within(synthese).getByText('0,00 Ar')).toBeInTheDocument();
+    expect(within(synthese).getByText(/1 virement\(s\)/)).toBeInTheDocument();
+
+    // La période et les filtres se comportent comme au journal.
+    expect(screen.getByLabelText('Mois des virements')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tout afficher' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Aucun filtre')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Recettes' }));
+    expect(screen.getByText('Filtres actifs')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
+    expect(screen.getByText('Aucun filtre')).toBeInTheDocument();
+
+    // Le mois choisi restreint la sélection ; « Tout afficher » la rétablit.
+    fireEvent.change(screen.getByLabelText('Mois des virements'), { target: { value: `${annee}-01` } });
+    expect(screen.getByRole('button', { name: 'Tout afficher' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/Aucun virement pour cette sélection/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tout afficher' }));
+    expect(screen.getByText('VR-2026-0001')).toBeInTheDocument();
+
+    // La synthèse se replie, comme celle du livre journal.
+    await user.click(screen.getByRole('button', { name: 'Masquer la synthèse' }));
+    expect(screen.queryByRole('region', { name: /Synthèse des virements/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Afficher la synthèse' }));
+    expect(screen.getByRole('region', { name: /Synthèse des virements/ })).toBeInTheDocument();
   });
   it('réserve l’onglet aux rôles autorisés et inclut le registre aux sauvegardes', () => {
     expect(ongletsAutorises('admin')).toContain('virements');
