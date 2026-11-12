@@ -135,6 +135,14 @@ garder les versions verrouillées par `package-lock.json`.
   ne peut pas être supprimé : ses ordres déjà émis perdraient leur RIB — son
   numéro se corrige, il ne se retire pas. Ce réglage est réservé à
   l’administrateur ; le livre des virements, lui, ne fait que les utiliser.
+- **Clients et fournisseurs** : le bénéficiaire d’un virement vient d’une fiche,
+  tenue dans le livre des virements. Un **client** pour une recette ; un
+  **fournisseur** pour une DED, dont le **RIB est obligatoire** (établissement
+  bancaire et numéro de compte) puisqu’il s’imprime sur l’ordre de virement. Le
+  choix de la fiche remplit le nom et les mentions du bénéficiaire, qui restent
+  modifiables pour une pièce particulière. Aucun virement ne s’enregistre sans
+  fiche ; les pièces antérieures gardent leur tiers écrit à la main. Une fiche
+  qui porte des virements ne se supprime pas, elle se corrige.
 - **Livre des virements** : l’administrateur et le comptable saisissent et
   corrigent les recettes ou DED par virement sur les comptes réglés dans
   Administration, filtrent le registre et impriment des bordereaux individuels

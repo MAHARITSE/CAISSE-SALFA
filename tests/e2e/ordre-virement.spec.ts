@@ -47,11 +47,21 @@ async function ouvrirOrdreVirement(page: Page) {
   await compte.getByRole('button', { name: 'Ajouter le compte' }).click();
 
   await page.getByRole('button', { name: 'Livre des virements' }).click();
+
+  // Le bénéficiaire vient d'une fiche fournisseur : son RIB s'imprime sur l'ordre.
+  const fiches = page.getByRole('region', { name: 'Clients et fournisseurs' });
+  await fiches.getByRole('button', { name: 'Ajouter un fournisseur' }).click();
+  const fiche = page.getByRole('dialog', { name: 'Ajouter un fournisseur' });
+  await fiche.getByLabel('Nom').fill('SOCIETE OXYGENE MADA');
+  await fiche.getByLabel('Adresse').fill('Lot II Antananarivo');
+  await fiche.getByLabel('Établissement bancaire').fill('BOA');
+  await fiche.getByLabel('Compte ou RIB').fill('00004 98765432101');
+  await fiche.getByRole('button', { name: 'Ajouter la fiche' }).click();
+
   await page.getByRole('button', { name: /Nouvelle DED/ }).click();
   const saisie = page.getByRole('dialog', { name: 'Nouvelle DED par virement' });
   await saisie.getByLabel('Libellé').fill('ACHAT OXYGENE');
-  await saisie.getByLabel('Tiers / bénéficiaire').fill('SOCIETE OXYGENE MADA');
-  await saisie.getByLabel(/Établissement bancaire du bénéficiaire/).fill('BOA');
+  await saisie.getByLabel('Fournisseur à payer').selectOption({ label: 'SOCIETE OXYGENE MADA' });
   await saisie.getByLabel('Montant (Ar)').fill('5000');
   await saisie.getByRole('button', { name: 'Enregistrer' }).click();
 

@@ -1,4 +1,4 @@
-import type { CompteVirement, NouvelleOperationVirement, Virement } from './virements';
+import type { CompteVirement, NouvelleOperationVirement, Tiers, Virement } from './virements';
 import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
 import { normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
 import { categoriesParDefaut } from './constants';
@@ -202,6 +202,9 @@ export type ActionVirement =
   | { operation: 'ajouter_comptes'; comptes: CompteVirement[] }
   | { operation: 'modifier_compte'; compte: CompteVirement }
   | { operation: 'supprimer_compte'; compteId: string }
+  | { operation: 'ajouter_tiers'; tiers: Tiers }
+  | { operation: 'modifier_tiers'; tiers: Tiers }
+  | { operation: 'supprimer_tiers'; tiersId: string }
   | { operation: 'ajouter'; virement: NouvelleOperationVirement }
   | { operation: 'modifier'; virement: Virement };
 

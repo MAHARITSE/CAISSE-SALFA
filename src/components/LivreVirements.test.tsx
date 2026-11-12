@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { LivreVirements } from './LivreVirements';
 import { categoriesParDefaut } from '../utils/constants';
 import { entetesParDefaut } from '../utils/entete';
-import { ajouterCompteVirement, ajouterVirement, registreVirementsVide } from '../utils/virements';
+import { ajouterCompteVirement, ajouterTiers, ajouterVirement, registreVirementsVide } from '../utils/virements';
 import { preparerSauvegarde, lireSauvegarde, preparerSqlLivre, lireSauvegardeSql } from '../utils/backup';
 import { livreTest } from '../test/fixtures';
 import { validerDonnees } from '../utils/validation';
@@ -13,8 +13,14 @@ import { ongletsAutorises } from '../utils/roles';
 const impression = vi.hoisted(() => vi.fn());
 vi.mock('../utils/export-pdf', () => ({ ouvrirEtatPourImpression: impression }));
 const compte = { id: 'banque', banque: 'BNI', numeroCompte: '001234' };
-const registre = ajouterVirement(ajouterCompteVirement(registreVirementsVide(), compte), {
-  id: 'v1', compteId: compte.id, date: '2026-05-12', sens: 'RECETTE', libelle: 'Cotisation', categorie: 'Dons', tiers: 'Test', reference: 'REF', observation: '', montant: 1000, createdAt: '2026-05-12T12:00:00Z',
+const client = { id: 't-client', type: 'CLIENT' as const, nom: 'Association FANILO', telephone: '034 00 000 00', adresse: 'Toliara', banque: '', numeroCompte: '' };
+const fournisseur = { id: 't-four', type: 'FOURNISSEUR' as const, nom: 'SOCIETE OXYGENE', telephone: '', adresse: 'Lot II Antananarivo', banque: 'BOA', numeroCompte: '00004 123' };
+
+/** Registre de départ : un compte bancaire, un client, un fournisseur. */
+const avecFiches = () => ajouterTiers(ajouterTiers(ajouterCompteVirement(registreVirementsVide(), compte), client), fournisseur);
+const registre = ajouterVirement(avecFiches(), {
+  id: 'v1', compteId: compte.id, date: '2026-05-12', sens: 'RECETTE', libelle: 'Cotisation', categorie: 'Dons',
+  tiers: client.nom, tiersId: client.id, reference: 'REF', observation: '', montant: 1000, createdAt: '2026-05-12T12:00:00Z',
 });
 
 describe('livre des virements', () => {
@@ -27,8 +33,14 @@ describe('livre des virements', () => {
     const dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(dialogue).getByLabelText('Libellé'), 'Facture');
     await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
+    // Le fournisseur se choisit dans les fiches : son RIB part avec le virement.
+    await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'), fournisseur.id);
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
-    expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({ sens: 'DEPENSE', montant: 5000, compteId: 'banque', libelle: 'Facture' }) });
+    expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
+      sens: 'DEPENSE', montant: 5000, compteId: 'banque', libelle: 'Facture',
+      tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
+      beneficiaireBanque: 'BOA', beneficiaireCompte: '00004 123', beneficiaireAdresse: 'Lot II Antananarivo',
+    }) });
   });
   it('ne règle plus les comptes : la saisie attend ceux créés dans Administration', async () => {
     const onMutation = vi.fn().mockResolvedValue(true);
@@ -55,6 +67,7 @@ describe('livre des virements', () => {
     let dialogue = screen.getByRole('dialog', { name: 'Nouvelle recette par virement' });
     await user.type(within(dialogue).getByLabelText('Libellé'), 'Cotisation reçue');
     await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '1000');
+    await user.selectOptions(within(dialogue).getByLabelText('Client qui règle la recette'), client.id);
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(onMutation).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nouvelle recette par virement' })).not.toBeInTheDocument());
@@ -64,9 +77,8 @@ describe('livre des virements', () => {
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
-    await user.type(within(dialogue).getByLabelText('Tiers / bénéficiaire'), 'SOCIETE OXYGENE');
+    await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'), fournisseur.id);
     await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
-    await user.type(within(dialogue).getByLabelText('Compte ou RIB du bénéficiaire'), '00004 123');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
     const feuille = document.querySelector('.print-ordre-virement');
@@ -78,7 +90,7 @@ describe('livre des virements', () => {
     expect(feuille).toHaveTextContent('00004 123');
     expect(feuille?.querySelectorAll('.ordre-virement')).toHaveLength(2);
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
-      sens: 'DEPENSE', montant: 5000, beneficiaireCompte: '00004 123', tiers: 'SOCIETE OXYGENE',
+      sens: 'DEPENSE', montant: 5000, beneficiaireCompte: '00004 123', tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
     }) });
     // La fin de l'impression rend le registre.
     fireEvent(window, new Event('afterprint'));
@@ -91,13 +103,13 @@ describe('livre des virements', () => {
     const user = userEvent.setup();
     const avecDepense = ajouterVirement(registre, {
       id: 'v2', compteId: compte.id, date: '2026-05-12', sens: 'DEPENSE', libelle: 'Oxygène',
-      categorie: 'Divers', tiers: 'OXYGENE MADA', reference: '', observation: '', montant: 5000,
-      createdAt: '2026-05-12T12:00:00Z', beneficiaireBanque: 'BOA',
+      categorie: 'Divers', tiers: fournisseur.nom, tiersId: fournisseur.id, reference: '', observation: '', montant: 5000,
+      createdAt: '2026-05-12T12:00:00Z', beneficiaireBanque: fournisseur.banque, beneficiaireCompte: fournisseur.numeroCompte,
     });
     render(<LivreVirements registre={avecDepense} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);
     await user.click(screen.getByRole('button', { name: `Imprimer l’ordre de virement ${avecDepense.ecritures[1].numero}` }));
     await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
-    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('OXYGENE MADA');
+    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('SOCIETE OXYGENE');
     expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('BOA');
     fireEvent(window, new Event('afterprint'));
     // Les boutons de réimpression n'existent que pour les dépenses.

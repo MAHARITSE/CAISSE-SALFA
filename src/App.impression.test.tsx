@@ -60,10 +60,19 @@ describe('ordre de virement : réimpression depuis le registre', () => {
     await user.type(within(compte).getByLabelText('Numéro de compte / RIB'), '00005 111');
     await user.click(within(compte).getByRole('button', { name: 'Ajouter le compte' }));
     await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
+    // Le bénéficiaire vient d'une fiche fournisseur, créée ici comme à l'écran.
+    const fiches = screen.getByRole('region', { name: 'Clients et fournisseurs' });
+    await user.click(within(fiches).getByRole('button', { name: 'Ajouter un fournisseur' }));
+    const fiche = screen.getByRole('dialog', { name: 'Ajouter un fournisseur' });
+    await user.type(within(fiche).getByLabelText('Nom'), 'OXYGENE MADA');
+    await user.type(within(fiche).getByLabelText('Établissement bancaire'), 'BOA');
+    await user.type(within(fiche).getByLabelText('Compte ou RIB'), '00004 222');
+    await user.click(within(fiche).getByRole('button', { name: 'Ajouter la fiche' }));
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     const saisie = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(saisie).getByLabelText('Libellé'), 'OXYGENE');
-    await user.type(within(saisie).getByLabelText('Tiers / bénéficiaire'), 'OXYGENE MADA');
+    await user.selectOptions(within(saisie).getByLabelText('Fournisseur à payer'),
+      within(saisie).getByRole('option', { name: 'OXYGENE MADA' }));
     await user.type(within(saisie).getByLabelText('Montant (Ar)'), '7000');
     await user.click(within(saisie).getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));

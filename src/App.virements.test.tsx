@@ -4,6 +4,25 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { CLE_LIVRE } from './utils/storage';
 
+/**
+ * Crée une fiche fournisseur (ou client) depuis le livre des virements : son
+ * nom, son adresse et son RIB alimentent ensuite l'ordre de virement.
+ */
+async function creerFiche(
+  user: ReturnType<typeof userEvent.setup>,
+  options: { type: 'FOURNISSEUR' | 'CLIENT'; nom: string; banque?: string; compte?: string; adresse?: string },
+) {
+  const section = screen.getByRole('region', { name: 'Clients et fournisseurs' });
+  const bouton = options.type === 'FOURNISSEUR' ? 'Ajouter un fournisseur' : 'Ajouter un client';
+  await user.click(within(section).getAllByRole('button', { name: bouton })[0]);
+  const dialogue = screen.getByRole('dialog', { name: options.type === 'FOURNISSEUR' ? 'Ajouter un fournisseur' : 'Ajouter un client' });
+  await user.type(within(dialogue).getByLabelText('Nom'), options.nom);
+  if (options.adresse) await user.type(within(dialogue).getByLabelText('Adresse'), options.adresse);
+  if (options.banque) await user.type(within(dialogue).getByLabelText('Établissement bancaire'), options.banque);
+  if (options.compte) await user.type(within(dialogue).getByLabelText('Compte ou RIB'), options.compte);
+  await user.click(within(dialogue).getByRole('button', { name: 'Ajouter la fiche' }));
+}
+
 it('le comptable saisit un virement sans modifier les espèces', async () => {
   const user = userEvent.setup();
   render(<App />);
@@ -25,8 +44,12 @@ it('le comptable saisit un virement sans modifier les espèces', async () => {
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));
   expect((await screen.findAllByRole('heading', { name: 'Livre de caisse' })).length).toBeGreaterThan(0);
   await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
+  // Le bénéficiaire vient d'une fiche : le comptable enregistre celle du client.
+  await creerFiche(user, { type: 'CLIENT', nom: 'ASSOCIATION FANILO', adresse: 'Toliara' });
   await user.click(screen.getByRole('button', { name: /Nouvelle recette par virement/ }));
   let dialog = screen.getByRole('dialog', { name: 'Nouvelle recette par virement' });
+  await user.selectOptions(within(dialog).getByLabelText('Client qui règle la recette'),
+    within(dialog).getByRole('option', { name: 'ASSOCIATION FANILO' }));
   await user.type(within(dialog).getByLabelText('Libellé'), 'Virement reçu');
   await user.type(within(dialog).getByLabelText('Montant (Ar)'), '1000');
   await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
@@ -83,14 +106,19 @@ it('l’administrateur prépare BNI/C et BNI/D dans Administration et complète 
   expect((await screen.findAllByRole('heading', { name: 'Livre de caisse' })).length).toBeGreaterThan(0);
   await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
   expect(screen.queryByRole('button', { name: /Ajouter un compte bancaire/ })).toBeNull();
+  // Une recette par virement se reçoit d'un client enregistré : le comptable
+  // crée sa fiche, puis le choisit dans la fenêtre de saisie.
+  await creerFiche(user, { type: 'CLIENT', nom: 'ASSOCIATION FANILO', adresse: 'Toliara' });
   await user.click(screen.getByRole('button', { name: 'Nouvelle recette par virement' }));
   dialog = screen.getByRole('dialog', { name: 'Nouvelle recette par virement' });
   await user.selectOptions(within(dialog).getByLabelText('Compte bancaire'), livre.virements.comptes[0].id);
+  await user.selectOptions(within(dialog).getByLabelText('Client qui règle la recette'),
+    within(dialog).getByRole('option', { name: 'ASSOCIATION FANILO' }));
   await user.type(within(dialog).getByLabelText('Libellé'), 'Recette sous-compte');
   await user.type(within(dialog).getByLabelText('Montant (Ar)'), '1000');
   await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
   livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
-  expect(livre.virements.ecritures[0].compteId).toBe(livre.virements.comptes[0].id);
+  expect(livre.virements.ecritures[0]).toMatchObject({ compteId: livre.virements.comptes[0].id, tiers: 'ASSOCIATION FANILO' });
   expect(livre.ecritures).toEqual([]);
 });
 
@@ -142,11 +170,13 @@ it('imprime l’ordre de virement sur demi-A4 après toute autorisation de dépe
   await user.click(within(dialogue).getByRole('button', { name: 'Ajouter le compte' }));
 
   await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
+  // Le fournisseur et son RIB vivent dans une fiche, pas dans un champ libre.
+  await creerFiche(user, { type: 'FOURNISSEUR', nom: 'OXYGENE MADA', banque: 'BOA', compte: '00004 111', adresse: 'Lot II Antananarivo' });
   await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
   dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
   await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
-  await user.type(within(dialogue).getByLabelText('Tiers / bénéficiaire'), 'OXYGENE MADA');
-  await user.type(within(dialogue).getByLabelText(/Établissement bancaire du bénéficiaire/), 'BOA');
+  await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'),
+    within(dialogue).getByRole('option', { name: 'OXYGENE MADA' }));
   await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
   await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
 

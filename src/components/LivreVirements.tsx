@@ -6,10 +6,11 @@ import type { EnteteDocument } from '../utils/entete';
 import { aujourdHui, dateFr, montantAffiche, parserMontant } from '../utils/format';
 import { identifiant } from '../utils/ledger';
 import type { CompteVirement, RegistreVirements, Virement } from '../utils/virements';
-import { ajouterVirement } from '../utils/virements';
+import { ajouterVirement, ribComplet } from '../utils/virements';
 import { Modale } from './Modale';
 import { ModaleBordereau } from './Bordereau';
 import { ModaleOrdreVirement } from './OrdreVirement';
+import { GestionTiersVirements } from './GestionTiersVirements';
 
 interface Props {
   registre: RegistreVirements;
@@ -25,6 +26,8 @@ type Formulaire = {
   /** Mentions de l'ordre de virement remis à la banque (facultatives). */
   beneficiaireAdresse: string; beneficiaireBanque: string; beneficiaireCompte: string;
   permanent: boolean;
+  /** Fiche client (recette) ou fournisseur (DED) du bénéficiaire. */
+  tiersId: string;
 };
 
 
@@ -42,6 +45,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   /** Ordre de virement imprimé juste après l'enregistrement d'une DED. */
   const [ordre, setOrdre] = useState<{ virement: Virement; compte: CompteVirement } | null>(null);
   const comptes = useMemo(() => new Map(registre.comptes.map(c => [c.id, c])), [registre.comptes]);
+  const fiches = useMemo(() => new Map(registre.tiers.map(t => [t.id, t])), [registre.tiers]);
   const lignes = useMemo(() => registre.ecritures.filter(v => {
     if (filtreCompte && v.compteId !== filtreCompte) return false;
     if (filtreSens !== 'TOUS' && v.sens !== filtreSens) return false;
@@ -58,6 +62,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       categorie: (sens === 'RECETTE' ? categories.recette : categories.depense)[0] ?? '',
       tiers: '', reference: '', observation: '', montant: '',
       beneficiaireAdresse: '', beneficiaireBanque: '', beneficiaireCompte: '', permanent: false,
+      tiersId: '',
     });
   }
   function modifier(v: Virement) {
@@ -67,21 +72,57 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       tiers: v.tiers, reference: v.reference, observation: v.observation, montant: String(v.montant),
       beneficiaireAdresse: v.beneficiaireAdresse ?? '', beneficiaireBanque: v.beneficiaireBanque ?? '',
       beneficiaireCompte: v.beneficiaireCompte ?? '', permanent: v.permanent === true,
+      tiersId: v.tiersId ?? '',
     });
   }
   function champ<K extends keyof Formulaire>(cle: K, valeur: Formulaire[K]) { setFormulaire(f => f ? { ...f, [cle]: valeur } : f); }
+  /** Fiches proposées : les clients pour une recette, les fournisseurs pour une DED. */
+  const fichesDuSens = formulaire ? registre.tiers.filter(t => t.type === (formulaire.sens === 'RECETTE' ? 'CLIENT' : 'FOURNISSEUR')) : [];
+  const ficheChoisie = formulaire?.tiersId ? fiches.get(formulaire.tiersId) : undefined;
+  /**
+   * Choisir la fiche remplit d'un coup le nom, l'adresse et le RIB : l'ordre de
+   * virement doit porter exactement ce que la fiche dit, sans double saisie.
+   */
+  function choisirTiers(tiersId: string) {
+    const fiche = fiches.get(tiersId);
+    setFormulaire(f => f ? {
+      ...f, tiersId,
+      tiers: fiche?.nom ?? '',
+      beneficiaireAdresse: fiche?.adresse ?? '',
+      beneficiaireBanque: fiche?.banque ?? '',
+      beneficiaireCompte: fiche?.numeroCompte ?? '',
+    } : f);
+  }
   async function enregistrerVirement(event: FormEvent) {
     event.preventDefault();
     if (!formulaire || soumission.current) return;
     const montant = parserMontant(formulaire.montant);
     if (montant === null || montant <= 0) { setErreur('Saisissez un montant entier supérieur à zéro.'); return; }
+    // Le bénéficiaire est obligatoire : c'est son nom et son RIB que la banque
+    // lit sur l'ordre de virement. Les pièces d'avant les fiches, elles, gardent
+    // leur tiers écrit à la main.
+    if (!formulaire.tiersId && !edition) {
+      setErreur(formulaire.sens === 'RECETTE'
+        ? 'Choisissez le client qui règle la recette : son nom figure sur le bordereau.'
+        : 'Choisissez le fournisseur à payer : son nom et son RIB figurent sur l’ordre de virement.');
+      return;
+    }
+    const fiche = formulaire.tiersId ? fiches.get(formulaire.tiersId) : undefined;
+    if (formulaire.tiersId && !fiche) { setErreur('Le client ou le fournisseur choisi est introuvable.'); return; }
     soumission.current = true; setOccupe(true); setErreur('');
     const { beneficiaireAdresse, beneficiaireBanque, beneficiaireCompte, permanent, ...commun } = formulaire;
+    // La fiche fait foi : elle fournit le nom, l'adresse et le RIB du bénéficiaire.
+    // Les champs restent modifiables pour une mention propre à ce virement.
+    const adresse = beneficiaireAdresse.trim() || fiche?.adresse || '';
+    const banque = beneficiaireBanque.trim() || fiche?.banque || '';
+    const compteBeneficiaire = beneficiaireCompte.trim() || fiche?.numeroCompte || '';
     const base = {
       ...commun, montant,
-      ...(beneficiaireAdresse.trim() ? { beneficiaireAdresse: beneficiaireAdresse.trim() } : {}),
-      ...(beneficiaireBanque.trim() ? { beneficiaireBanque: beneficiaireBanque.trim() } : {}),
-      ...(beneficiaireCompte.trim() ? { beneficiaireCompte: beneficiaireCompte.trim() } : {}),
+      tiers: fiche?.nom ?? formulaire.tiers,
+      ...(fiche?.id ? { tiersId: fiche.id } : {}),
+      ...(adresse ? { beneficiaireAdresse: adresse } : {}),
+      ...(banque ? { beneficiaireBanque: banque } : {}),
+      ...(compteBeneficiaire ? { beneficiaireCompte: compteBeneficiaire } : {}),
       ...(permanent ? { permanent: true } : {}),
       id: edition?.id ?? identifiant('virement'), createdAt: edition?.createdAt ?? new Date().toISOString(),
     };
@@ -139,15 +180,12 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const listeCategories = formulaire ? (formulaire.sens === 'RECETTE' ? categories.recette : categories.depense) : [];
 
   return <section className="space-y-4" aria-label="Livre des virements">
-    <p className="text-sm text-slate-600 dark:text-slate-300">Registre bancaire indépendant : ces opérations ne modifient pas le solde de la caisse en espèces.</p>
     <div className="card space-y-3 p-4">
       <div className="flex flex-wrap gap-2">
         <button type="button" className="btn-primary" disabled={!registre.comptes.length} onClick={() => nouveau('RECETTE')}><Plus size={16} />Nouvelle recette par virement</button>
         <button type="button" className="btn-danger" disabled={!registre.comptes.length} onClick={() => nouveau('DEPENSE')}><Plus size={16} />Nouvelle DED par virement</button>
         <button type="button" className="btn-secondary" disabled={!lignes.length} onClick={() => void imprimerEtat()}><Printer size={16} />Imprimer l’état des virements</button>
       </div>
-      <p className="text-sm text-slate-500 dark:text-slate-400">Chaque DED par virement s’imprime aussitôt sur une demi-feuille A4 : l’ordre de virement part à la banque, la souche reste dans le dossier.</p>
-      {registre.comptes.length > 0 && <div className="space-y-1 text-sm"><p className="font-semibold">Comptes bancaires</p><ul className="flex flex-wrap gap-x-4 gap-y-2">{registre.comptes.map(c => <li key={c.id}>{libelleCompte(c)}{!c.numeroCompte.trim() && <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">RIB à compléter</span>}</li>)}</ul><p className="text-slate-500">Les comptes et leurs RIB se règlent dans <strong>Administration</strong>, onglet réservé à l’administrateur.</p></div>}
       {!registre.comptes.length && <p className="text-sm text-slate-500">Aucun compte bancaire : un administrateur doit d’abord le créer dans <strong>Administration</strong>.</p>}
       <div className="flex flex-wrap gap-2">
         <label className="text-sm">Compte<select className="field" value={filtreCompte} onChange={e => setFiltreCompte(e.target.value)}><option value="">Tous les comptes</option>{registre.comptes.map(c => <option key={c.id} value={c.id}>{libelleCompte(c)}</option>)}</select></label>
@@ -166,11 +204,22 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       <div className="grid gap-3 sm:grid-cols-2"><label className="label">Date du virement<input className="field" type="date" required value={formulaire.date} onChange={e => champ('date', e.target.value)} /></label><label className="label">Compte bancaire<select className="field" required value={formulaire.compteId} onChange={e => champ('compteId', e.target.value)}>{registre.comptes.map(c => <option value={c.id} key={c.id}>{libelleCompte(c)}</option>)}</select></label></div>
       <label className="label">Libellé<input className="field" required maxLength={200} value={formulaire.libelle} onChange={e => champ('libelle', e.target.value)} /></label>
       <div className="grid gap-3 sm:grid-cols-2"><label className="label">Catégorie<select className="field" required value={formulaire.categorie} onChange={e => champ('categorie', e.target.value)}>{[...new Set([...listeCategories, ...(edition ? [edition.categorie] : [])])].map(c => <option key={c}>{c}</option>)}</select></label><label className="label">Montant (Ar)<input className="field" inputMode="numeric" required value={formulaire.montant} onChange={e => champ('montant', e.target.value)} /></label></div>
-      <label className="label">Tiers / bénéficiaire<input className="field" maxLength={200} value={formulaire.tiers} onChange={e => champ('tiers', e.target.value)} /></label>
+      <label className="label">{formulaire.sens === 'RECETTE' ? 'Client qui règle la recette' : 'Fournisseur à payer'}
+        <select className="field" required value={formulaire.tiersId} onChange={e => choisirTiers(e.target.value)}>
+          <option value="">{formulaire.sens === 'RECETTE' ? 'Choisir un client…' : 'Choisir un fournisseur…'}</option>
+          {fichesDuSens.map(t => <option key={t.id} value={t.id}>{t.nom}{t.type === 'FOURNISSEUR' && !ribComplet(t) ? ' — RIB à compléter' : ''}</option>)}
+        </select>
+        {fichesDuSens.length === 0 && <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+          {formulaire.sens === 'RECETTE'
+            ? 'Aucun client enregistré : créez sa fiche dans « Clients et fournisseurs », en bas de cette page.'
+            : 'Aucun fournisseur enregistré : créez sa fiche, RIB compris, dans « Clients et fournisseurs ». '}
+        </span>}
+        {ficheChoisie && formulaire.sens === 'RECETTE' && <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">Téléphone : {ficheChoisie.telephone || 'non renseigné'} · Adresse : {ficheChoisie.adresse || 'non renseignée'}</span>}
+      </label>
       <label className="label">Référence du virement<input className="field" maxLength={200} value={formulaire.reference} onChange={e => champ('reference', e.target.value)} /></label>
       <fieldset className="space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
         <legend className="px-1 text-sm font-semibold">Ordre de virement remis à la banque</legend>
-        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Ces mentions figurent sur le formulaire 114018 imprimé automatiquement. Une mention laissée vide reste en blanc sur le papier, à compléter à la main.</p>
+        <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Ces mentions viennent de la fiche du bénéficiaire et figurent sur l’ordre de virement 114018. Une mention laissée vide reste en blanc sur le papier.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="label">Adresse du bénéficiaire<input className="field" maxLength={200} value={formulaire.beneficiaireAdresse} onChange={e => champ('beneficiaireAdresse', e.target.value)} /></label>
           <label className="label">Établissement bancaire du bénéficiaire<input className="field" maxLength={200} value={formulaire.beneficiaireBanque} onChange={e => champ('beneficiaireBanque', e.target.value)} placeholder="BNI, BOA, CCP…" /></label>
@@ -184,6 +233,10 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       {(erreur || erreurExterne) && <p role="alert" className="text-sm text-rose-700">{erreurExterne || erreur}</p>}
       <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" disabled={occupe} onClick={() => setFormulaire(null)}>Annuler</button><button className="btn-primary" disabled={occupe}>Enregistrer</button></div>
     </form></Modale>}
+    {/* Clients et fournisseurs : le bénéficiaire de chaque virement vient d'ici. */}
+    <div className="card p-5" role="region" aria-label="Clients et fournisseurs">
+      <GestionTiersVirements registre={registre} onMutation={onMutation} erreurExterne={erreurExterne} />
+    </div>
     {impression && <ModaleBordereau ligne={impression.ligne} entete={entete} compteVirement={impression.compte} onFermer={() => setImpression(null)} onErreur={() => setErreur('Impossible d’ouvrir l’impression du bordereau.')} />}
     {ordre && <ModaleOrdreVirement virement={ordre.virement} compte={ordre.compte} entete={entete} onFermer={() => setOrdre(null)} onErreur={() => setErreur("Impossible de confirmer l’ouverture de l’impression de l’ordre de virement. Réessayez depuis la ligne du virement.")} />}
   </section>;

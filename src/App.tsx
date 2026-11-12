@@ -13,7 +13,7 @@ import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
 import { LivreVirements } from './components/LivreVirements';
-import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterTiers, modifierTiers, supprimerTiersVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
 import type { ActionVirement } from './utils/api';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
@@ -349,6 +349,9 @@ export function App() {
       if (action.operation === 'ajouter_comptes') return ajouterComptesVirement(registre, action.comptes);
       if (action.operation === 'modifier_compte') return modifierCompteVirement(registre, action.compte);
       if (action.operation === 'supprimer_compte') return supprimerCompteVirement(registre, action.compteId);
+      if (action.operation === 'ajouter_tiers') return ajouterTiers(registre, action.tiers);
+      if (action.operation === 'modifier_tiers') return modifierTiers(registre, action.tiers);
+      if (action.operation === 'supprimer_tiers') return supprimerTiersVirement(registre, action.tiersId);
       if (action.operation === 'ajouter') return ajouterVirement(registre, action.virement);
       return modifierVirement(registre, action.virement);
     };
@@ -357,8 +360,11 @@ export function App() {
     const reussi = MODE_API
       ? await muterEnLigne(revision => mutations.virement(revision, action))
       : muter(d => ({ ...d, virements: appliquer(d.virements ?? registreVirementsVide()) }));
-    if (reussi) setNotification(action.operation === 'supprimer_compte'
-      ? 'Compte bancaire supprimé.'
+    if (reussi) setNotification(
+      action.operation === 'supprimer_compte' ? 'Compte bancaire supprimé.'
+      : action.operation === 'ajouter_tiers' ? 'Client ou fournisseur ajouté.'
+      : action.operation === 'modifier_tiers' ? 'Client ou fournisseur modifié.'
+      : action.operation === 'supprimer_tiers' ? 'Client ou fournisseur supprimé.'
       : ['ajouter_compte', 'ajouter_comptes', 'modifier_compte'].includes(action.operation) ? 'Compte bancaire enregistré.' : 'Virement enregistré.');
     return reussi;
   }

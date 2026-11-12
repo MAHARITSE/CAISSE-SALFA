@@ -47,6 +47,35 @@ salfa_point('virements', function (): array {
             }
             if (count($restants) === count($registre['comptes'])) throw new SalFaErreur('Compte bancaire introuvable.', 404, 'compte_absent');
             $registre['comptes'] = $restants;
+        } elseif ($operation === 'ajouter_tiers') {
+            $fiche = $corps['tiers'] ?? null;
+            if (!is_array($fiche)) throw new SalFaErreur('Client ou fournisseur manquant.', 400, 'virements_invalides');
+            $registre['tiers'][] = $fiche;
+        } elseif ($operation === 'modifier_tiers') {
+            $fiche = $corps['tiers'] ?? null;
+            if (!is_array($fiche)) throw new SalFaErreur('Client ou fournisseur manquant.', 400, 'virements_invalides');
+            $trouve = false;
+            foreach ($registre['tiers'] as &$ancienneFiche) {
+                if ($ancienneFiche['id'] === ($fiche['id'] ?? null)) {
+                    $ancienneFiche = $fiche; $trouve = true; break;
+                }
+            }
+            unset($ancienneFiche);
+            if (!$trouve) throw new SalFaErreur('Client ou fournisseur introuvable.', 404, 'tiers_absent');
+        } elseif ($operation === 'supprimer_tiers') {
+            $tiersId = $corps['tiersId'] ?? null;
+            if (!is_string($tiersId) || $tiersId === '') throw new SalFaErreur('Client ou fournisseur manquant.', 400, 'virements_invalides');
+            foreach ($registre['ecritures'] as $ecriture) {
+                if (($ecriture['tiersId'] ?? null) === $tiersId) {
+                    throw new SalFaErreur('Ce client ou fournisseur porte des virements : il ne peut pas être supprimé. Corrigez sa fiche plutôt.', 409, 'tiers_utilise');
+                }
+            }
+            $restants = [];
+            foreach ($registre['tiers'] as $fiche) {
+                if ($fiche['id'] !== $tiersId) $restants[] = $fiche;
+            }
+            if (count($restants) === count($registre['tiers'])) throw new SalFaErreur('Client ou fournisseur introuvable.', 404, 'tiers_absent');
+            $registre['tiers'] = $restants;
         } elseif ($operation === 'ajouter') {
             $v = $corps['virement'] ?? null;
             if (!is_array($v)) throw new SalFaErreur('Virement manquant.', 400, 'virements_invalides');
