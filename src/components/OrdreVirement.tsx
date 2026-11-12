@@ -1,6 +1,5 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import bniLogo from '../assets/logo-bni.png?inline';
 import type { CompteVirement, Virement } from '../utils/virements';
 import { dateFr } from '../utils/format';
 import { nombreEnLettres } from '../utils/nombreEnLettres';
@@ -128,7 +127,9 @@ function BlocOrdre({ virement, compte, identite, souche }: DonneesOrdreVirement 
     aria-label={souche ? 'Ordre de virement — souche à conserver' : 'Ordre de virement — exemplaire pour la banque'}
   >
     <header className="ordre-virement__entete">
-      <img src={bniLogo} alt="BNI Madagascar" className="ordre-virement__logo" />
+      {/* Aucune image : l'application n'embarque pas de logo. Le nom de la banque
+          est écrit, comme sur un formulaire vierge à compléter. */}
+      <p className="ordre-virement__banque-nom">BANQUE&nbsp;: {compte.banque}</p>
       <div className="ordre-virement__titre">
         <p>ORDRE DE VIREMENT</p>
         <p>EN ARIARY</p>

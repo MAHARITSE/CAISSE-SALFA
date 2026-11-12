@@ -27,12 +27,8 @@ type Formulaire = {
   permanent: boolean;
 };
 
-type CompteForm = { banque: string; numeroCompte: string; titulaire: string; adresse: string; codeBanque: string };
 
 export function LivreVirements({ registre, categories, entete, onMutation, erreurExterne }: Props) {
-  const [compteOuvert, setCompteOuvert] = useState(false);
-  const [compteEdite, setCompteEdite] = useState<CompteVirement | null>(null);
-  const [compteForm, setCompteForm] = useState<CompteForm>({ banque: '', numeroCompte: '', titulaire: '', adresse: '', codeBanque: '' });
   const [edition, setEdition] = useState<Virement | null>(null);
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [filtreCompte, setFiltreCompte] = useState('');
@@ -53,7 +49,6 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     const q = recherche.trim().toLocaleLowerCase('fr');
     return !q || [v.numero, v.libelle, v.categorie, v.tiers, v.reference, comptes.get(v.compteId)?.banque, comptes.get(v.compteId)?.numeroCompte].some(t => t?.toLocaleLowerCase('fr').includes(q));
   }).slice().sort((a, b) => b.date.localeCompare(a.date) || b.numero.localeCompare(a.numero)), [registre, filtreCompte, filtreSens, filtreMois, recherche, comptes]);
-  const nomsBniManquants = ['BNI/C', 'BNI/D'].filter(nom => !registre.comptes.some(c => c.banque.toLocaleUpperCase('fr') === nom));
   const total = (sens: Sens) => lignes.filter(v => v.sens === sens).reduce((s, v) => s + v.montant, 0);
 
   function nouveau(sens: Sens) {
@@ -75,52 +70,6 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     });
   }
   function champ<K extends keyof Formulaire>(cle: K, valeur: Formulaire[K]) { setFormulaire(f => f ? { ...f, [cle]: valeur } : f); }
-  async function enregistrerCompte(event: FormEvent) {
-    event.preventDefault();
-    if (soumission.current) return;
-    if (!compteForm.banque.trim()) { setErreur('Renseignez le nom de la banque ou du compte.'); return; }
-    if (compteForm.codeBanque.trim() && !/^\d{5}$/.test(compteForm.codeBanque.trim())) {
-      setErreur('Le code banque du RIB comporte cinq chiffres.');
-      return;
-    }
-    soumission.current = true; setOccupe(true); setErreur('');
-    try {
-      const compte: CompteVirement = {
-        id: compteEdite?.id ?? identifiant('banque'),
-        banque: compteForm.banque.trim(),
-        numeroCompte: compteForm.numeroCompte.trim(),
-        ...(compteForm.titulaire.trim() ? { titulaire: compteForm.titulaire.trim() } : {}),
-        ...(compteForm.adresse.trim() ? { adresse: compteForm.adresse.trim() } : {}),
-        ...(compteForm.codeBanque.trim() ? { codeBanque: compteForm.codeBanque.trim() } : {}),
-      };
-      const action: ActionVirement = compteEdite ? { operation: 'modifier_compte', compte } : { operation: 'ajouter_compte', compte };
-      if (await onMutation(action)) {
-        setCompteOuvert(false); setCompteEdite(null);
-        setCompteForm({ banque: '', numeroCompte: '', titulaire: '', adresse: '', codeBanque: '' });
-      } else setErreur('Compte non enregistré. Vérifiez le message et réessayez.');
-    } catch (e) { setErreur(e instanceof Error ? e.message : 'Compte non enregistré.'); }
-    finally { soumission.current = false; setOccupe(false); }
-  }
-  async function preparerComptesBni() {
-    if (soumission.current || !nomsBniManquants.length) return;
-    soumission.current = true; setOccupe(true); setErreur('');
-    try {
-      const nouveaux = nomsBniManquants.map(banque => ({ id: identifiant('banque'), banque, numeroCompte: '' }));
-      if (!await onMutation({ operation: 'ajouter_comptes', comptes: nouveaux })) setErreur('Comptes non enregistrés. Vérifiez le message et réessayez.');
-    } catch (e) { setErreur(e instanceof Error ? e.message : 'Comptes non enregistrés.'); }
-    finally { soumission.current = false; setOccupe(false); }
-  }
-  function ouvrirCompte(compte?: CompteVirement) {
-    setCompteEdite(compte ?? null);
-    setCompteForm({
-      banque: compte?.banque ?? '', numeroCompte: compte?.numeroCompte ?? '',
-      titulaire: compte?.titulaire ?? '', adresse: compte?.adresse ?? '', codeBanque: compte?.codeBanque ?? '',
-    });
-    setErreur(''); setCompteOuvert(true);
-  }
-  function champCompte<K extends keyof CompteForm>(cle: K, valeurCompte: CompteForm[K]) {
-    setCompteForm(f => ({ ...f, [cle]: valeurCompte }));
-  }
   async function enregistrerVirement(event: FormEvent) {
     event.preventDefault();
     if (!formulaire || soumission.current) return;
@@ -193,15 +142,13 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     <p className="text-sm text-slate-600 dark:text-slate-300">Registre bancaire indépendant : ces opérations ne modifient pas le solde de la caisse en espèces.</p>
     <div className="card space-y-3 p-4">
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn-secondary" onClick={() => ouvrirCompte()}><Plus size={16} />Ajouter un compte bancaire</button>
-        {nomsBniManquants.length > 0 && <button type="button" className="btn-secondary" disabled={occupe} onClick={() => void preparerComptesBni()}><Plus size={16} />Préparer BNI/C et BNI/D</button>}
         <button type="button" className="btn-primary" disabled={!registre.comptes.length} onClick={() => nouveau('RECETTE')}><Plus size={16} />Nouvelle recette par virement</button>
         <button type="button" className="btn-danger" disabled={!registre.comptes.length} onClick={() => nouveau('DEPENSE')}><Plus size={16} />Nouvelle DED par virement</button>
         <button type="button" className="btn-secondary" disabled={!lignes.length} onClick={() => void imprimerEtat()}><Printer size={16} />Imprimer l’état des virements</button>
       </div>
       <p className="text-sm text-slate-500 dark:text-slate-400">Chaque DED par virement s’imprime aussitôt sur une demi-feuille A4 : l’ordre de virement part à la banque, la souche reste dans le dossier.</p>
-      {registre.comptes.length > 0 && <div className="space-y-1 text-sm"><p className="font-semibold">Comptes bancaires</p><ul className="flex flex-wrap gap-x-4 gap-y-2">{registre.comptes.map(c => <li key={c.id} className="flex items-center gap-1"><span>{libelleCompte(c)}</span><button type="button" className="icon-button" title="Modifier le compte" aria-label={`Modifier le compte ${c.banque}`} onClick={() => ouvrirCompte(c)}><Pencil size={15} /></button></li>)}</ul><p className="text-slate-500">Un numéro non renseigné peut être complété ultérieurement.</p></div>}
-      {!registre.comptes.length && <p className="text-sm text-slate-500">Ajoutez d’abord un compte bancaire pour saisir un virement.</p>}
+      {registre.comptes.length > 0 && <div className="space-y-1 text-sm"><p className="font-semibold">Comptes bancaires</p><ul className="flex flex-wrap gap-x-4 gap-y-2">{registre.comptes.map(c => <li key={c.id}>{libelleCompte(c)}{!c.numeroCompte.trim() && <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">RIB à compléter</span>}</li>)}</ul><p className="text-slate-500">Les comptes et leurs RIB se règlent dans <strong>Administration</strong>, onglet réservé à l’administrateur.</p></div>}
+      {!registre.comptes.length && <p className="text-sm text-slate-500">Aucun compte bancaire : un administrateur doit d’abord le créer dans <strong>Administration</strong>.</p>}
       <div className="flex flex-wrap gap-2">
         <label className="text-sm">Compte<select className="field" value={filtreCompte} onChange={e => setFiltreCompte(e.target.value)}><option value="">Tous les comptes</option>{registre.comptes.map(c => <option key={c.id} value={c.id}>{libelleCompte(c)}</option>)}</select></label>
         <label className="text-sm">Type<select className="field" value={filtreSens} onChange={e => setFiltreSens(e.target.value as 'TOUS' | Sens)}><option value="TOUS">Tous</option><option value="RECETTE">Recettes</option><option value="DEPENSE">DED / dépenses</option></select></label>
@@ -210,25 +157,11 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       </div>
       <p className="text-sm">{lignes.length} virement(s) · Recettes : {montantAffiche(total('RECETTE'))} Ar · Dépenses : {montantAffiche(total('DEPENSE'))} Ar</p>
     </div>
-    {erreur && !formulaire && !compteOuvert && <p role="alert" className="text-sm text-rose-700">{erreur}</p>}
+    {erreur && !formulaire && <p role="alert" className="text-sm text-rose-700">{erreur}</p>}
     <div className="card overflow-x-auto"><table className="w-full text-left text-sm" aria-label="Virements enregistrés"><thead><tr>{['Date', 'N°', 'Compte bancaire', 'Type', 'Libellé', 'Catégorie', 'Montant', 'Actions'].map(x => <th key={x} className="border-b p-3">{x}</th>)}</tr></thead><tbody>
       {lignes.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-slate-500">Aucun virement pour cette sélection.</td></tr>}
       {lignes.map(v => <tr key={v.id} className="border-b border-slate-100 dark:border-slate-700"><td className="p-3 whitespace-nowrap">{dateFr(v.date)}</td><td className="p-3">{v.numero}</td><td className="p-3">{comptes.get(v.compteId) ? libelleCompte(comptes.get(v.compteId)!) : 'Compte introuvable'}</td><td className="p-3">{v.sens === 'RECETTE' ? 'Recette' : 'DED'}</td><td className="p-3">{v.libelle}</td><td className="p-3">{v.categorie}</td><td className="p-3 whitespace-nowrap text-right">{montantAffiche(v.montant)}</td><td className="p-3 whitespace-nowrap"><button type="button" className="icon-button" title="Modifier" aria-label={`Modifier ${v.numero}`} onClick={() => modifier(v)}><Pencil size={16} /></button><button type="button" className="icon-button" title="Imprimer le bordereau" aria-label={`Imprimer le bordereau ${v.numero}`} onClick={() => imprimerPiece(v)}><Printer size={16} /></button>{v.sens === 'DEPENSE' && <button type="button" className="icon-button" title="Réimprimer l’ordre de virement" aria-label={`Imprimer l’ordre de virement ${v.numero}`} onClick={() => imprimerOrdre(v)}><Landmark size={16} /></button>}</td></tr>)}
     </tbody></table></div>
-    {compteOuvert && <Modale titre={compteEdite ? 'Modifier un compte bancaire' : 'Ajouter un compte bancaire'} onFermer={() => { if (!occupe) { setCompteOuvert(false); setErreur(''); } }}><form className="space-y-3" onSubmit={e => void enregistrerCompte(e)}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="label">Banque<input className="field" required maxLength={120} value={compteForm.banque} onChange={e => champCompte('banque', e.target.value)} /></label>
-        <label className="label">Numéro de compte<input className="field" maxLength={120} value={compteForm.numeroCompte} onChange={e => champCompte('numeroCompte', e.target.value)} /></label>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="label">Titulaire du compte (donneur d’ordre)<input className="field" maxLength={200} value={compteForm.titulaire} onChange={e => champCompte('titulaire', e.target.value)} placeholder="SALFA — Hôpital Loterana Toliary Tanambao" /></label>
-        <label className="label">Adresse du titulaire<input className="field" maxLength={200} value={compteForm.adresse} onChange={e => champCompte('adresse', e.target.value)} placeholder="BP 99 — Toliara" /></label>
-      </div>
-      <label className="label">Code banque du RIB (5 chiffres)<input className="field" inputMode="numeric" maxLength={5} value={compteForm.codeBanque} onChange={e => champCompte('codeBanque', e.target.value.replace(/\D/g, ''))} placeholder="00005" /></label>
-      <p className="text-sm text-slate-500">Le numéro peut être renseigné plus tard. Toute correction du compte apparaîtra également sur les anciens virements et leurs impressions. Le titulaire, l’adresse et le code banque sont imprimés sur l’ordre de virement remis à la banque.</p>
-      {(erreur || erreurExterne) && <p role="alert" className="text-sm text-rose-700">{erreurExterne || erreur}</p>}
-      <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" disabled={occupe} onClick={() => setCompteOuvert(false)}>Annuler</button><button className="btn-primary" disabled={occupe}>Enregistrer le compte</button></div>
-    </form></Modale>}
     {formulaire && <Modale titre={edition ? `Modifier ${edition.numero}` : formulaire.sens === 'RECETTE' ? 'Nouvelle recette par virement' : 'Nouvelle DED par virement'} onFermer={() => { if (!occupe) { setFormulaire(null); setErreur(''); } }}><form className="space-y-3" onSubmit={e => void enregistrerVirement(e)}>
       <div className="grid gap-3 sm:grid-cols-2"><label className="label">Date du virement<input className="field" type="date" required value={formulaire.date} onChange={e => champ('date', e.target.value)} /></label><label className="label">Compte bancaire<select className="field" required value={formulaire.compteId} onChange={e => champ('compteId', e.target.value)}>{registre.comptes.map(c => <option value={c.id} key={c.id}>{libelleCompte(c)}</option>)}</select></label></div>
       <label className="label">Libellé<input className="field" required maxLength={200} value={formulaire.libelle} onChange={e => champ('libelle', e.target.value)} /></label>

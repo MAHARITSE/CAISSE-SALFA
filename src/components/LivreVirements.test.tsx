@@ -18,25 +18,30 @@ const registre = ajouterVirement(ajouterCompteVirement(registreVirementsVide(), 
 });
 
 describe('livre des virements', () => {
-  it('saisit un compte et un virement avec la bonne opération', async () => {
+  it('saisit un virement avec la bonne opération, sur un compte réglé dans Administration', async () => {
     const onMutation = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
     const props = { categories: categoriesParDefaut(), entete: entetesParDefaut(), onMutation, erreurExterne: null };
-    const { rerender } = render(<LivreVirements {...props} registre={registreVirementsVide()} />);
-    expect(screen.getByRole('button', { name: /Nouvelle recette/ })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: /Ajouter un compte/ }));
-    const dialogueCompte = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
-    await user.type(within(dialogueCompte).getByLabelText('Banque'), 'BNI');
-    await user.type(within(dialogueCompte).getByLabelText('Numéro de compte'), '001234');
-    await user.click(within(dialogueCompte).getByRole('button', { name: 'Enregistrer le compte' }));
-    expect(onMutation).toHaveBeenCalledWith({ operation: 'ajouter_compte', compte: expect.objectContaining({ banque: 'BNI', numeroCompte: '001234' }) });
-    rerender(<LivreVirements {...props} registre={registre} />);
+    render(<LivreVirements {...props} registre={registre} />);
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     const dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(dialogue).getByLabelText('Libellé'), 'Facture');
     await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({ sens: 'DEPENSE', montant: 5000, compteId: 'banque', libelle: 'Facture' }) });
+  });
+  it('ne règle plus les comptes : la saisie attend ceux créés dans Administration', async () => {
+    const onMutation = vi.fn().mockResolvedValue(true);
+    const props = { categories: categoriesParDefaut(), entete: entetesParDefaut(), onMutation, erreurExterne: null };
+    render(<LivreVirements {...props} registre={registreVirementsVide()} />);
+    // Aucun bouton de compte ni de préparation BNI dans le livre des virements.
+    expect(screen.queryByRole('button', { name: /compte bancaire/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Préparer BNI/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Modifier le compte/ })).toBeNull();
+    // La saisie reste fermée tant qu'aucun compte n'existe, et l'écran dit où le créer.
+    expect(screen.getByRole('button', { name: /Nouvelle recette/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Nouvelle DED/ })).toBeDisabled();
+    expect(screen.getByText(/un administrateur doit d’abord le créer dans/)).toBeInTheDocument();
   });
   it('imprime l’ordre de virement dès qu’une DED par virement est enregistrée, jamais pour une recette', async () => {
     const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});

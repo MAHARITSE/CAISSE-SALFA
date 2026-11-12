@@ -48,16 +48,18 @@ describe('ordre de virement : réimpression depuis le registre', () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
-    await user.type(screen.getByLabelText('Identifiant'), 'comptable');
-    await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
+    await user.type(screen.getByLabelText('Identifiant'), 'admin');
+    await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
     await user.click(screen.getByRole('button', { name: /Se connecter/ }));
-    await screen.findByRole('heading', { name: 'Livre de caisse' });
-    await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
-    await user.click(screen.getByRole('button', { name: /Ajouter un compte bancaire/ }));
+    // Le compte et son RIB se règlent dans Administration, hors du livre des virements.
+    await user.click(screen.getByRole('button', { name: 'Administration' }));
+    const section = screen.getByRole('region', { name: 'Comptes bancaires et RIB' });
+    await user.click(within(section).getByRole('button', { name: 'Ajouter un compte' }));
     const compte = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
     await user.type(within(compte).getByLabelText('Banque'), 'BNI/C');
-    await user.type(within(compte).getByLabelText('Numéro de compte'), '00005 111');
-    await user.click(within(compte).getByRole('button', { name: 'Enregistrer le compte' }));
+    await user.type(within(compte).getByLabelText('Numéro de compte / RIB'), '00005 111');
+    await user.click(within(compte).getByRole('button', { name: 'Ajouter le compte' }));
+    await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     const saisie = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(saisie).getByLabelText('Libellé'), 'OXYGENE');

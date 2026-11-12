@@ -163,6 +163,21 @@ export function modifierCompteVirement(registre: RegistreVirements, compte: Comp
   return validerRegistreVirements({ ...registre, comptes: registre.comptes.map(c => c.id === compte.id ? compte : c) });
 }
 
+/**
+ * Supprime un compte bancaire resté sans virement.
+ *
+ * Un compte qui porte des virements n'est jamais supprimé : les pièces déjà
+ * émises et leurs réimpressions perdraient leur RIB. Le message le dit, plutôt
+ * que de laisser l'interface proposer une action impossible.
+ */
+export function supprimerCompteVirement(registre: RegistreVirements, compteId: string): RegistreVirements {
+  const compte = registre.comptes.find(c => c.id === compteId);
+  exiger(compte, 'Compte bancaire introuvable.');
+  exiger(!registre.ecritures.some(v => v.compteId === compteId),
+    'Ce compte porte des virements : il ne peut pas être supprimé. Corrigez son RIB plutôt.');
+  return validerRegistreVirements({ ...registre, comptes: registre.comptes.filter(c => c.id !== compteId) });
+}
+
 export type NouvelleOperationVirement = Omit<Virement, 'numero' | 'updatedAt'>;
 export function ajouterVirement(registre: RegistreVirements, operation: NouvelleOperationVirement): RegistreVirements {
   const date = dateValide(operation.date, 'Date du virement');

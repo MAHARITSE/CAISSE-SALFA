@@ -20,9 +20,9 @@ const virement: Virement = {
 describe('ordre de virement bancaire (formulaire BNI 114018)', () => {
   it('imprime deux ordres complets sur la même feuille A4, séparés par un trait de découpe', () => {
     const { container } = render(<FeuilleOrdreVirement virement={virement} compte={compte} entete={enteteParDefaut()} />);
-    const logos = screen.getAllByRole('img', { name: 'BNI Madagascar' });
-    expect(logos).toHaveLength(2);
-    for (const logo of logos) expect(logo).toHaveAttribute('src', expect.stringContaining('data:image/png'));
+    // Aucune image dans l'application : la banque est écrite en toutes lettres.
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+    expect(screen.getAllByText(/BANQUE\s*:\s*BNI\/C/)).toHaveLength(2);
     // Deux blocs : exemplaire banque et souche.
     expect(screen.getByLabelText('Ordre de virement — exemplaire pour la banque')).toBeInTheDocument();
     expect(screen.getByLabelText('Ordre de virement — souche à conserver')).toBeInTheDocument();

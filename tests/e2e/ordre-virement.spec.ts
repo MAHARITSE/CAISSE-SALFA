@@ -12,8 +12,9 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 async function ouvrirSession(page: Page) {
-  await page.locator('#identifiant').fill('comptable');
-  await page.getByLabel('Mot de passe', { exact: true }).fill('compta1234');
+  // Le compte et son RIB se règlent dans Administration, réservée à l'administrateur.
+  await page.locator('#identifiant').fill('admin');
+  await page.getByLabel('Mot de passe', { exact: true }).fill('admin1234');
   await page.getByRole('button', { name: /Se connecter/ }).click();
   await expect(page.getByRole('heading', { name: 'Livre de caisse' })).toBeVisible();
 }
@@ -34,16 +35,18 @@ async function ouvrirOrdreVirement(page: Page) {
   await page.addInitScript(() => { window.print = () => {}; });
   await page.goto('/?demo=0');
   await ouvrirSession(page);
-  await page.getByRole('button', { name: 'Livre des virements' }).click();
-
-  await page.getByRole('button', { name: /Ajouter un compte bancaire/ }).click();
+  await page.getByRole('button', { name: 'Administration' }).click();
+  const section = page.getByRole('region', { name: 'Comptes bancaires et RIB' });
+  await section.getByRole('button', { name: 'Ajouter un compte' }).click();
   const compte = page.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
   await compte.getByLabel('Banque').fill('BNI/C');
-  await compte.getByLabel('Numéro de compte').fill('00005 12345678901');
+  await compte.getByLabel('Numéro de compte / RIB').fill('00005 12345678901');
   await compte.getByLabel(/Titulaire du compte/).fill('SALFA TOLIARA');
   await compte.getByLabel(/Adresse du titulaire/).fill('BP 99 Toliara');
-  await compte.getByRole('button', { name: 'Enregistrer le compte' }).click();
+  await compte.getByLabel(/Code banque du RIB/).fill('00005');
+  await compte.getByRole('button', { name: 'Ajouter le compte' }).click();
 
+  await page.getByRole('button', { name: 'Livre des virements' }).click();
   await page.getByRole('button', { name: /Nouvelle DED/ }).click();
   const saisie = page.getByRole('dialog', { name: 'Nouvelle DED par virement' });
   await saisie.getByLabel('Libellé').fill('ACHAT OXYGENE');

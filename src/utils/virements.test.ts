@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide, validerRegistreVirements, type NouvelleOperationVirement } from './virements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide, validerRegistreVirements, type NouvelleOperationVirement } from './virements';
 
 const compte = { id: 'b1', banque: 'BNI', numeroCompte: '000001' };
 const operation: NouvelleOperationVirement = { id: 'v1', compteId: 'b1', date: '2026-03-01', sens: 'RECETTE', libelle: 'Versement', categorie: 'Divers', tiers: '', reference: '', observation: '', montant: 1000, createdAt: '2026-03-01T12:00:00Z' };
@@ -48,5 +48,17 @@ describe('règles du registre de virements indépendant', () => {
     const suivant = ajouterVirement({ ...registre, ecritures: [] }, { ...operation, id: 'v2' });
     expect(suivant.ecritures[0].numero).toBe('VR-2026-0002');
     expect(() => validerRegistreVirements({ ...registre, compteurs: {} })).toThrow(/manquant/);
+  });
+
+  it('supprime un compte sans virement et refuse celui qui en porte', () => {
+    const registre = ajouterVirement(ajouterCompteVirement(registreVirementsVide(), compte), operation);
+    // Le compte porte la pièce : le retirer rendrait son ordre de virement orphelin.
+    expect(() => supprimerCompteVirement(registre, compte.id))
+      .toThrow('Ce compte porte des virements : il ne peut pas être supprimé. Corrigez son RIB plutôt.');
+    const libre = ajouterComptesVirement(registre, [{ id: 'b9', banque: 'BNI/D', numeroCompte: '' }]);
+    const apres = supprimerCompteVirement(libre, 'b9');
+    expect(apres.comptes.map(c => c.id)).toEqual([compte.id]);
+    expect(apres.ecritures).toHaveLength(1);
+    expect(() => supprimerCompteVirement(apres, 'b9')).toThrow('Compte bancaire introuvable.');
   });
 });

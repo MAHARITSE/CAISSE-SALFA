@@ -7,6 +7,9 @@ import { Modale } from './Modale';
 import { Confirmation } from './Confirmation';
 import { listerComptes, creerCompte, modifierCompte, supprimerCompte, LONGUEUR_MIN_MOT_DE_PASSE } from '../utils/utilisateurs';
 import { ROLES, libelleRole, resumeDroits, type Compte, type Role } from '../utils/roles';
+import type { ActionVirement } from '../utils/api';
+import type { RegistreVirements } from '../utils/virements';
+import { GestionComptesBancaires } from './GestionComptesBancaires';
 
 interface Props {
   /** Réglages de la caisse, ouverts depuis Administration. */
@@ -17,6 +20,10 @@ interface Props {
   nombreModeles: number;
   /** Compte connecté : on ne se supprime pas soi-même par mégarde. */
   compteCourant?: { identifiant: string } | null;
+  /** Comptes bancaires et RIB de la caisse, réglés depuis cette page. */
+  registreVirements: RegistreVirements;
+  onMutationVirement: (action: ActionVirement) => Promise<boolean>;
+  erreurExterne: string | null;
 }
 
 type Formulaire =
@@ -34,7 +41,10 @@ const formulaireVide = (): Formulaire => ({
  * saisie, les catégories et l'en-tête des bordereaux, auparavant éparpillés dans
  * le livre journal, sont désormais rangés à cet endroit.
  */
-export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEntete, nombreModeles, compteCourant }: Props) {
+export function Administration({
+  onOuvrirModeles, onOuvrirCategories, onOuvrirEntete, nombreModeles, compteCourant,
+  registreVirements, onMutationVirement, erreurExterne,
+}: Props) {
   const [comptes, setComptes] = useState<Compte[] | null>(null);
   const [erreur, setErreur] = useState('');
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
@@ -112,7 +122,7 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100"><BookOpenCheck size={17} className="text-brand-700 dark:text-brand-300" />Réglages de la caisse</h2>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Modèles de saisie, catégories et en-tête des bordereaux : tout se règle ici.</p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Modèles de saisie, catégories et en-tête des bordereaux : tout se règle ici. Les comptes bancaires et leurs RIB se règlent juste en dessous.</p>
         </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -129,6 +139,11 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
           </span>
         </button>)}
       </div>
+    </section>
+
+    {/* Comptes bancaires et RIB : ils étaient dans le livre des virements. */}
+    <section className="card p-5" aria-label="Comptes bancaires et RIB">
+      <GestionComptesBancaires registre={registreVirements} onMutation={onMutationVirement} erreurExterne={erreurExterne} />
     </section>
 
     {/* Utilisateurs et rôles */}

@@ -13,7 +13,7 @@ import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
 import { LivreVirements } from './components/LivreVirements';
-import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
 import type { ActionVirement } from './utils/api';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
@@ -348,6 +348,7 @@ export function App() {
       if (action.operation === 'ajouter_compte') return ajouterCompteVirement(registre, action.compte);
       if (action.operation === 'ajouter_comptes') return ajouterComptesVirement(registre, action.comptes);
       if (action.operation === 'modifier_compte') return modifierCompteVirement(registre, action.compte);
+      if (action.operation === 'supprimer_compte') return supprimerCompteVirement(registre, action.compteId);
       if (action.operation === 'ajouter') return ajouterVirement(registre, action.virement);
       return modifierVirement(registre, action.virement);
     };
@@ -356,7 +357,9 @@ export function App() {
     const reussi = MODE_API
       ? await muterEnLigne(revision => mutations.virement(revision, action))
       : muter(d => ({ ...d, virements: appliquer(d.virements ?? registreVirementsVide()) }));
-    if (reussi) setNotification(['ajouter_compte', 'ajouter_comptes', 'modifier_compte'].includes(action.operation) ? 'Compte bancaire enregistré.' : 'Virement enregistré.');
+    if (reussi) setNotification(action.operation === 'supprimer_compte'
+      ? 'Compte bancaire supprimé.'
+      : ['ajouter_compte', 'ajouter_comptes', 'modifier_compte'].includes(action.operation) ? 'Compte bancaire enregistré.' : 'Virement enregistré.');
     return reussi;
   }
 
@@ -648,6 +651,9 @@ export function App() {
         {onglet === 'donnees' && <DonneesSauvegardes livre={livre} administrateur={administre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}
         {onglet === 'administration' && (administre
           ? <Administration
+            registreVirements={livre.virements ?? registreVirementsVide()}
+            onMutationVirement={enregistrerVirement}
+            erreurExterne={erreur}
             nombreModeles={livre.masques.length}
             onOuvrirModeles={() => setMasquesOuverts(true)}
             onOuvrirCategories={() => setCategoriesOuvertes(true)}

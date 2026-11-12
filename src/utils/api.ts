@@ -201,6 +201,7 @@ export type ActionVirement =
   | { operation: 'ajouter_compte'; compte: CompteVirement }
   | { operation: 'ajouter_comptes'; comptes: CompteVirement[] }
   | { operation: 'modifier_compte'; compte: CompteVirement }
+  | { operation: 'supprimer_compte'; compteId: string }
   | { operation: 'ajouter'; virement: NouvelleOperationVirement }
   | { operation: 'modifier'; virement: Virement };
 

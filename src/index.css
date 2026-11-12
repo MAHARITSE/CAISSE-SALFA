@@ -508,7 +508,7 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   text-overflow: ellipsis;
 }
 
-/* En-tête : logo BNI à gauche, titre au centre, références du formulaire à droite. */
+/* En-tête : nom de la banque à gauche, titre au centre, références du formulaire à droite. */
 .ordre-virement__entete {
   display: grid;
   grid-template-columns: 34mm 1fr 34mm;
@@ -517,7 +517,7 @@ html.dark .modal-shell::backdrop { background: rgb(0 0 0 / .65); }
   padding-bottom: 1.5mm;
   border-bottom: 1px solid #000;
 }
-.ordre-virement__logo { width: 32mm; height: auto; object-fit: contain; }
+.ordre-virement__banque-nom { font-size: 7.5pt; font-weight: 700; line-height: 1.2; }
 .ordre-virement__titre { text-align: center; font-weight: 700; font-size: 10pt; }
 .ordre-virement__titre p { text-align: center; }
 .ordre-virement__titre-client { font-size: 7.5pt; margin-top: 1mm !important; }

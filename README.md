@@ -125,24 +125,32 @@ garder les versions verrouillées par `package-lock.json`.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
-- **Livre des virements** : l’administrateur et le comptable peuvent ajouter des
-  comptes (banque, numéro, titulaire, adresse et code banque du RIB), saisir et
-  corriger les recettes ou DED par virement, filtrer le registre et imprimer des
-  bordereaux individuels ou un état séparant recettes et dépenses. Les séries
-  `VR-AAAA-0001` et `VD-AAAA-0001` sont distinctes des pièces de caisse. Le bouton
-  « Préparer BNI/C et BNI/D » crée les comptes manquants sans numéro ; complétez
-  leurs références avec le bouton de modification, notamment celles de BNI/D à
-  partir de son RIB. Les comptes déjà enregistrés ne sont pas remplacés. Aucun
-  solde bancaire n’est calculé ; la clôture en espèces ne modifie pas le registre
-  bancaire.
+- **Comptes bancaires et RIB, réglés dans Administration** : la section
+  « Comptes bancaires et RIB » liste les comptes de l’hôpital et permet de les
+  **ajouter**, de les **modifier** ou de les **supprimer** (banque, numéro de
+  compte / RIB, titulaire — donneur d’ordre —, adresse et code banque à cinq
+  chiffres). Un compte dont le numéro manque porte la mention « RIB à
+  compléter » ; le bouton « Préparer BNI/C et BNI/D » crée les deux comptes
+  manquants sans numéro, à compléter ensuite. Un compte qui porte des virements
+  ne peut pas être supprimé : ses ordres déjà émis perdraient leur RIB — son
+  numéro se corrige, il ne se retire pas. Ce réglage est réservé à
+  l’administrateur ; le livre des virements, lui, ne fait que les utiliser.
+- **Livre des virements** : l’administrateur et le comptable saisissent et
+  corrigent les recettes ou DED par virement sur les comptes réglés dans
+  Administration, filtrent le registre et impriment des bordereaux individuels
+  ou un état séparant recettes et dépenses. Les séries `VR-AAAA-0001` et
+  `VD-AAAA-0001` sont distinctes des pièces de caisse. Aucun solde bancaire n’est
+  calculé ; la clôture en espèces ne modifie pas le registre bancaire.
 - **Ordre de virement obligatoire** : chaque **DED par virement** imprime
   aussitôt, sans aperçu, l’**ordre de virement** du formulaire BNI 114018 remis à
   la banque. La feuille A4 porte le même ordre deux fois, séparés par un trait de
   découpe : la moitié haute part à la banque, la moitié basse reste en souche —
   quelle que soit la moitié détachée, la pièce est complète. Date, compte débité
   et son RIB, bénéficiaire, montant en chiffres et en toutes lettres, référence,
-  observations et signature y figurent ; le titre, le logo BNI et les mentions
-  du modèle sont reproduits. L’ordre est réimprimable depuis la ligne du virement.
+  observations et signature y figurent ; le titre, le nom de la banque et les
+  mentions du modèle sont reproduits, sans aucune image : le document n’embarque
+  pas de logo et se complète au besoin à la main. L’ordre est réimprimable depuis
+  la ligne du virement.
   Les recettes par virement n’impriment rien : rien n’est à envoyer à la banque.
   Les mentions propres au bénéficiaire (adresse, établissement bancaire, compte
   ou RIB) et le caractère permanent ou occasionnel se saisissent dans le

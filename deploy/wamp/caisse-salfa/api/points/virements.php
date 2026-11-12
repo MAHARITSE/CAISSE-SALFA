@@ -33,6 +33,20 @@ salfa_point('virements', function (): array {
             }
             unset($ancienCompte);
             if (!$trouve) throw new SalFaErreur('Compte bancaire introuvable.', 404, 'compte_absent');
+        } elseif ($operation === 'supprimer_compte') {
+            $compteId = $corps['compteId'] ?? null;
+            if (!is_string($compteId) || $compteId === '') throw new SalFaErreur('Compte manquant.', 400, 'virements_invalides');
+            foreach ($registre['ecritures'] as $ecriture) {
+                if (($ecriture['compteId'] ?? null) === $compteId) {
+                    throw new SalFaErreur('Ce compte porte des virements : il ne peut pas être supprimé. Corrigez son RIB plutôt.', 409, 'compte_utilise');
+                }
+            }
+            $restants = [];
+            foreach ($registre['comptes'] as $compte) {
+                if ($compte['id'] !== $compteId) $restants[] = $compte;
+            }
+            if (count($restants) === count($registre['comptes'])) throw new SalFaErreur('Compte bancaire introuvable.', 404, 'compte_absent');
+            $registre['comptes'] = $restants;
         } elseif ($operation === 'ajouter') {
             $v = $corps['virement'] ?? null;
             if (!is_array($v)) throw new SalFaErreur('Virement manquant.', 400, 'virements_invalides');
