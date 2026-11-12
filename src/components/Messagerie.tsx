@@ -6,7 +6,7 @@ import { libelleRole } from '../utils/roles';
 import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages } from '../utils/son-messages';
 import { Modale } from './Modale';
 
-const DUREE_SON_SECONDES = 3;
+const DUREE_SON_SECONDES = 1;
 const CLE = 'salfa_messages_prives';
 const CLE_SUPPRESSIONS = 'salfa_messages_suppressions';
 function suppressionsLocales(): Record<string, number[]> {
@@ -56,7 +56,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       const volume = contexte.createGain();
       oscillateur.frequency.value = 740;
       volume.gain.setValueAtTime(0.08, contexte.currentTime);
-      // L'enveloppe garde le volume pendant 2,8 secondes puis atténue la fin,
+      // L'enveloppe garde le volume pendant 0,8 seconde puis atténue la fin,
       // sans dépendre des minuteurs JavaScript ralentis en arrière-plan.
       volume.gain.setValueAtTime(0.08, contexte.currentTime + DUREE_SON_SECONDES - 0.2);
       volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + DUREE_SON_SECONDES);

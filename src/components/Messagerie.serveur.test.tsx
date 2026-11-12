@@ -88,7 +88,7 @@ it('la cloche active et désactive le son, même si les notifications sont bloqu
   vi.useRealTimers();
 });
 
-it('sonne pendant trois secondes lorsque la page est en arrière-plan, puis respecte la cloche', async () => {
+it('sonne pendant une seconde lorsque la page est en arrière-plan, puis respecte la cloche', async () => {
   const { ControlesFlottants } = await import('./ControlesFlottants');
   const etatInitial = Object.getOwnPropertyDescriptor(document, 'visibilityState');
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
@@ -106,9 +106,9 @@ it('sonne pendant trois secondes lorsque la page est en arrière-plan, puis resp
     serveur.lire.mockResolvedValue({ comptes, messages: [message] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
     expect(demarrer).toHaveBeenCalledOnce();
-    expect(arreter).toHaveBeenCalledWith(13);
-    expect(volume.gain.setValueAtTime).toHaveBeenCalledWith(0.08, 12.8);
-    expect(volume.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 13);
+    expect(arreter).toHaveBeenCalledWith(11);
+    expect(volume.gain.setValueAtTime).toHaveBeenCalledWith(0.08, 10.8);
+    expect(volume.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 11);
     expect(screen.queryByRole('dialog', { name: 'Messages privés' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Désactiver le son des messages' }));
     expect(arreter).toHaveBeenLastCalledWith();
