@@ -302,7 +302,7 @@ export interface MessagePrive {
   auteurNom: string; destinataireNom: string; contenu: string; creeLe: string; luLe: string | null;
 }
 export interface BoiteMessages {
-  comptes: { id: number | string; nomComplet: string; identifiant: string; enLigne?: boolean | number | string | null }[];
+  comptes: { id: number | string; nomComplet: string; identifiant: string; role?: string; enLigne?: boolean | number | string | null }[];
   messages: MessagePrive[];
 }
 export function lireMessages(): Promise<BoiteMessages> { return appeler('messages'); }

@@ -42,7 +42,7 @@ salfa_point('messages', function (): array {
         } else throw new SalFaErreur('Action inconnue.', 400, 'action_inconnue');
     } else salfa_exiger_methode('GET');
     $presence = 'EXISTS (SELECT 1 FROM ' . $presences . ' p WHERE p.utilisateur_id = u.id AND p.expire_le > NOW(3))';
-    $comptes = salfa_executer('SELECT u.id, u.nom_complet AS nomComplet, u.identifiant, ' . $presence . ' AS enLigne FROM ' . salfa_table('utilisateurs') . ' u WHERE u.actif = 1 AND u.id <> ? ORDER BY u.nom_complet', [$uid])->fetchAll();
+    $comptes = salfa_executer('SELECT u.id, u.nom_complet AS nomComplet, u.identifiant, u.role, ' . $presence . ' AS enLigne FROM ' . salfa_table('utilisateurs') . ' u WHERE u.actif = 1 AND u.id <> ? ORDER BY u.nom_complet', [$uid])->fetchAll();
     $messages = salfa_executer("SELECT id, auteur_id AS auteurId, destinataire_id AS destinataireId, auteur_nom AS auteurNom, destinataire_nom AS destinataireNom, contenu, cree_le AS creeLe, lu_le AS luLe FROM $table m WHERE (auteur_id = ? OR destinataire_id = ?) AND NOT EXISTS (SELECT 1 FROM $suppressions x WHERE x.message_id = m.id AND x.utilisateur_id = ?) ORDER BY id DESC", [$uid, $uid, $uid])->fetchAll();
     return ['ok' => true, 'comptes' => $comptes, 'messages' => $messages];
 });

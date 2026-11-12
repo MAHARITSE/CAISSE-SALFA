@@ -15,16 +15,14 @@ describe('messagerie en conversations', () => {
     const vue = render(<Messagerie utilisateur={admin} />);
     fireEvent.click(screen.getByRole('button', { name: 'Messages privés' }));
     expect(screen.queryByLabelText('Destinataire')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Nouveau message' }));
-    await screen.findByRole('option', { name: 'Caisse (caisse)' });
-    fireEvent.change(screen.getByLabelText('Destinataire'), { target: { value: '2' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Caisse.*caisse/ }));
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Bonjour' } });
     fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
     await screen.findByLabelText('Conversation avec Caisse');
     vue.unmount();
     const vue2 = render(<Messagerie utilisateur={autre} />);
     fireEvent.click(screen.getByRole('button', { name: 'Messages privés' }));
-    await screen.findByText(/Aucun message/);
+    await screen.findByText(/Sélectionnez un utilisateur/);
     expect(screen.queryByText('Bonjour')).not.toBeInTheDocument();
     vue2.unmount();
     render(<Messagerie utilisateur={caisse} />);
@@ -33,7 +31,7 @@ describe('messagerie en conversations', () => {
     expect(screen.getByLabelText('Conversation avec Admin')).toHaveTextContent('Bonjour');
     fireEvent.click(screen.getByRole('button', { name: 'Répondre' }));
     expect(screen.queryByLabelText('Destinataire')).not.toBeInTheDocument();
-    expect(screen.getByText('Réponse à')).toHaveTextContent('Admin');
+    expect(screen.getByText(/Réponse à Admin/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Bien reçu' } });
     fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
     await screen.findByText('Bien reçu');
@@ -54,10 +52,9 @@ describe('messagerie en conversations', () => {
     const conversation = screen.getByLabelText('Conversation avec Admin');
     expect(within(conversation).getAllByRole('article').map(a => a.textContent)).toEqual([expect.stringContaining('Message reçu'), expect.stringContaining('Réponse envoyée')]);
     expect(within(conversation).queryByText('Autre discussion')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Écrire un message' }));
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Brouillon important' } });
     vi.spyOn(window, 'confirm').mockReturnValue(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Retour aux conversations' }));
+    fireEvent.click(screen.getByRole('button', { name: /Autre.*Autre discussion/ }));
     expect(screen.getByLabelText('Message')).toHaveValue('Brouillon important');
   });
   it('désactive la réponse lorsque l’expéditeur n’est plus actif', async () => {
@@ -110,7 +107,7 @@ describe('suppression individuelle', () => {
     await waitFor(() => expect(screen.queryByText('Premier')).not.toBeInTheDocument());
     expect(screen.getByText('Second')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer toute la conversation' }));
-    await screen.findByText(/Aucun message/);
+    await waitFor(() => expect(screen.queryByText('Second')).not.toBeInTheDocument());
     expect(JSON.parse(localStorage.getItem('salfa_messages_prives')!)).toHaveLength(2);
     vue.unmount();
     render(<Messagerie utilisateur={admin} />);
