@@ -274,7 +274,10 @@ export function App() {
       return donneesLocales;
     });
     if (!reussi) return false;
-    setSaisie(null); setDerniereSupprimee(null); setMois(ecriture.date.slice(0, 7)); reinitialiser();
+    setSaisie(null); setDerniereSupprimee(null);
+    // En modification, conserver la sélection du journal (y compris le mois),
+    // même si l'écriture modifiée ne correspond plus aux filtres.
+    if (!edition) { setMois(ecriture.date.slice(0, 7)); reinitialiser(); }
     const document = numeroDocument(ecriture.numero);
     setNotification(edition
       ? 'Modification enregistrée. Les soldes ont été recalculés.'
