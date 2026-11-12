@@ -27,7 +27,7 @@ const TABLE_ATTENDUE = [
   'salfa_livre', 'salfa_parametres', 'salfa_ecritures', 'salfa_details',
   'salfa_masques', 'salfa_masque_lignes', 'salfa_entetes', 'salfa_categories',
   'salfa_compteurs', 'salfa_clotures', 'salfa_utilisateurs', 'salfa_sessions',
-  'salfa_tentatives', 'salfa_journal_audit',
+  'salfa_tentatives', 'salfa_journal_audit', 'salfa_registre_virements',
 ];
 
 describe('fichier SQL livré avec le paquet', () => {
@@ -35,13 +35,13 @@ describe('fichier SQL livré avec le paquet', () => {
     expect(existsSync(fichier)).toBe(true);
   });
 
-  it('crée la base et les 14 tables salfa_', () => {
+  it('crée la base et les 15 tables salfa_', () => {
     expect(contenu).toMatch(new RegExp(`CREATE DATABASE IF NOT EXISTS \`${valeur('base')}\``));
     expect(contenu).toMatch(new RegExp(`USE \`${valeur('base')}\`;`));
     for (const table of TABLE_ATTENDUE) {
       expect(contenu, `table ${table} absente du SQL livré`).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
     }
-    expect(contenu.match(/CREATE TABLE IF NOT EXISTS/g)).toHaveLength(14);
+    expect(contenu.match(/CREATE TABLE IF NOT EXISTS/g)).toHaveLength(15);
   });
 
   it('crée les deux comptes de connexion avec une empreinte bcrypt', () => {

@@ -574,6 +574,9 @@ function salfa_restaurer_sauvegarde(array $corps): void
         throw new SalFaErreur('Compteurs invalides.', 400, 'sauvegarde_invalide');
     }
 
+    // Les sauvegardes antérieures sans registre bancaire ne l'effacent pas.
+    $registreVirements = array_key_exists('virements', $sauvegarde) ? salfa_valider_registre_virements($sauvegarde['virements']) : null;
+
     $pdo = salfa_pdo();
     $pdo->beginTransaction();
     try {
@@ -617,6 +620,17 @@ function salfa_restaurer_sauvegarde(array $corps): void
             }
         }
         salfa_fusionner_compteurs($compteurs);
+        if ($registreVirements !== null) {
+            // Conserver les compteurs les plus avancés pour ne jamais réattribuer
+            // un numéro utilisé après la date de la sauvegarde restaurée.
+            $actuel = salfa_lire_registre_virements();
+            $compteursVirements = (array) $registreVirements['compteurs'];
+            foreach ((array) $actuel['compteurs'] as $cle => $valeur) {
+                $compteursVirements[$cle] = max($compteursVirements[$cle] ?? 0, $valeur);
+            }
+            $registreVirements['compteurs'] = (object) $compteursVirements;
+            salfa_ecrire_registre_virements($registreVirements);
+        }
         salfa_incrementer_revision();
         $pdo->commit();
     } catch (Throwable $echec) {

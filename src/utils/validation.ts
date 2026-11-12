@@ -1,3 +1,4 @@
+import { validerRegistreVirements } from './virements';
 import type { DonneesCaisse, Ecriture, ExerciceCloture, LigneDetail, MasqueSaisie, Parametres, Sauvegarde, Sens } from '../types';
 import { ANNEE_MAX, ANNEE_MIN, MAX_CATEGORIES, MAX_CLOTURES, MAX_DETAILS, MAX_ECRITURES, MAX_LONGUEUR_CATEGORIE, MONTANT_MAX, categoriesParDefaut, categoriesPour } from './constants';
 import { entetesParDefaut, normaliserEntetes } from './entete';
@@ -270,7 +271,7 @@ export function validerDonnees(valeur: unknown): DonneesCaisse {
   // reprend celui livré par l'application, sans copie obsolète.
   const entetes = d.entetes === undefined ? normaliserEntetes(entetesParDefaut()) : normaliserEntetes(d.entetes);
   const categories = validerCategories(d.categories);
-  return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes, categories };
+  return { ecritures, parametres, masques, compteurs, exercicesClotures, entetes, categories, ...(d.virements === undefined ? {} : { virements: validerRegistreVirements(d.virements) }) };
 }
 
 export function validerSauvegarde(valeur: unknown): Sauvegarde {

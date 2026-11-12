@@ -20,7 +20,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config.php';
 
-const SALFA_TABLES_ATTENDUES = 14;
+const SALFA_TABLES_ATTENDUES = 15;
 
 /** Message utilisateur pour une erreur PDO, sans exposer le mot de passe. */
 function salfa_erreur_mysql(Throwable $e): string
@@ -261,13 +261,27 @@ function salfa_amorcer_silencieusement(): void
         return;
     }
     $fait = true;
+    $pdo = null;
     try {
         $pdo = salfa_pdo();
-        if (salfa_compter_tables($pdo) >= SALFA_TABLES_ATTENDUES) {
-            return;
-        }
+        $requete = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?');
+        $requete->execute([salfa_prefixe() . 'livre']);
+        $livreExistant = (int) $requete->fetchColumn() === 1;
     } catch (Throwable $e) {
-        // Base ou configuration absente : on tente l'amorçage complet ci-dessous.
+        $livreExistant = false;
+    }
+    if ($pdo !== null && $livreExistant) {
+        // Mise à jour ciblée : ne jamais rejouer le SQL de données initiales
+        // sur une caisse existante, il écraserait les écritures et réglages.
+        $requete->execute([salfa_prefixe() . 'registre_virements']);
+        if ((int) $requete->fetchColumn() === 0) {
+            try {
+                $pdo->exec('CREATE TABLE IF NOT EXISTS ' . salfa_table('registre_virements') . ' (id TINYINT UNSIGNED NOT NULL PRIMARY KEY, contenu LONGTEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+            } catch (Throwable $e) {
+                throw new SalFaErreur('Création du registre de virements impossible. Vérifiez le droit CREATE de MySQL.', 503, 'migration_virements');
+            }
+        }
+        return;
     }
     try {
         salfa_amorcer();

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import ExcelJS from 'exceljs';
 
 /**
  * L'application s'ouvre sur la page de connexion : chaque parcours commence par
@@ -19,7 +20,7 @@ async function ouvrirSession(page: Page, identifiant = 'admin', motDePasse = 'ad
   await expect(titre).toBeVisible();
 }
 
-test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dialogue accessible', async ({ page }) => {
+test('parcours desktop : saisie détaillée, persistance, Excel, bordereau et dialogue accessible', async ({ page }) => {
   await page.addInitScript(() => { window.print = () => {}; });
   const erreurs: string[] = [];
   page.on('pageerror', e => erreurs.push(e.message));
@@ -59,14 +60,14 @@ test('parcours desktop : saisie détaillée, persistance, CSV, bordereau et dial
   expect(stocke.ecritures[0].lignesDetail[0]).toMatchObject({ libelle: 'CONSULTATION', montant: 4000 });
 
   const telechargement = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Exporter CSV' }).click();
-  const csv = await readFile(await (await telechargement).path()!, 'utf8');
-  const lignes = csv.replace(/^\uFEFF/, '').split('\r\n').map(l => l.split(';'));
-  const debut = lignes.findIndex(l => l[0] === 'Date') + 2;
-  const fin = lignes.findIndex(l => l[2] === 'TOTAUX DE LA PÉRIODE');
-  const total = lignes.slice(debut, fin).reduce((s, l) => s + (Number(l[8]) || 0), 0);
-  expect(total).toBe(10000);
-  expect(csv).toContain('CONSULTATION');
+  await page.getByRole('button', { name: 'Exporter Excel' }).click();
+  const fichier = await telechargement;
+  expect(fichier.suggestedFilename()).toMatch(/\.xlsx$/);
+  const classeur = new ExcelJS.Workbook();
+  await classeur.xlsx.load(await readFile(await fichier.path()!));
+  const feuille = classeur.getWorksheet('Livre journal')!;
+  expect(feuille.getColumn(8).values).toContain(10000);
+  expect(feuille.getColumn(3).values.join(' ')).toContain('CONSULTATION');
 
   await page.getByRole('button', { name: /^Imprimer le bordereau RC-/ }).first().click();
   await page.emulateMedia({ media: 'print' });

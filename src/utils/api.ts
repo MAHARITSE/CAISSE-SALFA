@@ -1,3 +1,4 @@
+import type { CompteVirement, NouvelleOperationVirement, Virement } from './virements';
 import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
 import { normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
 import { categoriesParDefaut } from './constants';
@@ -160,6 +161,7 @@ export function normaliserLivreServeur(brut: unknown): Sauvegarde {
     masques: Array.isArray(livre.masques) ? livre.masques : [],
     compteurs: livre.compteurs && typeof livre.compteurs === 'object' ? livre.compteurs : {},
     exercicesClotures: Array.isArray(livre.exercicesClotures) ? livre.exercicesClotures : [],
+    ...(livre.virements === undefined ? {} : { virements: livre.virements }),
     entetes: normaliserEntetes(livre.entetes),
     categories: livre.categories && typeof livre.categories === 'object'
       ? { recette: livre.categories.recette ?? [], depense: livre.categories.depense ?? [] }
@@ -185,7 +187,15 @@ const mutation = (route: string, corps: Record<string, unknown>) =>
   appeler<{ livre: unknown }>(route, { methode: 'POST', corps })
     .then(reponse => ({ livre: normaliserLivreServeur(reponse.livre) }));
 
+export type ActionVirement =
+  | { operation: 'ajouter_compte'; compte: CompteVirement }
+  | { operation: 'ajouter_comptes'; comptes: CompteVirement[] }
+  | { operation: 'modifier_compte'; compte: CompteVirement }
+  | { operation: 'ajouter'; virement: NouvelleOperationVirement }
+  | { operation: 'modifier'; virement: Virement };
+
 export const mutations = {
+  virement: (revision: number, action: ActionVirement) => mutation('virements', { revision, ...action }),
   ecriture: (revision: number, ecriture: Ecriture) =>
     mutation('ecritures', { revision, ecriture }),
   supprimer: (revision: number, id: string) =>

@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, Eye, EyeOff, HeartPulse, KeyRound, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, Eye, EyeOff, HeartPulse, KeyRound, Landmark, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
 import type { DonneesCaisse, Ecriture, FiltresJournal, LigneJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
 import { verifierContexteEcriture } from './utils/conflit-ecriture';
 import { calculerJournal, changerSoldeInitial, clotureAutorisee, cloturerExercice, enregistrerCategories, enregistrerEntete, enregistrerEcriture, enregistrerMasques, filtrerJournal, prochainNumero, restaurerEcriture, soldeCloture, soldeOuverture, supprimerEcriture, totaliser } from './utils/ledger';
 import { anneeCourante, dateFr, decalerMois, formatAr, libelleMois, moisCourant } from './utils/format';
 
-import { exporterLivreCsv, telechargerTexte } from './utils/export';
+import { telechargerTexte } from './utils/export';
 import { exporterArchiveExercice, exporterSqlLivre, exporterSecours } from './utils/backup';
 import { Messagerie } from './components/Messagerie';
 import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
+import { LivreVirements } from './components/LivreVirements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
+import type { ActionVirement } from './utils/api';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
 import { GestionCategoriesModal } from './components/GestionCategoriesModal';
@@ -264,6 +267,47 @@ export function App() {
     if (onglet !== 'journal' && onglet !== 'analyse') setOnglet('journal');
   }
 
+  async function exporterExcelSelection() {
+    try {
+      const { exporterLivreExcel } = await import('./utils/export-excel');
+      await exporterLivreExcel(lignes, { periode, soldeOuverture: ouverture, ...totauxSelection, soldeFin, selection: filtreActif });
+      setNotification('Export Excel téléchargé.');
+    } catch {
+      setNotification('L’export Excel a échoué. Réessayez ou utilisez la sauvegarde SQL.');
+    }
+  }
+
+  async function imprimerSelection() {
+    // Ouvrir la fenêtre pendant le clic évite le blocage des pop-up après import asynchrone.
+    const fenetre = window.open('', '_blank');
+    if (!fenetre) { setNotification('Autorisez les fenêtres contextuelles pour imprimer l’état.'); return; }
+    try {
+      const { ouvrirEtatPourImpression } = await import('./utils/export-pdf');
+      ouvrirEtatPourImpression(lignes, livre.entetes, periode, fenetre);
+    } catch (e) {
+      fenetre.close();
+      setNotification(e instanceof Error ? `Impression impossible : ${e.message}` : 'Impression impossible.');
+    }
+  }
+
+  async function enregistrerVirement(action: ActionVirement): Promise<boolean> {
+    if (!peutGererVirements(role) || erreur) return false;
+    const appliquer = (registre: NonNullable<DonneesCaisse['virements']>) => {
+      if (action.operation === 'ajouter_compte') return ajouterCompteVirement(registre, action.compte);
+      if (action.operation === 'ajouter_comptes') return ajouterComptesVirement(registre, action.comptes);
+      if (action.operation === 'modifier_compte') return modifierCompteVirement(registre, action.compte);
+      if (action.operation === 'ajouter') return ajouterVirement(registre, action.virement);
+      return modifierVirement(registre, action.virement);
+    };
+    // Refuser une saisie invalide avant de toucher au stockage ou à l'API.
+    appliquer(livre.virements ?? registreVirementsVide());
+    const reussi = MODE_API
+      ? await muterEnLigne(revision => mutations.virement(revision, action))
+      : muter(d => ({ ...d, virements: appliquer(d.virements ?? registreVirementsVide()) }));
+    if (reussi) setNotification(['ajouter_compte', 'ajouter_comptes', 'modifier_compte'].includes(action.operation) ? 'Compte bancaire enregistré.' : 'Virement enregistré.');
+    return reussi;
+  }
+
   async function enregistrer(ecriture: Ecriture) {
     const edition = Boolean(saisie?.edition);
     const livreEnregistre = MODE_API ? await muterEcritureEnLigne(ecriture, saisie?.edition ?? null) : null;
@@ -421,17 +465,20 @@ export function App() {
 
   const navigation = [
     { id: 'journal' as const, label: 'Livre journal', labelCourt: 'Journal', icone: BookOpen },
+    { id: 'virements' as const, label: 'Livre des virements', labelCourt: 'Virements', icone: Landmark },
     { id: 'analyse' as const, label: 'Analyse de la caisse', labelCourt: 'Analyse', icone: ChartNoAxesCombined },
     { id: 'exercices' as const, label: 'Exercices & clôtures', labelCourt: 'Exercices', icone: CalendarCheck },
     { id: 'donnees' as const, label: 'Données & sauvegardes', labelCourt: 'Données', icone: Database },
     { id: 'administration' as const, label: 'Administration', labelCourt: 'Admin', icone: Settings2 },
   ].filter(n => autorises.includes(n.id));
   const titrePage = onglet === 'journal' ? 'Livre de caisse'
+    : onglet === 'virements' ? 'Livre des virements'
     : onglet === 'analyse' ? 'Analyse de la caisse'
     : onglet === 'exercices' ? 'Exercices & clôtures'
     : onglet === 'administration' ? 'Administration'
     : 'Données & sauvegardes';
   const sousTitrePage = onglet === 'journal' ? 'Chaque mouvement compte. Gardez une trace claire de votre trésorerie.'
+    : onglet === 'virements' ? 'Recettes et dépenses bancaires, séparées de la caisse en espèces.'
     : onglet === 'analyse' ? 'Comprenez vos recettes et vos dépenses, période par période.'
     : onglet === 'exercices' ? 'La caisse se clôture chaque année : l’exercice en cours reste court, les précédents sont archivés.'
     : onglet === 'administration' ? 'Les réglages de la caisse et les personnes qui y accèdent, chacune à sa place.'
@@ -511,7 +558,7 @@ export function App() {
         </div>
       </header>
       <main id="contenu" tabIndex={-1} className="w-full space-y-5 px-4 pb-20 pt-6 outline-none sm:px-7 sm:pb-20 sm:pt-7">
-        <div className="no-print flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">{titrePage}</h1><p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{sousTitrePage}</p></div>{onglet === 'journal' && <div className="flex flex-wrap gap-2"><button type="button" className={`btn-secondary ${!afficherSynthese ? '!border-slate-300 dark:!border-slate-700' : ''}`} onClick={basculerSynthese} aria-expanded={afficherSynthese} aria-label={afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'} title={afficherSynthese ? 'Masquer les cartes de synthèse' : 'Afficher les cartes de synthèse'}>{afficherSynthese ? <EyeOff size={16} /> : <Eye size={16} />}<span>{afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'}</span></button><button className="btn-secondary" disabled={Boolean(erreur)} onClick={() => { try { exporterLivreCsv(lignes, { periode, soldeOuverture: ouverture, ...totauxSelection, soldeFin, selection: filtreActif }); setNotification('Export CSV téléchargé. Les montants détaillés ne sont pas comptés deux fois.'); } catch { setNotification('L’export a échoué. Réessayez ou utilisez la sauvegarde SQL.'); } }}><Download size={16} />Exporter CSV</button><button className="btn-secondary" disabled={Boolean(erreur)} onClick={() => window.print()}><Printer size={16} />Imprimer</button></div>}</div>
+        <div className="no-print flex flex-wrap items-center justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">{titrePage}</h1><p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{sousTitrePage}</p></div>{onglet === 'journal' && <div className="flex flex-wrap gap-2"><button type="button" className={`btn-secondary ${!afficherSynthese ? '!border-slate-300 dark:!border-slate-700' : ''}`} onClick={basculerSynthese} aria-expanded={afficherSynthese} aria-label={afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'} title={afficherSynthese ? 'Masquer les cartes de synthèse' : 'Afficher les cartes de synthèse'}>{afficherSynthese ? <EyeOff size={16} /> : <Eye size={16} />}<span>{afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'}</span></button><button className="btn-secondary" disabled={Boolean(erreur)} onClick={() => void exporterExcelSelection()}><Download size={16} />Exporter Excel</button><button className="btn-secondary" disabled={Boolean(erreur) || lignes.length === 0} title={lignes.length ? 'Imprimer les écritures affichées' : 'Aucune écriture à imprimer'} onClick={() => void imprimerSelection()}><Printer size={16} />Imprimer</button></div>}</div>
         {erreur && <div role="alert" className="no-print rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900/60 dark:bg-rose-950/40"><div className="flex items-start gap-3"><AlertTriangle size={22} className="mt-0.5 shrink-0 text-rose-600 dark:text-rose-400" /><div className="space-y-3"><p className="text-sm leading-relaxed text-rose-900 dark:text-rose-200">{erreur}</p><div className="flex flex-wrap gap-2"><button className="btn-secondary" onClick={rechargerLivre}><RefreshCw size={15} />Recharger</button><button className="btn-secondary" onClick={() => setOnglet('donnees')}><Database size={15} />Données & sauvegardes</button></div></div></div></div>}
         {avertissement && !erreur && <div className="no-print flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3.5 text-sm leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"><AlertTriangle size={18} className="mt-0.5 shrink-0" />{avertissement}</div>}
         {messageSync && !erreur && <div role="status" className="no-print flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200"><RefreshCw size={18} className="shrink-0" />{messageSync}</div>}
@@ -541,6 +588,7 @@ export function App() {
           </section></div>
           {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onDemanderPrecision={administre && !archiveConsultee ? setDemandeCible : undefined} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
+        {onglet === 'virements' && peutGererVirements(role) && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour consulter les virements.</p> : <LivreVirements registre={livre.virements ?? registreVirementsVide()} categories={livre.categories} entete={livre.entetes} onMutation={enregistrerVirement} erreurExterne={erreur} />)}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} value={mois} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} categoriesDepense={livre.categories.depense} onModifierCategorieDepense={saisieOuverte && !archiveConsultee ? modifierCategorieDepense : undefined} raisonLectureSeule={archiveConsultee ? 'Exercice clôturé : les catégories sont en lecture seule.' : !saisieOuverte ? 'Votre rôle permet la consultation uniquement.' : undefined} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} administrateur={administre} exerciceActif={exerciceAffiche} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} onOuvrirExercice={changerExerciceConsulte} />)}
         {onglet === 'donnees' && <DonneesSauvegardes livre={livre} administrateur={administre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}

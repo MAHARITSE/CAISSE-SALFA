@@ -238,6 +238,7 @@ function salfa_charger_livre(): array
         // toujours au moins le modèle livré (même forme que enteteParDefaut()).
         'entetes' => salfa_entetes_ou_defaut(salfa_charger_entetes()),
         'categories' => salfa_categories_ou_defaut(salfa_charger_categories()),
+        ...((($user = salfa_utilisateur_courant(false)) && in_array($user['role'], ['admin', 'comptable'], true)) ? ['virements' => salfa_lire_registre_virements()] : []),
     ];
 }
 

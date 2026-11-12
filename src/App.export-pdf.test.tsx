@@ -1,0 +1,55 @@
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import App from './App';
+import { ecritureTest, livreTest, parametresTest } from './test/fixtures';
+import { enregistrerEcriture } from './utils/ledger';
+import { sauvegarderLivre } from './utils/storage';
+
+const impression = vi.hoisted(() => vi.fn());
+const excel = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock('./utils/export-pdf', () => ({ ouvrirEtatPourImpression: impression }));
+vi.mock('./utils/export-excel', () => ({ exporterLivreExcel: excel }));
+
+describe('impression de la sélection affichée', () => {
+  it('transmet uniquement les écritures filtrées avec l’en-tête enregistré', async () => {
+    const annee = new Date().getFullYear();
+    let livre = enregistrerEcriture(livreTest({ parametres: parametresTest({ exercice: annee }) }), ecritureTest({ id: 'janvier', date: `${annee}-01-15`, libelle: 'RECETTE JANVIER' }));
+    livre = enregistrerEcriture(livre, ecritureTest({ id: 'fevrier', date: `${annee}-02-15`, libelle: 'RECETTE FEVRIER' }));
+    livre.entetes.lignes[0].texte = 'HÔPITAL DE TEST';
+    sauvegarderLivre(livreTest(livre), 0);
+    render(<App />);
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await user.type(screen.getByLabelText('Identifiant'), 'admin');
+    await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
+    await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+    await screen.findByRole('heading', { name: 'Livre de caisse' });
+    fireEvent.change(screen.getByLabelText('Mois affiché'), { target: { value: `${annee}-01` } });
+    await user.type(screen.getByLabelText('Rechercher dans le journal'), 'JANVIER');
+    const fenetre = { close: vi.fn() } as unknown as Window;
+    const ouvrir = vi.spyOn(window, 'open').mockReturnValue(fenetre);
+    await user.click(screen.getByRole('button', { name: 'Imprimer' }));
+    await waitFor(() => expect(impression).toHaveBeenCalledOnce());
+    const [lignes, entete, periode, destination] = impression.mock.calls[0];
+    expect(destination).toBe(fenetre);
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0].id).toBe('janvier');
+    expect(entete.lignes[0].texte).toBe('HÔPITAL DE TEST');
+    expect(periode).toBe(`janvier ${annee}`);
+    await user.click(screen.getByRole('button', { name: 'Exporter Excel' }));
+    await waitFor(() => expect(excel).toHaveBeenCalledOnce());
+    expect(excel.mock.calls[0][0]).toHaveLength(1);
+    expect(excel.mock.calls[0][0][0].id).toBe('janvier');
+    expect(excel.mock.calls[0][1]).toMatchObject({ periode: `janvier ${annee}`, selection: true });
+    ouvrir.mockReturnValue(null);
+    await user.click(screen.getByRole('button', { name: 'Imprimer' }));
+    expect(screen.getByText(/Autorisez les fenêtres contextuelles/)).toBeInTheDocument();
+    expect(impression).toHaveBeenCalledOnce();
+    await user.clear(screen.getByLabelText('Rechercher dans le journal'));
+    await user.type(screen.getByLabelText('Rechercher dans le journal'), 'introuvable');
+    expect(screen.getByRole('button', { name: 'Imprimer' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Exporter PDF' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Exporter Excel' })).toBeEnabled();
+  });
+});

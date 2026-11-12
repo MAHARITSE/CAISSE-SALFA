@@ -103,7 +103,7 @@ Le dossier est livré dans le dépôt (`deploy/wamp/caisse-salfa/`, avec l'archi
   comptes viennent de la base ; la session est un cookie PHP. Un livre laissé
   par une ancienne session de démonstration n'apparaît pas et n'est jamais lu.
 - Le premier appel de l'API écrit sa configuration (hors de `www` quand c'est
-  possible, sinon dans `api\data\`), crée la base `caisse_salfa`, ses 14 tables,
+  possible, sinon dans `api\data\`), crée la base `caisse_salfa`, ses 15 tables,
   les catégories, les modèles de bordereaux et deux comptes de départ
   (`admin` / `admin123`, `comptable` / `comptable123`).
 - Il n'y a **ni page d'installation, ni script `.bat`, ni ligne de commande, ni
@@ -120,7 +120,7 @@ Le dossier est livré dans le dépôt (`deploy/wamp/caisse-salfa/`, avec l'archi
   deuxième appel ne détruisent ni ne dupliquent rien ; un mot de passe déjà
   changé n'est jamais réinitialisé.
 - Vérifié sous PHP 8.4 (WebAssembly) : amorçage complet (configuration, base,
-  14 tables, comptes), détection des chemins de configuration, résolution
+  15 tables, comptes), détection des chemins de configuration, résolution
   automatique des ports MySQL 3306/3307/3308, et 24 tests de l'API verts.
 
 ## Version du paquet

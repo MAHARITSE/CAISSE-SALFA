@@ -34,6 +34,7 @@ salfa_point('index', function (): void {
         'livre' => 'livre',
         'precisions' => 'precisions',
         'messages' => 'messages',
+        'virements' => 'virements',
         'ecritures' => 'ecritures',
         'ecritures-supprimer' => 'ecritures-supprimer',
         'ecritures-restaurer' => 'ecritures-restaurer',

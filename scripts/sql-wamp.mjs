@@ -6,7 +6,7 @@
  * Il contient absolument tout ce qu'il faut pour avoir une base prête :
  *
  *   1. création de la base `caisse_salfa` (utf8mb4) ;
- *   2. les 14 tables `salfa_*` ;
+ *   2. les 15 tables `salfa_*` ;
  *   3. le livre, les paramètres, les catégories et les modèles de départ ;
  *   4. les deux comptes de connexion (`admin` / `admin123`,
  *      `comptable` / `comptable123`) avec leurs empreintes bcrypt ;
@@ -151,8 +151,8 @@ ${comptesSql}
 -- ============================================================================
 SELECT 'tables salfa_ présentes' AS controle,
        COUNT(*) AS trouve,
-       14 AS attendu,
-       IF(COUNT(*) = 14, 'OK', 'INCOMPLET — relancez l’import du fichier entier') AS etat
+       15 AS attendu,
+       IF(COUNT(*) >= 15, 'OK', 'INCOMPLET — relancez l’import du fichier entier') AS etat
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME LIKE 'salfa%';

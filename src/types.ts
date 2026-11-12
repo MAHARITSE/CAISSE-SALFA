@@ -1,3 +1,4 @@
+import type { RegistreVirements } from './utils/virements';
 import type { EntetesDocuments } from './utils/entete';
 
 export type { EntetesDocuments };
@@ -72,6 +73,8 @@ export interface Categories {
 }
 
 export interface DonneesCaisse {
+  /** Registre bancaire indépendant, absent des sauvegardes antérieures. */
+  virements?: RegistreVirements;
   ecritures: Ecriture[];
   parametres: Parametres;
   masques: MasqueSaisie[];

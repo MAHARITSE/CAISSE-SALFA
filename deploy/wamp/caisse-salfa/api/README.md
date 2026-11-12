@@ -9,7 +9,7 @@ catégories, les modèles de bordereaux et les comptes de départ se créent tou
 seuls au premier lancement.
 
 **Le fichier SQL est livré avec le site : `api/caisse-salfa.sql`.** Il contient
-toute la base — les 14 tables, les catégories, les modèles de bordereaux, les
+toute la base — les 15 tables, les catégories, les modèles de bordereaux, les
 paramètres et les deux comptes de connexion. Normalement vous n'en avez pas
 besoin : l'API prépare tout seule au premier appel. Il sert quand on préfère
 partir d'une base déjà faite, ou la déplacer d'un serveur à l'autre :
@@ -48,7 +48,7 @@ Au premier appel, l'API :
 - écrit sa configuration `C:\wamp64\salfa-config.php` (hors de `www`, donc
   invisible depuis le navigateur) ;
 - crée la base `caisse_salfa` si elle n'existe pas ;
-- crée ses 14 tables et les données de départ (catégories, modèles de
+- crée ses 15 tables et les données de départ (catégories, modèles de
   bordereaux) ;
 - crée deux comptes :
 
@@ -159,7 +159,7 @@ Que faire, dans l’ordre :
 
 1. **Ctrl+F5** (vider le cache) : le navigateur a pu garder un ancien
    `index.html` avec l’ancien JavaScript.
-2. Ouvrir `api/index.php?action=verifier` : si les 14 tables sont présentes et
+2. Ouvrir `api/index.php?action=verifier` : si les 15 tables sont présentes et
    MySQL connecté, le problème est côté navigateur, pas côté base.
 3. Dans l’onglet « Données & sauvegardes », « Recharger le livre » : le livre
    repart de MySQL.

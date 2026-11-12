@@ -38,7 +38,7 @@ export interface UtilisateurConnecte {
 export const ROLES: Array<{ valeur: Role; libelle: string; resume: string }> = [
   { valeur: 'admin', libelle: 'Administrateur', resume: 'Tout : Administration, journal, analyse, exercices, données.' },
   { valeur: 'caissier', libelle: 'Caissière', resume: 'Le livre journal seulement : saisie des recettes et des dépenses.' },
-  { valeur: 'comptable', libelle: 'Comptable', resume: 'Le livre journal et l’analyse de la caisse, sans saisie.' },
+  { valeur: 'comptable', libelle: 'Comptable', resume: 'Journal et analyse en lecture ; saisie et modification des virements.' },
 ];
 
 export function libelleRole(role: Role | string): string {
@@ -46,7 +46,7 @@ export function libelleRole(role: Role | string): string {
 }
 
 /** Onglets de l'application, filtrés par rôle. */
-export type OngletApplication = 'journal' | 'analyse' | 'exercices' | 'donnees' | 'administration';
+export type OngletApplication = 'journal' | 'virements' | 'analyse' | 'exercices' | 'donnees' | 'administration';
 
 /**
  * Un rôle ouvre exactement les onglets listés ici.
@@ -55,8 +55,8 @@ export type OngletApplication = 'journal' | 'analyse' | 'exercices' | 'donnees' 
  * données. Le comptable consulte le journal et l'analyse.
  */
 export function ongletsAutorises(role: Role | string): OngletApplication[] {
-  if (role === 'admin') return ['journal', 'analyse', 'exercices', 'donnees', 'administration'];
-  if (role === 'comptable') return ['journal', 'analyse'];
+  if (role === 'admin') return ['journal', 'virements', 'analyse', 'exercices', 'donnees', 'administration'];
+  if (role === 'comptable') return ['journal', 'virements', 'analyse'];
   return ['journal'];
 }
 
@@ -80,6 +80,7 @@ export function resumeDroits(role: Role | string): string {
   const onglets = ongletsAutorises(role).filter(o => o !== 'administration');
   const noms: Record<string, string> = {
     journal: 'Livre journal',
+    virements: 'Livre des virements',
     analyse: 'Analyse de la caisse',
     exercices: 'Exercices',
     donnees: 'Données & sauvegardes',
