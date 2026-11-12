@@ -6,6 +6,7 @@ import { libelleRole } from '../utils/roles';
 import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages } from '../utils/son-messages';
 import { Modale } from './Modale';
 
+const DUREE_SON_SECONDES = 3;
 const CLE = 'salfa_messages_prives';
 const CLE_SUPPRESSIONS = 'salfa_messages_suppressions';
 function suppressionsLocales(): Record<string, number[]> {
@@ -36,6 +37,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   const [occupe, setOccupe] = useState(false);
   const vus = useRef<Set<number> | null>(null);
   const audio = useRef<AudioContext | null>(null);
+  const sonsActifs = useRef(new Set<OscillatorNode>());
   const sonAutorise = useRef(lireSonMessages());
 
   // Chrome exige un geste utilisateur pour autoriser le son.
@@ -54,9 +56,14 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       const volume = contexte.createGain();
       oscillateur.frequency.value = 740;
       volume.gain.setValueAtTime(0.08, contexte.currentTime);
-      volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + 0.3);
+      // L'enveloppe garde le volume pendant 2,8 secondes puis atténue la fin,
+      // sans dépendre des minuteurs JavaScript ralentis en arrière-plan.
+      volume.gain.setValueAtTime(0.08, contexte.currentTime + DUREE_SON_SECONDES - 0.2);
+      volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + DUREE_SON_SECONDES);
       oscillateur.connect(volume); volume.connect(contexte.destination);
-      oscillateur.start(); oscillateur.stop(contexte.currentTime + 0.3);
+      sonsActifs.current.add(oscillateur);
+      oscillateur.onended = () => { sonsActifs.current.delete(oscillateur); oscillateur.disconnect(); volume.disconnect(); };
+      oscillateur.start(); oscillateur.stop(contexte.currentTime + DUREE_SON_SECONDES);
       return true;
     } catch { return false; /* L'absence de périphérique audio ne bloque pas la messagerie. */ }
   }
@@ -65,7 +72,11 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     const dejaVus = vus.current;
     if (dejaVus) {
       const nouveaux = recus.filter(m => !m.luLe && !dejaVus.has(m.id));
-      if (nouveaux.length) sonner();
+      if (nouveaux.length && sonAutorise.current) {
+        // Reprendre un contexte déjà autorisé mais suspendu, même en arrière-plan.
+        if (audio.current?.state === 'suspended') void preparerSon().then(ok => { if (ok) sonner(); });
+        else sonner();
+      }
       if (nouveaux.length && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try {
           const notification = new Notification('Caisse SALFA · Nouveau message', {
@@ -90,12 +101,16 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     const activer = () => {
       if (sonAutorise.current && audio.current?.state !== 'running') void preparerSon();
     };
+    const arreterSons = () => {
+      for (const oscillateur of sonsActifs.current) { try { oscillateur.stop(); } catch { /* déjà terminé */ } }
+      sonsActifs.current.clear();
+    };
     const changerSon = (event: Event) => {
       sonAutorise.current = (event as CustomEvent<boolean>).detail;
-      if (sonAutorise.current) activer();
+      if (sonAutorise.current) activer(); else arreterSons();
     };
     const synchroniserSon = (event: StorageEvent) => {
-      if (event.key === CLE_SON_MESSAGES || event.key === null) sonAutorise.current = lireSonMessages();
+      if (event.key === CLE_SON_MESSAGES || event.key === null) { sonAutorise.current = lireSonMessages(); if (!sonAutorise.current) arreterSons(); }
     };
     window.addEventListener(EVENEMENT_SON_MESSAGES, changerSon);
     window.addEventListener('storage', synchroniserSon);
@@ -105,6 +120,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     // autorisé l'audio. Ne pas créer de contexte avant toute interaction.
     if (navigator.userActivation?.hasBeenActive) activer();
     return () => {
+      arreterSons();
       window.removeEventListener(EVENEMENT_SON_MESSAGES, changerSon);
       window.removeEventListener('storage', synchroniserSon);
       document.removeEventListener('pointerdown', activer, true);
@@ -114,8 +130,16 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   useEffect(() => {
     vus.current = null;
     void actualiser();
+    // La vérification continue aussi quand l'onglet n'est pas visible. Chrome
+    // peut cependant ralentir ou suspendre ses minuteries en arrière-plan.
     const timer = window.setInterval(() => { void actualiser(); }, 15000);
-    return () => { window.clearInterval(timer); if (audio.current) { void audio.current.close().catch(() => {}); audio.current = null; } };
+    const reprise = () => { if (document.visibilityState === 'visible') void actualiser(); };
+    const connexion = () => { void actualiser(); };
+    const stockage = (e: StorageEvent) => { if (!MODE_API && e.key === CLE) void actualiser(); };
+    document.addEventListener('visibilitychange', reprise);
+    window.addEventListener('online', connexion);
+    window.addEventListener('storage', stockage);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', reprise); window.removeEventListener('online', connexion); window.removeEventListener('storage', stockage); if (audio.current) { void audio.current.close().catch(() => {}); audio.current = null; } };
   }, [utilisateur.id]);
   async function envoyer() {
     if (!dest || !contenu.trim() || occupe) return;
