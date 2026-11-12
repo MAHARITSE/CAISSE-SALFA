@@ -5,7 +5,7 @@ import { listerComptes } from '../utils/utilisateurs';
 import { libelleRole } from '../utils/roles';
 import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages } from '../utils/son-messages';
 import { Modale } from './Modale';
-import sonMessageUrl from '../../COMCell_Message envoye (ID 1313)_LaSonotheque.fr.wav';
+import sonMessageIntegre from '../../COMCell_Message envoye (ID 1313)_LaSonotheque.fr.wav?inline';
 
 const CLE = 'salfa_messages_prives';
 const CLE_SUPPRESSIONS = 'salfa_messages_suppressions';
@@ -34,6 +34,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   const [conversation, setConversation] = useState<string | null>(null);
   const [confirmationEnvoi, setConfirmationEnvoi] = useState('');
   const [erreur, setErreur] = useState('');
+  const [etatTestSon, setEtatTestSon] = useState('');
   const [occupe, setOccupe] = useState(false);
   const vus = useRef<Set<number> | null>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -50,32 +51,47 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       return audio.current?.state === 'running';
     } catch { return false; }
   }
-  async function sonner(): Promise<void> {
+  async function sonner(): Promise<boolean> {
     const contexte = audio.current;
     const generation = generationSon.current;
-    if (!sonAutorise.current || !contexte) return;
+    if (!sonAutorise.current || !contexte) return false;
     try {
       if (contexte.state === 'suspended') await contexte.resume();
-      if (contexte.state !== 'running') return;
+      if (contexte.state !== 'running') return false;
       if (!chargementSon.current) {
-        chargementSon.current = fetch(sonMessageUrl).then(reponse => {
-          if (!reponse.ok) throw new Error('Son indisponible.');
-          return reponse.arrayBuffer();
-        }).then(donnees => contexte.decodeAudioData(donnees));
+        // Le fichier est intégré au JavaScript : aucun chemin ni téléchargement
+        // supplémentaire ne peut manquer dans un déploiement WAMP partiel.
+        const base64 = sonMessageIntegre.split(',')[1];
+        const binaire = atob(base64);
+        const donnees = Uint8Array.from(binaire, caractere => caractere.charCodeAt(0));
+        chargementSon.current = contexte.decodeAudioData(donnees.buffer);
       }
       const chargement = chargementSon.current;
       let tampon: AudioBuffer;
       try { tampon = await chargement; }
       catch (e) { if (chargementSon.current === chargement) chargementSon.current = null; throw e; }
       // Le son peut avoir été désactivé ou la session fermée pendant le chargement.
-      if (!sonAutorise.current || generationSon.current !== generation || audio.current !== contexte || contexte.state !== 'running') return;
+      if (!sonAutorise.current || generationSon.current !== generation || audio.current !== contexte || contexte.state !== 'running') return false;
       const source = contexte.createBufferSource();
       source.buffer = tampon;
       source.connect(contexte.destination);
       sonsActifs.current.add(source);
       source.onended = () => { sonsActifs.current.delete(source); source.disconnect(); };
       source.start();
-    } catch { /* L'absence de son ne bloque pas la messagerie. */ }
+      return true;
+    } catch { return false; /* L'absence de son ne bloque pas la messagerie. */ }
+  }
+  async function testerSon() {
+    setEtatTestSon('');
+    if (!sonAutorise.current) {
+      setEtatTestSon('Le son des messages est désactivé. Fermez la messagerie puis activez la cloche en bas à droite.');
+      return;
+    }
+    if (await preparerSon() && await sonner()) {
+      setEtatTestSon('Son de test joué. Si vous ne l’entendez pas, vérifiez le volume et la sortie audio.');
+    } else {
+      setEtatTestSon('Impossible de jouer le son. Vérifiez les autorisations audio et la sortie du navigateur.');
+    }
   }
   function detecterMessages(nouvelleBoite: BoiteMessages) {
     const recus = nouvelleBoite.messages.filter(m => String(m.destinataireId) === String(utilisateur.id));
@@ -232,6 +248,10 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   }
   return <><button className="icon-button relative" aria-label={`Messages privés${nonLus ? `, ${nonLus} non lus` : ''}`} title="Messages privés" onClick={() => { if (sonAutorise.current) void preparerSon(); setOuvert(true); void actualiser(); }}><Mail size={18} />{nonLus > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1 text-[10px] text-white">{nonLus}</span>}</button>
     {ouvert && <Modale titre="Messages privés" sousTitre="Vos échanges avec les autres utilisateurs" largeur="document" onFermer={() => { if (contenu.trim() && !window.confirm('Abandonner le brouillon en cours ?')) return; setOuvert(false); }}>
+      <div className="mb-2 flex flex-wrap items-center gap-3">
+        <button type="button" className="btn-secondary" onClick={() => void testerSon()}>Tester le son des messages</button>
+        {etatTestSon && <p role="status" className="text-sm text-slate-600 dark:text-slate-300">{etatTestSon}</p>}
+      </div>
       <div className="messagerie-interface">
         <aside className="messagerie-contacts" aria-label="Liste des utilisateurs">
           <div className="messagerie-legende"><span><span className="point-presence en-ligne" /> Vert : en ligne · <span className="point-presence" /> Gris : hors ligne</span><button type="button" className="icon-button" aria-label="Actualiser" title="Actualiser" onClick={() => void actualiser()}><RefreshCw size={15} /></button></div>

@@ -15,10 +15,8 @@ function simulerAudio() {
   const audio = { state: 'running', destination: {}, close: vi.fn().mockResolvedValue(undefined), resume: vi.fn(), decodeAudioData: vi.fn().mockResolvedValue(tampon), createBufferSource: vi.fn(() => source) };
   audio.resume.mockImplementation(async () => { audio.state = 'running'; });
   const constructeur = vi.fn(function () { return audio; });
-  const fetchSon = vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) });
   vi.stubGlobal('AudioContext', constructeur);
-  vi.stubGlobal('fetch', fetchSon);
-  return { audio, constructeur, demarrer, arreter, source, tampon, fetchSon };
+  return { audio, constructeur, demarrer, arreter, source, tampon };
 }
 afterEach(() => { serveur.lire.mockReset(); serveur.modifier.mockReset(); vi.unstubAllGlobals(); });
 describe('messagerie serveur', () => {
@@ -37,7 +35,7 @@ describe('messagerie serveur', () => {
     await screen.findByText(/Sélectionnez un utilisateur/);
   });
   it('joue le son des nouveaux messages même sans permission de notification système', async () => {
-    const { demarrer, source, tampon, fetchSon } = simulerAudio();
+    const { audio, demarrer, source, tampon } = simulerAudio();
     vi.stubGlobal('Notification', undefined);
     serveur.lire.mockResolvedValue({ comptes, messages: [] });
     render(<Messagerie utilisateur={utilisateur} />);
@@ -52,7 +50,9 @@ describe('messagerie serveur', () => {
     await waitFor(() => expect(serveur.lire).toHaveBeenCalled());
     expect(demarrer).toHaveBeenCalledTimes(1);
     expect(source.buffer).toBe(tampon);
-    expect(fetchSon).toHaveBeenCalledWith(expect.stringContaining('LaSonotheque.fr.wav'));
+    const octets = new Uint8Array(audio.decodeAudioData.mock.calls[0][0]);
+    expect(Array.from(octets.slice(0, 4))).toEqual([82, 73, 70, 70]); // RIFF
+    expect(octets.length).toBe(68072);
   });
 });
 
@@ -161,9 +161,9 @@ it('reprend un contexte audio suspendu avant de jouer un nouveau message', async
 
 it('ne joue pas un son en cours de chargement après la désactivation, même si la cloche est réactivée', async () => {
   const { ControlesFlottants } = await import('./ControlesFlottants');
-  const { demarrer, fetchSon } = simulerAudio();
-  let terminer!: (value: { ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }) => void;
-  fetchSon.mockReturnValueOnce(new Promise(resolve => { terminer = resolve; }));
+  const { audio, demarrer, tampon } = simulerAudio();
+  let terminer!: (value: AudioBuffer) => void;
+  audio.decodeAudioData.mockReturnValueOnce(new Promise(resolve => { terminer = resolve; }));
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
   try {
@@ -172,21 +172,21 @@ it('ne joue pas un son en cours de chargement après la désactivation, même si
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Action caisse' }));
     serveur.lire.mockResolvedValue({ comptes, messages: [message] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
-    expect(fetchSon).toHaveBeenCalledOnce();
+    expect(audio.decodeAudioData).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole('button', { name: 'Désactiver le son des messages' }));
     fireEvent.click(screen.getByRole('button', { name: 'Activer le son des messages' }));
-    await act(async () => { terminer({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }); });
+    await act(async () => { terminer(tampon); });
     expect(demarrer).not.toHaveBeenCalled();
     serveur.lire.mockResolvedValue({ comptes, messages: [message, { ...message, id: 8 }] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
     expect(demarrer).toHaveBeenCalledOnce();
-    expect(fetchSon).toHaveBeenCalledOnce();
+    expect(audio.decodeAudioData).toHaveBeenCalledOnce();
   } finally { vi.useRealTimers(); }
 });
 
-it('réessaie le chargement du fichier si une première tentative échoue', async () => {
-  const { demarrer, fetchSon } = simulerAudio();
-  fetchSon.mockRejectedValueOnce(new Error('réseau'));
+it('réessaie le décodage du fichier si une première tentative échoue', async () => {
+  const { audio, demarrer } = simulerAudio();
+  audio.decodeAudioData.mockRejectedValueOnce(new Error('décodage'));
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
   try {
@@ -198,7 +198,27 @@ it('réessaie le chargement du fichier si une première tentative échoue', asyn
     expect(demarrer).not.toHaveBeenCalled();
     serveur.lire.mockResolvedValue({ comptes, messages: [message, { ...message, id: 8 }] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
-    expect(fetchSon).toHaveBeenCalledTimes(2);
+    expect(audio.decodeAudioData).toHaveBeenCalledTimes(2);
     expect(demarrer).toHaveBeenCalledOnce();
   } finally { vi.useRealTimers(); }
+});
+
+
+it('permet de tester le son intégré et indique les échecs ou la désactivation', async () => {
+  const { ControlesFlottants } = await import('./ControlesFlottants');
+  const { audio, demarrer } = simulerAudio();
+  serveur.lire.mockResolvedValue({ comptes, messages: [] });
+  render(<><Messagerie utilisateur={utilisateur} /><ControlesFlottants /></>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Messages privés' }));
+  const tester = screen.getByRole('button', { name: 'Tester le son des messages' });
+  audio.decodeAudioData.mockRejectedValueOnce(new Error('décodage'));
+  fireEvent.click(tester);
+  expect(await screen.findByText(/Impossible de jouer le son/)).toBeVisible();
+  fireEvent.click(tester);
+  expect(await screen.findByText(/Son de test joué/)).toBeVisible();
+  expect(demarrer).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByRole('button', { name: 'Désactiver le son des messages' }));
+  fireEvent.click(tester);
+  expect(await screen.findByText(/Le son des messages est désactivé/)).toBeVisible();
+  expect(demarrer).toHaveBeenCalledOnce();
 });
