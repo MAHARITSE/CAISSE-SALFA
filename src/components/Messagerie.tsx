@@ -5,8 +5,8 @@ import { listerComptes } from '../utils/utilisateurs';
 import { libelleRole } from '../utils/roles';
 import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages } from '../utils/son-messages';
 import { Modale } from './Modale';
+import sonMessageUrl from '../../COMCell_Message envoye (ID 1313)_LaSonotheque.fr.wav';
 
-const DUREE_SON_SECONDES = 1;
 const CLE = 'salfa_messages_prives';
 const CLE_SUPPRESSIONS = 'salfa_messages_suppressions';
 function suppressionsLocales(): Record<string, number[]> {
@@ -37,7 +37,9 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   const [occupe, setOccupe] = useState(false);
   const vus = useRef<Set<number> | null>(null);
   const audio = useRef<AudioContext | null>(null);
-  const sonsActifs = useRef(new Set<OscillatorNode>());
+  const sonsActifs = useRef(new Set<AudioBufferSourceNode>());
+  const chargementSon = useRef<Promise<AudioBuffer> | null>(null);
+  const generationSon = useRef(0);
   const sonAutorise = useRef(lireSonMessages());
 
   // Chrome exige un geste utilisateur pour autoriser le son.
@@ -48,24 +50,32 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       return audio.current?.state === 'running';
     } catch { return false; }
   }
-  function sonner(): boolean {
+  async function sonner(): Promise<void> {
+    const contexte = audio.current;
+    const generation = generationSon.current;
+    if (!sonAutorise.current || !contexte) return;
     try {
-      const contexte = audio.current;
-      if (!sonAutorise.current || !contexte || contexte.state !== 'running') return false;
-      const oscillateur = contexte.createOscillator();
-      const volume = contexte.createGain();
-      oscillateur.frequency.value = 740;
-      volume.gain.setValueAtTime(0.08, contexte.currentTime);
-      // L'enveloppe garde le volume pendant 0,8 seconde puis atténue la fin,
-      // sans dépendre des minuteurs JavaScript ralentis en arrière-plan.
-      volume.gain.setValueAtTime(0.08, contexte.currentTime + DUREE_SON_SECONDES - 0.2);
-      volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + DUREE_SON_SECONDES);
-      oscillateur.connect(volume); volume.connect(contexte.destination);
-      sonsActifs.current.add(oscillateur);
-      oscillateur.onended = () => { sonsActifs.current.delete(oscillateur); oscillateur.disconnect(); volume.disconnect(); };
-      oscillateur.start(); oscillateur.stop(contexte.currentTime + DUREE_SON_SECONDES);
-      return true;
-    } catch { return false; /* L'absence de périphérique audio ne bloque pas la messagerie. */ }
+      if (contexte.state === 'suspended') await contexte.resume();
+      if (contexte.state !== 'running') return;
+      if (!chargementSon.current) {
+        chargementSon.current = fetch(sonMessageUrl).then(reponse => {
+          if (!reponse.ok) throw new Error('Son indisponible.');
+          return reponse.arrayBuffer();
+        }).then(donnees => contexte.decodeAudioData(donnees));
+      }
+      const chargement = chargementSon.current;
+      let tampon: AudioBuffer;
+      try { tampon = await chargement; }
+      catch (e) { if (chargementSon.current === chargement) chargementSon.current = null; throw e; }
+      // Le son peut avoir été désactivé ou la session fermée pendant le chargement.
+      if (!sonAutorise.current || generationSon.current !== generation || audio.current !== contexte || contexte.state !== 'running') return;
+      const source = contexte.createBufferSource();
+      source.buffer = tampon;
+      source.connect(contexte.destination);
+      sonsActifs.current.add(source);
+      source.onended = () => { sonsActifs.current.delete(source); source.disconnect(); };
+      source.start();
+    } catch { /* L'absence de son ne bloque pas la messagerie. */ }
   }
   function detecterMessages(nouvelleBoite: BoiteMessages) {
     const recus = nouvelleBoite.messages.filter(m => String(m.destinataireId) === String(utilisateur.id));
@@ -73,9 +83,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     if (dejaVus) {
       const nouveaux = recus.filter(m => !m.luLe && !dejaVus.has(m.id));
       if (nouveaux.length && sonAutorise.current) {
-        // Reprendre un contexte déjà autorisé mais suspendu, même en arrière-plan.
-        if (audio.current?.state === 'suspended') void preparerSon().then(ok => { if (ok) sonner(); });
-        else sonner();
+        void sonner();
       }
       if (nouveaux.length && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try {
@@ -102,7 +110,8 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       if (sonAutorise.current && audio.current?.state !== 'running') void preparerSon();
     };
     const arreterSons = () => {
-      for (const oscillateur of sonsActifs.current) { try { oscillateur.stop(); } catch { /* déjà terminé */ } }
+      generationSon.current++;
+      for (const source of sonsActifs.current) { try { source.stop(); } catch { /* déjà terminé */ } }
       sonsActifs.current.clear();
     };
     const changerSon = (event: Event) => {
@@ -139,7 +148,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     document.addEventListener('visibilitychange', reprise);
     window.addEventListener('online', connexion);
     window.addEventListener('storage', stockage);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', reprise); window.removeEventListener('online', connexion); window.removeEventListener('storage', stockage); if (audio.current) { void audio.current.close().catch(() => {}); audio.current = null; } };
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', reprise); window.removeEventListener('online', connexion); window.removeEventListener('storage', stockage); if (audio.current) { void audio.current.close().catch(() => {}); audio.current = null; } chargementSon.current = null; };
   }, [utilisateur.id]);
   async function envoyer() {
     if (!dest || !contenu.trim() || occupe) return;
