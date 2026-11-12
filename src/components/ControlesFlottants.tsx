@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Minus, Moon, Plus, Sun } from 'lucide-react';
+import { Bell, BellOff, Minus, Moon, Plus, Sun } from 'lucide-react';
+import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages, reglerSonMessages } from '../utils/son-messages';
 
 const CLE_THEME = 'salfa_theme';
 const CLE_TAILLE = 'salfa_taille_police';
@@ -37,6 +38,14 @@ function tailleInitiale(): number {
 export function ControlesFlottants() {
   const [theme, setTheme] = useState<'light' | 'dark'>(themeInitial);
   const [taille, setTaille] = useState<number>(tailleInitiale);
+  const [sonActive, setSonActive] = useState(lireSonMessages);
+  useEffect(() => {
+    const changement = (e: Event) => setSonActive((e as CustomEvent<boolean>).detail);
+    const stockage = (e: StorageEvent) => { if (e.key === CLE_SON_MESSAGES || e.key === null) setSonActive(lireSonMessages()); };
+    window.addEventListener(EVENEMENT_SON_MESSAGES, changement);
+    window.addEventListener('storage', stockage);
+    return () => { window.removeEventListener(EVENEMENT_SON_MESSAGES, changement); window.removeEventListener('storage', stockage); };
+  }, []);
 
   // Applique le thème et la taille au montage et lors des changements
   useEffect(() => {
@@ -98,31 +107,16 @@ export function ControlesFlottants() {
   return (
     <aside
       aria-label="Accessibilité et affichage"
-      className="no-print fixed bottom-4 right-4 z-40 flex items-center gap-1 rounded-full border border-slate-200/90 bg-white/95 p-1 shadow-lg shadow-slate-900/10 backdrop-blur transition-all dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-black/40 sm:bottom-5 sm:right-5 sm:p-1.5"
+      className="no-print fixed bottom-4 right-4 z-40 flex items-center gap-2 sm:bottom-5 sm:right-5"
     >
-      {/* Bascule Mode Sombre / Mode Clair */}
-      <button
-        type="button"
-        onClick={basculerTheme}
-        className="flex size-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:size-9"
-        aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
-        title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
-      >
-        {theme === 'dark' ? (
-          <Sun size={17} className="text-amber-400" />
-        ) : (
-          <Moon size={17} className="text-slate-700 dark:text-slate-200" />
-        )}
-      </button>
-
-      <span className="h-4 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
+      <button type="button" className="controle-rond" aria-label={sonActive ? 'Désactiver le son des messages' : 'Activer le son des messages'} aria-pressed={sonActive} title={sonActive ? 'Son des messages activé — cliquer pour désactiver' : 'Son des messages désactivé — cliquer pour activer'} onClick={() => reglerSonMessages(!sonActive)}>{sonActive ? <Bell size={17} /> : <BellOff size={17} />}</button>
 
       {/* Bouton - : réduire la police */}
       <button
         type="button"
         onClick={reduirePolice}
         disabled={!peutReduire}
-        className="flex size-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:size-9"
+        className="controle-rond disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Réduire la taille de police"
         title="Réduire la taille de police (-)"
       >
@@ -145,12 +139,13 @@ export function ControlesFlottants() {
         type="button"
         onClick={augmenterPolice}
         disabled={!peutAugmenter}
-        className="flex size-8 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white sm:size-9"
+        className="controle-rond disabled:cursor-not-allowed disabled:opacity-35"
         aria-label="Augmenter la taille de police"
         title="Augmenter la taille de police (+)"
       >
         <Plus size={16} />
       </button>
+      <button type="button" onClick={basculerTheme} className="controle-rond" aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'} title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button>
     </aside>
   );
 }

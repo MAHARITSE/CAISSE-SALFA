@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Mail, MessageCircle, Plus, RefreshCw, Send, Trash2, Volume2 }  from 'lucide-react';
+import { Mail, MessageCircle, RefreshCw, Send, Trash2 }  from 'lucide-react';
 import { MODE_API, lireMessages, modifierMessages, type BoiteMessages, type MessagePrive, type Utilisateur } from '../utils/api';
 import { listerComptes } from '../utils/utilisateurs';
+import { libelleRole } from '../utils/roles';
+import { CLE_SON_MESSAGES, EVENEMENT_SON_MESSAGES, lireSonMessages } from '../utils/son-messages';
 import { Modale } from './Modale';
 
 const CLE = 'salfa_messages_prives';
@@ -32,25 +34,22 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
   const [confirmationEnvoi, setConfirmationEnvoi] = useState('');
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
-  const [sonActif, setSonActif] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission | 'indisponible'>(() => typeof Notification === 'undefined' ? 'indisponible' : Notification.permission);
   const vus = useRef<Set<number> | null>(null);
   const audio = useRef<AudioContext | null>(null);
+  const sonAutorise = useRef(lireSonMessages());
 
   // Chrome exige un geste utilisateur pour autoriser le son.
   async function preparerSon(): Promise<boolean> {
     try {
-      if (!audio.current && typeof AudioContext !== 'undefined') audio.current = new AudioContext();
+      if ((!audio.current || audio.current.state === 'closed') && typeof AudioContext !== 'undefined') audio.current = new AudioContext();
       if (audio.current?.state === 'suspended') await audio.current.resume();
-      const actif = audio.current?.state === 'running';
-      setSonActif(Boolean(actif));
-      return Boolean(actif);
-    } catch { setSonActif(false); return false; }
+      return audio.current?.state === 'running';
+    } catch { return false; }
   }
-  function sonner() {
+  function sonner(): boolean {
     try {
       const contexte = audio.current;
-      if (!contexte || contexte.state !== 'running') return;
+      if (!sonAutorise.current || !contexte || contexte.state !== 'running') return false;
       const oscillateur = contexte.createOscillator();
       const volume = contexte.createGain();
       oscillateur.frequency.value = 740;
@@ -58,13 +57,8 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + 0.3);
       oscillateur.connect(volume); volume.connect(contexte.destination);
       oscillateur.start(); oscillateur.stop(contexte.currentTime + 0.3);
-    } catch { /* L'absence de périphérique audio ne bloque pas la messagerie. */ }
-  }
-  async function activerNotifications() {
-    void preparerSon();
-    if (typeof Notification === 'undefined') return;
-    try { setPermission(await Notification.requestPermission()); }
-    catch { setPermission(Notification.permission); }
+      return true;
+    } catch { return false; /* L'absence de périphérique audio ne bloque pas la messagerie. */ }
   }
   function detecterMessages(nouvelleBoite: BoiteMessages) {
     const recus = nouvelleBoite.messages.filter(m => String(m.destinataireId) === String(utilisateur.id));
@@ -90,6 +84,33 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
     try { const nouvelle = MODE_API ? await lireMessages() : await boiteLocale(utilisateur); detecterMessages(nouvelle); setBoite(nouvelle); setErreur(''); }
     catch (e) { setErreur(e instanceof Error ? e.message : 'Impossible de charger les messages.'); }
   }
+  // Le son est activé par défaut au premier geste dans la caisse, même si la
+  // messagerie n'est jamais ouverte. Chrome peut exiger une activation utilisateur.
+  useEffect(() => {
+    const activer = () => {
+      if (sonAutorise.current && audio.current?.state !== 'running') void preparerSon();
+    };
+    const changerSon = (event: Event) => {
+      sonAutorise.current = (event as CustomEvent<boolean>).detail;
+      if (sonAutorise.current) activer();
+    };
+    const synchroniserSon = (event: StorageEvent) => {
+      if (event.key === CLE_SON_MESSAGES || event.key === null) sonAutorise.current = lireSonMessages();
+    };
+    window.addEventListener(EVENEMENT_SON_MESSAGES, changerSon);
+    window.addEventListener('storage', synchroniserSon);
+    document.addEventListener('pointerdown', activer, true);
+    document.addEventListener('keydown', activer, true);
+    // Après une connexion ou un rechargement, le navigateur peut déjà avoir
+    // autorisé l'audio. Ne pas créer de contexte avant toute interaction.
+    if (navigator.userActivation?.hasBeenActive) activer();
+    return () => {
+      window.removeEventListener(EVENEMENT_SON_MESSAGES, changerSon);
+      window.removeEventListener('storage', synchroniserSon);
+      document.removeEventListener('pointerdown', activer, true);
+      document.removeEventListener('keydown', activer, true);
+    };
+  }, [utilisateur.id]);
   useEffect(() => {
     vus.current = null;
     void actualiser();
@@ -108,7 +129,7 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
         liste.unshift({ id: Math.max(0, ...liste.map(m => m.id)) + 1, auteurId: utilisateur.id, destinataireId: compte.id, auteurNom: utilisateur.nomComplet, destinataireNom: compte.nomComplet, contenu: contenu.trim(), creeLe: new Date().toISOString(), luLe: null });
         localStorage.setItem(CLE, JSON.stringify(liste)); setBoite(await boiteLocale(utilisateur));
       }
-      setConversation(dest); setConfirmationEnvoi('Message envoyé.'); setContenu(''); setDest(''); setMessageRepondu(null); setRedaction(null); setErreur('');
+      setConversation(dest); setConfirmationEnvoi('Message envoyé.'); setContenu(''); setMessageRepondu(null); setRedaction('reponse'); setErreur('');
     } catch (e) { setErreur(e instanceof Error ? e.message : 'Envoi impossible.'); }
     finally { setOccupe(false); }
   }
@@ -163,64 +184,51 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
       if (recu && !m.luLe) actuelle.nonLus++;
     }
   }
-  const listeConversations = [...conversations.values()].sort((a, b) => b.dernier.creeLe.localeCompare(a.dernier.creeLe) || b.dernier.id - a.dernier.id);
   const selection = conversation ? conversations.get(conversation) : undefined;
+  const compteSelectionne = boite.comptes.find(c => String(c.id) === conversation);
+  const nomSelectionne = compteSelectionne?.nomComplet ?? selection?.nom ?? 'Utilisateur';
+  const contacts = [...boite.comptes.map(c => ({ id: String(c.id), nom: c.nomComplet, role: c.role, actif: true })), ...[...conversations.values()].filter(c => !boite.comptes.some(u => String(u.id) === c.id)).map(c => ({ id: c.id, nom: c.nom, role: undefined, actif: false }))];
   const messagesConversation = boite.messages.filter(m => conversation !== null && (String(m.auteurId) === conversation || String(m.destinataireId) === conversation)).sort((a, b) => a.creeLe.localeCompare(b.creeLe) || a.id - b.id);
-  const enLigne = (id: string) => { const etat = boite.comptes.find(c => String(c.id) === id)?.enLigne; return etat === true || etat === 1 || etat === '1'; };
+  const presence = (id: string): 'En ligne' | 'Hors ligne' | 'Présence inconnue' => { const etat = boite.comptes.find(c => String(c.id) === id)?.enLigne; return etat == null ? 'Présence inconnue' : etat === true || etat === 1 || etat === '1' ? 'En ligne' : 'Hors ligne'; };
+  const enLigne = (id: string) => presence(id) === 'En ligne';
   const disponible = conversation !== null && boite.comptes.some(c => String(c.id) === conversation);
   function choisirConversation(id: string | null) {
+    if (id === conversation) return;
     if (contenu.trim() && !window.confirm('Abandonner le brouillon en cours ?')) return;
-    setConversation(id); setRedaction(null); setDest(''); setContenu(''); setMessageRepondu(null); setErreur(''); setConfirmationEnvoi('');
+    setConversation(id); setRedaction(id ? 'reponse' : null); setDest(id ?? ''); setContenu(''); setMessageRepondu(null); setErreur(''); setConfirmationEnvoi('');
   }
-  return <><button className="icon-button relative" aria-label={`Messages privés${nonLus ? `, ${nonLus} non lus` : ''}`} title="Messages privés" onClick={() => { void preparerSon(); setOuvert(true); void actualiser(); }}><Mail size={18} />{nonLus > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1 text-[10px] text-white">{nonLus}</span>}</button>
-    {ouvert && <Modale titre="Messages privés" sousTitre="Vos échanges avec les autres utilisateurs" onFermer={() => setOuvert(false)}>
-      <div className="mb-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-        <p>{sonActif ? 'Son activé pour cet onglet.' : 'Activez le son après ouverture de la caisse pour entendre les nouveaux messages.'}</p>
-        <button type="button" className="btn-secondary mt-2" onClick={() => { void preparerSon().then(ok => { if (ok) sonner(); else setErreur('Son indisponible : vérifiez le son de Chrome et de Windows.'); }); }}><Volume2 size={16} />Activer et tester le son</button>
+  return <><button className="icon-button relative" aria-label={`Messages privés${nonLus ? `, ${nonLus} non lus` : ''}`} title="Messages privés" onClick={() => { if (sonAutorise.current) void preparerSon(); setOuvert(true); void actualiser(); }}><Mail size={18} />{nonLus > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1 text-[10px] text-white">{nonLus}</span>}</button>
+    {ouvert && <Modale titre="Messages privés" sousTitre="Vos échanges avec les autres utilisateurs" largeur="document" onFermer={() => { if (contenu.trim() && !window.confirm('Abandonner le brouillon en cours ?')) return; setOuvert(false); }}>
+      <div className="messagerie-interface">
+        <aside className="messagerie-contacts" aria-label="Liste des utilisateurs">
+          <div className="messagerie-legende"><span><span className="point-presence en-ligne" /> Vert : en ligne · <span className="point-presence" /> Gris : hors ligne</span><button type="button" className="icon-button" aria-label="Actualiser" title="Actualiser" onClick={() => void actualiser()}><RefreshCw size={15} /></button></div>
+          {!MODE_API && <p className="px-3 py-1 text-xs text-slate-500">Présence indisponible en mode local.</p>}
+          <div className="messagerie-liste" aria-label="Liste des conversations">
+            {contacts.length === 0 && <p className="p-4 text-sm text-slate-500">Aucun autre utilisateur disponible.</p>}
+            {contacts.map(c => { const discussion = conversations.get(c.id); return <button type="button" key={c.id} className={`messagerie-contact ${conversation === c.id ? 'selectionne' : ''}`} onClick={() => choisirConversation(c.id)} aria-pressed={conversation === c.id}>
+              <span className={`point-presence ${enLigne(c.id) ? 'en-ligne' : ''}`} aria-label={presence(c.id)} />
+              <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{c.nom}</span><span className="block truncate text-xs text-slate-500">{(c.role ? libelleRole(c.role) : null) || (c.actif ? boite.comptes.find(u => String(u.id) === c.id)?.identifiant : 'Compte indisponible')}{discussion ? ` · ${discussion.dernier.contenu}` : ''}</span></span>
+              {!!discussion?.nonLus && <span className="rounded-full bg-indigo-600 px-2 text-xs text-white">{discussion.nonLus}</span>}
+            </button>; })}
+          </div>
+        </aside>
+        <section className="messagerie-contenu" aria-label={conversation ? `Conversation avec ${nomSelectionne}` : 'Conversation'}>
+          {conversation ? <>
+            <header className="messagerie-entete"><div className="min-w-0"><strong>{nomSelectionne}</strong>{compteSelectionne?.role && <span className="ml-2 text-xs text-slate-500">({libelleRole(compteSelectionne.role)})</span>}<span className="sr-only">{presence(conversation)}</span></div>{messagesConversation.length > 0 && <button type="button" disabled={occupe} className="text-xs text-red-600 hover:underline" onClick={() => void supprimer()}>Supprimer toute la conversation</button>}</header>
+            <div className="messagerie-bulles" aria-live="polite">
+              {messagesConversation.length === 0 && <p className="m-auto text-center text-sm text-slate-400">Aucun message. Écrivez à {nomSelectionne}.</p>}
+              {messagesConversation.map(m => { const recu = String(m.destinataireId) === String(utilisateur.id); const auteurDisponible = boite.comptes.some(c => String(c.id) === String(m.auteurId)); return <div key={m.id} className={`flex ${recu ? 'justify-start' : 'justify-end'}`}><article className={`messagerie-bulle ${recu ? 'recu' : 'envoye'}`}>
+                <p className="whitespace-pre-wrap break-words">{m.contenu}</p><p className="mt-1 text-right text-[11px] opacity-75"><time dateTime={m.creeLe}>{new Date(m.creeLe).toLocaleString('fr-FR')}</time> · {recu ? (m.luLe ? 'Lu' : 'Non lu') : (m.luLe ? 'Lu par le destinataire' : 'Envoyé · non lu')}</p>
+                <div className="mt-1 flex flex-wrap justify-end gap-3 text-xs"><button type="button" aria-label={`Supprimer le message ${m.id}`} title="Supprimer" disabled={occupe} onClick={() => void supprimer(m.id)}><Trash2 size={14} /></button>{recu && <><button type="button" disabled={!auteurDisponible || occupe} className="underline disabled:opacity-50" onClick={() => repondre(m)}>Répondre</button>{!m.luLe && <button type="button" disabled={occupe} className="underline" onClick={() => void lire(m.id)}>Marquer comme lu</button>}</>}</div>
+              </article></div>; })}
+            </div>
+            {messageRepondu && <blockquote className="mx-3 border-l-4 border-indigo-400 px-3 text-xs text-slate-500">Réponse à {messageRepondu.auteurNom} : {messageRepondu.contenu}</blockquote>}
+            {disponible ? <form onSubmit={e => { e.preventDefault(); void envoyer(); }} className="messagerie-saisie"><label className="sr-only" htmlFor="contenu-message">Message</label><textarea className="field" id="contenu-message" rows={1} maxLength={2000} required value={contenu} onChange={e => setContenu(e.target.value)} placeholder="Votre message…" /><button className="messagerie-envoyer" aria-label="Envoyer" title="Envoyer" disabled={occupe || !contenu.trim()}><Send size={18} /></button></form> : <p className="p-3 text-sm text-slate-500">Ce correspondant est désactivé ou indisponible.</p>}
+          </> : <div className="m-auto p-6 text-center text-sm text-slate-400"><MessageCircle className="mx-auto mb-2" size={28} />Sélectionnez un utilisateur pour commencer une conversation.</div>}
+        </section>
       </div>
-      <div className="mb-5 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-        {permission === 'indisponible' ? <p>Notifications indisponibles. Chrome exige une connexion sécurisée HTTPS (ou localhost) pour les notifications.</p> : permission === 'denied' ? <p>Notifications bloquées. Autorisez-les dans les paramètres du site dans Chrome, puis rechargez la page.</p> : <><p>{permission === 'granted' ? 'Notifications autorisées. Le son se règle séparément ci-dessus.' : 'Recevoir une notification Windows pour les nouveaux messages.'}</p><button type="button" className="btn-secondary mt-2" onClick={() => void activerNotifications()}>{permission === 'granted' ? 'Activer le son' : 'Activer les notifications et le son'}</button></>}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {conversation && <button type="button" className="icon-button" aria-label="Retour aux conversations" title="Retour aux conversations" onClick={() => choisirConversation(null)}><ArrowLeft size={18} /></button>}
-          <div><h3 className="font-bold text-slate-900 dark:text-slate-100">{selection?.nom ?? 'Conversations'}</h3><p className={`text-xs ${conversation && enLigne(conversation) ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'}`}>{conversation ? (enLigne(conversation) ? '● En ligne' : 'Messages privés') : `${listeConversations.length} conversation${listeConversations.length > 1 ? 's' : ''} · ${nonLus} non lu${nonLus > 1 ? 's' : ''}`}</p></div>
-        </div>
-        <div className="flex gap-2"><button className="icon-button" type="button" aria-label="Actualiser" title="Actualiser" onClick={() => void actualiser()}><RefreshCw size={17} /></button>{!redaction && <button type="button" className="btn-secondary" onClick={() => { setDest(''); setMessageRepondu(null); setConfirmationEnvoi(''); setRedaction('nouveau'); }}><Plus size={16} />Nouveau message</button>}</div>
-      </div>
-      {!conversation && MODE_API && <div className="mt-4 text-sm" aria-label="Utilisateurs en ligne"><p className="font-semibold">Utilisateurs en ligne</p><div className="mt-2 flex flex-wrap gap-2">{boite.comptes.filter(c => enLigne(String(c.id))).map(c => <span key={c.id} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800"><span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />{c.nomComplet} · en ligne</span>)}{!boite.comptes.some(c => enLigne(String(c.id))) && <span className="text-slate-500">{boite.comptes.some(c => c.enLigne === null || c.enLigne === undefined) ? 'Présence indisponible pour cette configuration.' : 'Aucun utilisateur détecté en ligne.'}</span>}</div></div>}
-      {!conversation && <div className="mt-4 space-y-2" aria-label="Liste des conversations">
-        {listeConversations.length === 0 && <div className="rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-500 dark:bg-slate-800"><MessageCircle className="mx-auto mb-2 text-slate-400" size={24} />Aucun message. Commencez une conversation.</div>}
-        {listeConversations.map(c => <button key={c.id} type="button" className="flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" onClick={() => choisirConversation(c.id)}>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">{c.nom.trim().slice(0, 1).toUpperCase()}</span>
-          <span className="min-w-0 flex-1"><span className="block font-semibold text-slate-900 dark:text-slate-100">{c.nom} {enLigne(c.id) && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><span className="size-2 rounded-full bg-emerald-500" aria-hidden="true" />En ligne</span>}</span><span className="block truncate text-xs text-slate-500">{c.dernier.contenu}</span></span>
-          {c.nonLus > 0 && <span className="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-semibold text-white">{c.nonLus} non lu{c.nonLus > 1 ? 's' : ''}</span>}
-        </button>)}
-      </div>}
-      {conversation && <button type="button" className="btn-secondary mt-3" disabled={occupe} onClick={() => void supprimer()}><Trash2 size={15} />Supprimer toute la conversation</button>}
-      {conversation && <div aria-label={`Conversation avec ${selection?.nom ?? 'utilisateur'}`} className="mt-4 max-h-96 space-y-3 overflow-y-auto rounded-xl bg-slate-100 p-3 sm:p-4 dark:bg-slate-950">
-        {messagesConversation.map(m => {
-          const recu = String(m.destinataireId) === String(utilisateur.id);
-          const auteurDisponible = boite.comptes.some(c => String(c.id) === String(m.auteurId));
-          return <div key={m.id} className={`flex ${recu ? 'justify-start' : 'justify-end'}`}>
-            <article className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${recu ? 'rounded-bl-sm bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100' : 'rounded-br-sm bg-brand-700 text-white'}`}>
-              <p className="whitespace-pre-wrap break-words">{m.contenu}</p>
-              <p className={`mt-2 text-[11px] ${recu ? 'text-slate-500 dark:text-slate-400' : 'text-white/80'}`}><time dateTime={m.creeLe}>{new Date(m.creeLe).toLocaleString('fr-FR')}</time> · {recu ? (m.luLe ? 'Lu' : 'Non lu') : (m.luLe ? 'Lu par le destinataire' : 'Envoyé · non lu')}</p>
-              <button type="button" aria-label={`Supprimer le message ${m.id}`} className={`mt-2 text-xs underline ${recu ? 'text-rose-700 dark:text-rose-300' : 'text-white'}`} disabled={occupe} onClick={() => void supprimer(m.id)}>Supprimer</button>
-              {recu && <div className="mt-2 flex flex-wrap gap-4 text-xs font-semibold"><button type="button" className="text-brand-700 underline disabled:opacity-50 dark:text-brand-400" disabled={!auteurDisponible || occupe} title={auteurDisponible ? 'Répondre à ce message' : 'Cet utilisateur est désactivé ou indisponible'} onClick={() => repondre(m)}>Répondre</button>{!m.luLe && <button type="button" className="text-brand-700 underline dark:text-brand-400" disabled={occupe} onClick={() => void lire(m.id)}>Marquer comme lu</button>}</div>}
-            </article>
-          </div>;
-        })}
-      </div>}
-      {conversation && !redaction && <div className="mt-3">{disponible ? <button type="button" className="btn-primary" onClick={() => { setDest(conversation); setMessageRepondu(null); setRedaction('reponse'); setConfirmationEnvoi(''); }}>Écrire un message</button> : <p className="text-sm text-slate-500">Ce correspondant est désactivé ou indisponible.</p>}</div>}
-      {redaction && <form onSubmit={e => { e.preventDefault(); void envoyer(); }} className="mt-4 space-y-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-        {redaction === 'nouveau' ? <><label className="block text-sm font-semibold" htmlFor="dest-message">Destinataire</label><select className="field" id="dest-message" required value={dest} onChange={e => { if (dest && contenu.trim() && e.target.value !== dest && !window.confirm('Changer le destinataire du brouillon ?')) return; setDest(e.target.value); }}><option value="">Choisir un utilisateur</option>{boite.comptes.map(c => <option key={c.id} value={c.id}>{c.nomComplet} ({c.identifiant}){enLigne(String(c.id)) ? ' ● En ligne' : ''}</option>)}</select></> : <p className="text-sm">Réponse à <strong>{boite.comptes.find(c => String(c.id) === dest)?.nomComplet ?? 'Utilisateur indisponible'}</strong></p>}
-        {messageRepondu && redaction === 'reponse' && <blockquote className="rounded-lg border-l-4 border-brand-500 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"><p className="font-semibold">Message de {messageRepondu.auteurNom}</p><p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words">{messageRepondu.contenu}</p></blockquote>}
-        <label className="block text-sm font-semibold" htmlFor="contenu-message">Message</label><textarea className="field" id="contenu-message" rows={3} maxLength={2000} required value={contenu} onChange={e => setContenu(e.target.value)} autoFocus placeholder="Écrivez votre message…" />
-        <div className="flex gap-2"><button className="btn-primary" disabled={occupe || !dest || !contenu.trim() || !boite.comptes.some(c => String(c.id) === dest)}><Send size={16} />Envoyer</button><button type="button" className="btn-secondary" onClick={() => { setRedaction(null); setDest(''); setContenu(''); setMessageRepondu(null); setErreur(''); }}>Annuler</button></div>
-      </form>}
-      {confirmationEnvoi && <p role="status" className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">{confirmationEnvoi}</p>}
-      {erreur && <p role="alert" className="mt-3 text-sm text-rose-700">{erreur}</p>}
+      {confirmationEnvoi && <p role="status" className="mt-2 text-sm text-emerald-700">{confirmationEnvoi}</p>}
+      {erreur && <p role="alert" className="mt-2 text-sm text-rose-700">{erreur}</p>}
     </Modale>}
   </>;
 }
