@@ -7,6 +7,19 @@ import { Messagerie } from './Messagerie';
 const utilisateur = { id: 1, identifiant: 'admin', nomComplet: 'Admin', role: 'admin' as const };
 const message = { id: 7, auteurId: 2, destinataireId: 1, auteurNom: 'Caisse', destinataireNom: 'Admin', contenu: 'Bonjour', creeLe: '2026-01-01T12:00:00Z', luLe: null };
 const comptes = [{ id: 2, identifiant: 'caisse', nomComplet: 'Caisse', enLigne: 1 }, { id: 3, identifiant: 'autre', nomComplet: 'Autre', enLigne: 0 }];
+function simulerAudio() {
+  const demarrer = vi.fn();
+  const arreter = vi.fn();
+  const tampon = {} as AudioBuffer;
+  const source = { buffer: null as AudioBuffer | null, connect: vi.fn(), disconnect: vi.fn(), start: demarrer, stop: arreter, onended: null };
+  const audio = { state: 'running', destination: {}, close: vi.fn().mockResolvedValue(undefined), resume: vi.fn(), decodeAudioData: vi.fn().mockResolvedValue(tampon), createBufferSource: vi.fn(() => source) };
+  audio.resume.mockImplementation(async () => { audio.state = 'running'; });
+  const constructeur = vi.fn(function () { return audio; });
+  const fetchSon = vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) });
+  vi.stubGlobal('AudioContext', constructeur);
+  vi.stubGlobal('fetch', fetchSon);
+  return { audio, constructeur, demarrer, arreter, source, tampon, fetchSon };
+}
 afterEach(() => { serveur.lire.mockReset(); serveur.modifier.mockReset(); vi.unstubAllGlobals(); });
 describe('messagerie serveur', () => {
   it('affiche les personnes en ligne même sans conversation et transmet les suppressions', async () => {
@@ -24,13 +37,13 @@ describe('messagerie serveur', () => {
     await screen.findByText(/Sélectionnez un utilisateur/);
   });
   it('joue le son des nouveaux messages même sans permission de notification système', async () => {
-    const demarrer = vi.fn();
-    const audio = { state: 'running', currentTime: 0, destination: {}, close: vi.fn().mockResolvedValue(undefined), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), start: demarrer, stop: vi.fn() }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }) };
-    vi.stubGlobal('AudioContext', vi.fn(function () { return audio; }));
+    const { demarrer, source, tampon, fetchSon } = simulerAudio();
     vi.stubGlobal('Notification', undefined);
     serveur.lire.mockResolvedValue({ comptes, messages: [] });
     render(<Messagerie utilisateur={utilisateur} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Messages privés' }));
+    const boutonMessages = await screen.findByRole('button', { name: 'Messages privés' });
+    fireEvent.pointerDown(boutonMessages);
+    fireEvent.click(boutonMessages);
     expect(screen.queryByText('Son et notifications')).not.toBeInTheDocument();
     serveur.lire.mockResolvedValue({ comptes, messages: [message] });
     fireEvent.click(screen.getByRole('button', { name: 'Actualiser' }));
@@ -38,14 +51,13 @@ describe('messagerie serveur', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Actualiser' }));
     await waitFor(() => expect(serveur.lire).toHaveBeenCalled());
     expect(demarrer).toHaveBeenCalledTimes(1);
+    expect(source.buffer).toBe(tampon);
+    expect(fetchSon).toHaveBeenCalledWith(expect.stringContaining('LaSonotheque.fr.wav'));
   });
 });
 
 it('active le son au premier geste dans la caisse sans ouvrir la messagerie', async () => {
-  const demarrer = vi.fn();
-  const audio = { state: 'running', currentTime: 0, destination: {}, close: vi.fn().mockResolvedValue(undefined), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), start: demarrer, stop: vi.fn() }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }) };
-  const constructeur = vi.fn(function () { return audio; });
-  vi.stubGlobal('AudioContext', constructeur);
+  const { demarrer, constructeur } = simulerAudio();
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
   render(<><button>Autre action dans la caisse</button><Messagerie utilisateur={utilisateur} /></>);
@@ -63,10 +75,8 @@ it('active le son au premier geste dans la caisse sans ouvrir la messagerie', as
 
 it('la cloche active et désactive le son, même si les notifications sont bloquées', async () => {
   const { ControlesFlottants } = await import('./ControlesFlottants');
-  const demarrer = vi.fn();
+  const { demarrer } = simulerAudio();
   const demander = vi.fn();
-  const audio = { state: 'running', currentTime: 0, destination: {}, close: vi.fn().mockResolvedValue(undefined), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), start: demarrer, stop: vi.fn() }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }) };
-  vi.stubGlobal('AudioContext', vi.fn(function () { return audio; }));
   vi.stubGlobal('Notification', { permission: 'denied', requestPermission: demander });
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
@@ -88,15 +98,11 @@ it('la cloche active et désactive le son, même si les notifications sont bloqu
   vi.useRealTimers();
 });
 
-it('sonne pendant une seconde lorsque la page est en arrière-plan, puis respecte la cloche', async () => {
+it('joue le fichier en arrière-plan et arrête le son avec la cloche', async () => {
   const { ControlesFlottants } = await import('./ControlesFlottants');
   const etatInitial = Object.getOwnPropertyDescriptor(document, 'visibilityState');
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
-  const demarrer = vi.fn();
-  const arreter = vi.fn();
-  const volume = { gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn(), disconnect: vi.fn() };
-  const audio = { state: 'running', currentTime: 10, destination: {}, close: vi.fn().mockResolvedValue(undefined), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), disconnect: vi.fn(), start: demarrer, stop: arreter }), createGain: () => volume };
-  vi.stubGlobal('AudioContext', vi.fn(function () { return audio; }));
+  const { demarrer, arreter } = simulerAudio();
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
   try {
@@ -106,9 +112,6 @@ it('sonne pendant une seconde lorsque la page est en arrière-plan, puis respect
     serveur.lire.mockResolvedValue({ comptes, messages: [message] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
     expect(demarrer).toHaveBeenCalledOnce();
-    expect(arreter).toHaveBeenCalledWith(11);
-    expect(volume.gain.setValueAtTime).toHaveBeenCalledWith(0.08, 10.8);
-    expect(volume.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 11);
     expect(screen.queryByRole('dialog', { name: 'Messages privés' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Désactiver le son des messages' }));
     expect(arreter).toHaveBeenLastCalledWith();
@@ -140,10 +143,7 @@ it('réactualise les messages au retour sur l’onglet ou au rétablissement du 
 });
 
 it('reprend un contexte audio suspendu avant de jouer un nouveau message', async () => {
-  const demarrer = vi.fn();
-  const audio = { state: 'running', currentTime: 0, destination: {}, close: vi.fn().mockResolvedValue(undefined), resume: vi.fn(), createOscillator: () => ({ frequency: { value: 0 }, connect: vi.fn(), disconnect: vi.fn(), start: demarrer, stop: vi.fn() }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn(), disconnect: vi.fn() }) };
-  audio.resume.mockImplementation(async () => { audio.state = 'running'; });
-  vi.stubGlobal('AudioContext', vi.fn(function () { return audio; }));
+  const { audio, demarrer } = simulerAudio();
   serveur.lire.mockResolvedValue({ comptes, messages: [] });
   vi.useFakeTimers();
   try {
@@ -154,6 +154,51 @@ it('reprend un contexte audio suspendu avant de jouer un nouveau message', async
     serveur.lire.mockResolvedValue({ comptes, messages: [message] });
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
     expect(audio.resume).toHaveBeenCalledOnce();
+    expect(demarrer).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
+
+
+it('ne joue pas un son en cours de chargement après la désactivation, même si la cloche est réactivée', async () => {
+  const { ControlesFlottants } = await import('./ControlesFlottants');
+  const { demarrer, fetchSon } = simulerAudio();
+  let terminer!: (value: { ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }) => void;
+  fetchSon.mockReturnValueOnce(new Promise(resolve => { terminer = resolve; }));
+  serveur.lire.mockResolvedValue({ comptes, messages: [] });
+  vi.useFakeTimers();
+  try {
+    render(<><button>Action caisse</button><Messagerie utilisateur={utilisateur} /><ControlesFlottants /></>);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Action caisse' }));
+    serveur.lire.mockResolvedValue({ comptes, messages: [message] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(fetchSon).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Désactiver le son des messages' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activer le son des messages' }));
+    await act(async () => { terminer({ ok: true, arrayBuffer: async () => new ArrayBuffer(1) }); });
+    expect(demarrer).not.toHaveBeenCalled();
+    serveur.lire.mockResolvedValue({ comptes, messages: [message, { ...message, id: 8 }] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(demarrer).toHaveBeenCalledOnce();
+    expect(fetchSon).toHaveBeenCalledOnce();
+  } finally { vi.useRealTimers(); }
+});
+
+it('réessaie le chargement du fichier si une première tentative échoue', async () => {
+  const { demarrer, fetchSon } = simulerAudio();
+  fetchSon.mockRejectedValueOnce(new Error('réseau'));
+  serveur.lire.mockResolvedValue({ comptes, messages: [] });
+  vi.useFakeTimers();
+  try {
+    render(<><button>Action caisse</button><Messagerie utilisateur={utilisateur} /></>);
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Action caisse' }));
+    serveur.lire.mockResolvedValue({ comptes, messages: [message] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(demarrer).not.toHaveBeenCalled();
+    serveur.lire.mockResolvedValue({ comptes, messages: [message, { ...message, id: 8 }] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    expect(fetchSon).toHaveBeenCalledTimes(2);
     expect(demarrer).toHaveBeenCalledOnce();
   } finally { vi.useRealTimers(); }
 });
