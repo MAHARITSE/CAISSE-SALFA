@@ -125,6 +125,15 @@ garder les versions verrouillées par `package-lock.json`.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
+- **Livre des virements** : l’administrateur et le comptable peuvent ajouter des
+  comptes (banque et numéro), saisir et corriger les recettes ou DED par virement,
+  filtrer le registre et imprimer des bordereaux individuels ou un état séparant
+  recettes et dépenses. Les séries `VR-AAAA-0001` et `VD-AAAA-0001` sont
+  distinctes des pièces de caisse. Le bouton « Préparer BNI/C et BNI/D » crée
+  les comptes manquants sans numéro ; complétez leurs références avec le bouton
+  de modification, notamment celles de BNI/D à partir de son RIB. Les comptes
+  déjà enregistrés ne sont pas remplacés. Aucun solde bancaire n’est calculé ; la
+  clôture en espèces ne modifie pas le registre bancaire.
 - **Annulation de suppression** : la dernière écriture supprimée peut être
   restaurée depuis le journal tant qu’elle n’a pas été remplacée par une autre
   opération de suppression.
@@ -141,14 +150,15 @@ garder les versions verrouillées par `package-lock.json`.
   rôles (`lecteur`, `caissier`, `admin`), sessions à expiration, limitation des
   tentatives, journal d’audit, verrou optimiste par révision (409 explicite) et
   revalidation intégrale de chaque écriture côté serveur.
-- **Exports** : CSV compatible Excel (UTF-8 BOM, séparateur `;`), protection
-  contre l’injection de formules, colonnes mode/référence/observation, montants
-  détaillés non comptés deux fois. Les totaux exportés correspondent à la
+- **Export Excel** : classeur `.xlsx` avec montants numériques, textes sans
+  formules et détails non comptés deux fois. Les totaux correspondent à la
   sélection affichée ; le solde de clôture reste celui de la période complète.
-- **Impression** : journal en A4 paysage (toutes les pages de la sélection),
-  bordereau seul en A4 portrait avec ses zones de signature. La hauteur de la
-  feuille n’ajoute pas de page vide à la fin ; une pièce trop longue peut
-  continuer sur les pages nécessaires.
+- **Impression du journal** : le bouton Imprimer ouvre la sélection dans la
+  visionneuse PDF du navigateur, avec l’en-tête des bordereaux, les catégories
+  en objet et la signature du Gestionnaire sur la dernière page. Si le dialogue
+  ne s’ouvre pas automatiquement, utiliser Imprimer dans la visionneuse. Il faut
+  autoriser les fenêtres contextuelles pour la caisse. Les bordereaux individuels
+  restent imprimables en A4 portrait avec leurs zones de signature.
 - **Sauvegardes SQL** : export MySQL complet en mode serveur, ou instantané SQL
   du livre en mode local. La restauration dans l’application vérifie un instantané
   intégré au fichier, demande confirmation et sauvegarde le livre actuel avant
@@ -194,9 +204,9 @@ garder les versions verrouillées par `package-lock.json`.
   saisies restent bloquées sur l’année ouverte jusqu’à la clôture.
 - Une clôture demandée avant l’échéance est refusée côté métier **et** côté
   interface : aucune archive ne peut être créée par anticipation.
-- L’application ne gère qu’un seul mode de paiement : **les espèces**. Le champ
-  n’est plus demandé à la saisie ; les écritures anciennes qui portent un autre
-  mode restent lisibles telles quelles jusqu’à leur modification.
+- Le livre de caisse reste réservé aux **espèces**. Les virements sont saisis
+  dans leur propre registre et ne modifient jamais le solde de caisse ; les
+  écritures anciennes gardent leur mode jusqu’à leur modification.
 - Les montants sont des **entiers MGA**. Les décimales, les notations scientifiques
   et les valeurs vides ne sont pas converties silencieusement en zéro.
 - Le **solde d’ouverture du livre** précède tout l’historique conservé. Ce n’est
@@ -248,7 +258,8 @@ automatiquement un livre existant.
 
 Une **sauvegarde SQL récente** produite par l’application contient un instantané
 validable du livre. Le bouton de restauration remplace le livre sans fusion et
-ne modifie pas les comptes. Le fichier est limité à 24 Mo (8 Mo pour le livre
+ne modifie pas les comptes utilisateurs. Les virements et comptes bancaires sont inclus ;
+une ancienne sauvegarde sans registre bancaire conserve celui en place. Le fichier est limité à 24 Mo (8 Mo pour le livre
 intégré). En mode WAMP, le dump SQL contient aussi les comptes hachés et peut
 être restauré intégralement avec phpMyAdmin ; pour les anciens dumps sans
 instantané, utiliser également phpMyAdmin. En mode local, le SQL contient le
@@ -291,7 +302,9 @@ src/
     validation.ts                 validation stricte des données
     storage.ts                    stockage atomique et migration
     backup.ts                     instantanés SQL, validation et secours
-    export.ts                     CSV sûr et téléchargements
+    export.ts                     téléchargements et utilitaires CSV
+    export-excel.ts               classeur Excel du journal
+    export-pdf.ts                 état imprimable de la sélection
     format.ts                     dates locales et montants
     constants.ts                  catégories, modes, limites, modèles
     entete.ts                     modèle, validation et valeurs par défaut des en-têtes

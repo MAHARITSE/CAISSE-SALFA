@@ -62,7 +62,7 @@ function LignesEntete({ entete }: { entete: EnteteDocument }) {
  * 11,2 / 87,0 / 22,0 / 35,9 / 41,5 mm, lignes de 11,6 mm, cases de signature
  * pleine largeur (65,5 mm pour trois signataires, 49,4 mm pour quatre).
  */
-export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; entete: EnteteDocument }) {
+export function BordereauDocument({ ligne, entete, compteVirement }: { ligne: LigneJournal; entete: EnteteDocument; compteVirement?: { banque: string; numeroCompte: string } }) {
   const recette = ligne.sens === 'RECETTE';
   const details = ligne.lignesDetail?.length
     ? ligne.lignesDetail.map(d => ({ id: d.id, libelle: d.libelle, montant: d.montant, observation: d.reference ?? '' }))
@@ -97,7 +97,8 @@ export function BordereauDocument({ ligne, entete }: { ligne: LigneJournal; ente
             AUTORISATION DE RECETTES, DEMANDE D’ENGAGEMENT DE DÉPENSES (DED). */}
         <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
 
-        <p className="bordereau-piece"><strong>Pièce n°</strong></p>
+        <p className="bordereau-piece"><strong>Pièce n°{compteVirement ? ` ${ligne.numero}` : ""}</strong></p>
+        {compteVirement && <p className="bordereau-ligne"><strong>Virement bancaire :</strong> {compteVirement.banque} · Compte {compteVirement.numeroCompte || 'non renseigné'}</p>}
 
         <p className="bordereau-ligne"><span className="bordereau-etiquette">DATE :</span>{' '}{dateFr(ligne.date)}</p>
         <p className="bordereau-ligne">
@@ -176,10 +177,11 @@ interface ModaleBordereauProps {
   entete: EnteteDocument;
   onFermer: () => void;
   onErreur?: () => void;
+  compteVirement?: { banque: string; numeroCompte: string };
 }
 
 /** Copie uniquement imprimable, sans écran d'aperçu intermédiaire. */
-export function ModaleBordereau({ ligne, entete, onFermer, onErreur }: ModaleBordereauProps) {
+export function ModaleBordereau({ ligne, entete, onFermer, onErreur, compteVirement }: ModaleBordereauProps) {
   const callbacks = useRef({ onFermer, onErreur });
   callbacks.current = { onFermer, onErreur };
   useEffect(() => {
@@ -214,7 +216,7 @@ export function ModaleBordereau({ ligne, entete, onFermer, onErreur }: ModaleBor
   return createPortal(
     <div className="print-only print-bordereau">
       <style>{'@media print { @page { size: A4 portrait; margin: 0; } }'}</style>
-      <BordereauDocument ligne={ligne} entete={entete} />
+      <BordereauDocument ligne={ligne} entete={entete} compteVirement={compteVirement} />
     </div>, document.body,
   );
 }

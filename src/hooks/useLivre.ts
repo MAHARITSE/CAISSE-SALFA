@@ -164,7 +164,13 @@ export function useLivre() {
     }
     // La restauration est explicite ; l'appelant télécharge d'abord les données actuelles.
     try {
-      const livre = sauvegarderLivre(importe, etat.erreur ? importe.revision : etat.livre.revision, true);
+      let aRestaurer = importe.virements === undefined ? { ...importe, virements: etat.livre.virements } : importe;
+      if (aRestaurer.virements && etat.livre.virements) {
+        const compteurs = { ...aRestaurer.virements.compteurs };
+        for (const [cle, valeur] of Object.entries(etat.livre.virements.compteurs)) compteurs[cle] = Math.max(compteurs[cle] ?? 0, valeur);
+        aRestaurer = { ...aRestaurer, virements: { ...aRestaurer.virements, compteurs } };
+      }
+      const livre = sauvegarderLivre(aRestaurer, etat.erreur ? importe.revision : etat.livre.revision, true);
       setEtat({ livre, erreur: null, avertissement: null, migration: false, normalisation: false });
       setMessageSync('');
       return livre;

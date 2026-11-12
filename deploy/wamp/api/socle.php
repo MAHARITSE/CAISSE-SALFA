@@ -28,6 +28,7 @@ if (!defined('SALFA_SOCLE')) {
     require_once __DIR__ . '/lib/auth.php';
     require_once __DIR__ . '/lib/validation.php';
     require_once __DIR__ . '/lib/aide-objet.php';
+    require_once __DIR__ . '/lib/virements.php';
     require_once __DIR__ . '/lib/metier.php';
     require_once __DIR__ . '/lib/export-sql.php';
     require_once __DIR__ . '/points/enveloppe.php';

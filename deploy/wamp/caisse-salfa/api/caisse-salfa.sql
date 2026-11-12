@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS salfa_livre (
   modifie_le DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS salfa_registre_virements (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  contenu LONGTEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS salfa_parametres (
   id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
   solde_initial BIGINT NOT NULL DEFAULT 0,
@@ -27233,8 +27238,8 @@ INSERT INTO salfa_utilisateurs (identifiant, nom_complet, mdp_hash, role, actif)
 -- ============================================================================
 SELECT 'tables salfa_ présentes' AS controle,
        COUNT(*) AS trouve,
-       14 AS attendu,
-       IF(COUNT(*) = 14, 'OK', 'INCOMPLET — relancez l’import du fichier entier') AS etat
+       15 AS attendu,
+       IF(COUNT(*) >= 15, 'OK', 'INCOMPLET — relancez l’import du fichier entier') AS etat
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME LIKE 'salfa%';

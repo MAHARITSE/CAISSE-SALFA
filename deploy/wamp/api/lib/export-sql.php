@@ -20,6 +20,7 @@ function salfa_tables_sauvegardees(): array
 {
     return [
         'livre',
+        'registre_virements',
         'parametres',
         'masques',
         'masque_lignes',

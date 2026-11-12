@@ -1,3 +1,4 @@
+import { registreVirementsVide } from './virements';
 import type { DonneesCaisse, Ecriture, ExerciceCloture, FiltresJournal, LigneJournal, Sauvegarde, Sens } from '../types';
 import { ANNEE_MAX, ANNEE_MIN, categoriesParDefaut, masquesParDefaut, MONTANT_MAX } from './constants';
 import { dateValide, exiger, validerDonnees } from './validation';
@@ -12,7 +13,7 @@ export function creerDonnees(annee = new Date().getFullYear()): DonneesCaisse {
   return {
     ecritures: [], parametres: { soldeInitial: 0, exercice: annee, reportPrecedent: null },
     masques: masquesParDefaut(), compteurs: {}, exercicesClotures: [], entetes: entetesParDefaut(),
-    categories: categoriesParDefaut(),
+    categories: categoriesParDefaut(), virements: registreVirementsVide(),
   };
 }
 
