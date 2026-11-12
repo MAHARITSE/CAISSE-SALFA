@@ -30,7 +30,7 @@ import { EnteteBordereauModal } from './components/EnteteBordereauModal';
 import { ControlesFlottants } from './components/ControlesFlottants';
 import { MODE_API, deconnexion as deconnexionApi, exporterSql, mutations, sante as santeApi, session as sessionApi, type EtatSession } from './utils/api';
 import { enteteModifie, numeroDocument, type EnteteDocument } from './utils/entete';
-import { retenirSessionLocale, restaurerSessionLocale, renouvelerSessionLocale } from './utils/utilisateurs';
+import { DUREE_INACTIVITE_LOCALE_MS, retenirSessionLocale, restaurerSessionLocale, renouvelerSessionLocale } from './utils/utilisateurs';
 import { libelleRole, ongletsAutorises, peutAdministrer, peutModifierSoldeOuverture, peutSaisir, type OngletApplication, type Role } from './utils/roles';
 import { VERSION_APPLICATION } from './utils/version';
 
@@ -40,6 +40,12 @@ type Onglet = OngletApplication;
 export function App() {
   const { livre, erreur, avertissement, messageSync, muter, muterEnLigne, muterEcritureEnLigne, recharger, rechargerApi, restaurer, chargementApi } = useLivre();
   const [bordereauEnregistre, setBordereauEnregistre] = useState<LigneJournal | null>(null);
+  /**
+   * Raison de la dernière fermeture de session, affichée sur l'écran de
+   * connexion. Sans elle, une expiration se confondait avec un plantage :
+   * l'utilisateur devait deviner pourquoi la caisse s'était refermée.
+   */
+  const [motifDeconnexion, setMotifDeconnexion] = useState('');
   /**
    * Hauteur réelle de la barre d'en-tête. La barre de filtres s'y accroche :
    * une valeur fixe se désaligne dès que la navigation passe sur deux lignes
@@ -155,26 +161,72 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [notification]);
 
-  // Chaque onglet ouvert renouvelle la présence ; sans contact la session expire.
+  /**
+   * Présence : un onglet de la caisse ouvert maintient la session vivante, y
+   * compris après un passage en veille ou une suspension d'onglet par Chrome.
+   *
+   * La vérification périodique ne déconnecte qu'après la fenêtre d'inactivité
+   * (`DUREE_INACTIVITE_LOCALE_MS`, alignée sur `SALFA_DUREE_SESSION` côté PHP).
+   * Un échec réseau n'est jamais une déconnexion confirmée : couper sur une
+   * simple coupure WiFi renvoyait à l'écran de connexion en pleine saisie.
+   */
   useEffect(() => {
     if (!session?.connecte || !session.utilisateur) return;
-    let actif = true;
     const id = String(session.utilisateur.id);
-    const verifier = async () => {
-      if (MODE_API) {
-        try {
-          const etat = await sessionApi();
-          if (actif && (!etat.connecte || String(etat.utilisateur?.id) !== id)) setSession({ connecte: false, utilisateur: null });
-        } catch { /* Une panne réseau n'est pas une déconnexion confirmée. */ }
-      } else if (!renouvelerSessionLocale(id) && actif) {
-        setSession({ connecte: false, utilisateur: null });
-      }
+    const ouvrirSession = () => setSession({ connecte: true, utilisateur: session.utilisateur });
+    const fermerSession = (motif: string) => {
+      setMotifDeconnexion(motif);
+      setSession({ connecte: false, utilisateur: null });
     };
+    if (!MODE_API) {
+      // Hors serveur, la trace locale doit exister dès l'ouverture : sans elle,
+      // la toute première vérification refermait la caisse ouverte depuis peu.
+      if (!renouvelerSessionLocale(id)) retenirSessionLocale({ id });
+      return;
+    }
+    let actif = true;
+    // Fenêtre réelle : celle annoncée par le serveur, sinon celle de l'application.
+    // Un écart entre les deux faisait expirer la caisse côté navigateur alors que
+    // le serveur la gardait ouverte (ou l'inverse, tout aussi déroutant).
+    const duree = session.dureeSession && session.dureeSession > 0
+      ? session.dureeSession * 1000
+      : DUREE_INACTIVITE_LOCALE_MS;
+    /** Dernière confirmation reçue du serveur : base du calcul d'inactivité. */
+    let derniereReponse = Date.now();
+    const verifier = async () => {
+      if (!actif) return;
+      try {
+        const etat = await sessionApi();
+        if (!actif) return;
+        if (!etat.connecte) {
+          const expiree = Date.now() - derniereReponse > duree;
+          fermerSession(expiree
+            ? `Votre session a expiré après ${Math.max(1, Math.round(duree / 60_000))} minutes sans activité. Reconnectez-vous : la caisse n’a pas été modifiée.`
+            : 'La session a été fermée sur ce poste ou révoquée. Reconnectez-vous pour reprendre la caisse.');
+          return;
+        }
+        if (String(etat.utilisateur?.id) !== id) {
+          fermerSession('Un autre compte a ouvert la caisse sur ce poste. Reconnectez-vous avec votre identifiant.');
+          return;
+        }
+        // Le serveur vient de confirmer la session : la présence est à jour.
+        derniereReponse = Date.now();
+      } catch { /* Réseau indisponible : la session n'est pas déclarée close. */ }
+    };
+    // Une session ouverte ici ne doit pas dépendre d'une échéance antérieure.
+    ouvrirSession();
+    void verifier();
     const timer = window.setInterval(() => { void verifier(); }, 15_000);
-    const reprise = () => { if (document.visibilityState === 'visible') void verifier(); };
+    const reprise = () => {
+      if (document.visibilityState !== 'visible') return;
+      // Retour dans l'onglet : signaler la présence tout de suite, sans attendre
+      // le prochain battement — c'est ce qui protège un poste mis en veille.
+      ouvrirSession();
+      void verifier();
+    };
     document.addEventListener('visibilitychange', reprise);
     return () => { actif = false; window.clearInterval(timer); document.removeEventListener('visibilitychange', reprise); };
-  }, [session?.connecte, session?.utilisateur?.id]);
+  }, [session?.connecte, session?.utilisateur?.id, session?.dureeSession]);
 
   // Le rôle décide de tout ce qui s'ouvre : pages, réglages et saisie.
   const role: Role = (session?.utilisateur?.role ?? 'admin') as Role;
@@ -456,6 +508,7 @@ export function App() {
       // Hors serveur, le compte vit dans le navigateur : on efface sa trace.
       retenirSessionLocale(null);
     }
+    setMotifDeconnexion('');
     setSession({ connecte: false, utilisateur: null });
     setNotification('');
   }
@@ -497,7 +550,8 @@ export function App() {
   }
   if (!session || !session.connecte) {
     return <>
-      <Connexion erreurInitiale={MODE_API ? erreur : null} onConnecte={etat => {
+      <Connexion erreurInitiale={MODE_API ? erreur : null} motif={motifDeconnexion} onConnecte={etat => {
+        setMotifDeconnexion('');
         setSession(etat);
         // Sur le serveur, la session ne vit que dans MySQL (cookie PHP) : rien
         // n'est mémorisé dans le navigateur. Hors serveur, on la retient.

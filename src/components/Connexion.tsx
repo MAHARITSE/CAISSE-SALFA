@@ -14,8 +14,10 @@ import { libelleRole, type Role } from '../utils/roles';
  *
  * Le mot de passe ne quitte jamais cet écran autrement que par le formulaire.
  */
-export function Connexion({ erreurInitiale, onConnecte }: {
+export function Connexion({ erreurInitiale, motif, onConnecte }: {
   erreurInitiale?: string | null;
+  /** Pourquoi la session précédente s'est fermée (expiration, révocation…). */
+  motif?: string;
   onConnecte: (etat: EtatSession) => void;
 }) {
   const [identifiant, setIdentifiant] = useState('');
@@ -262,6 +264,10 @@ export function Connexion({ erreurInitiale, onConnecte }: {
             >{afficher ? <EyeOff size={18} /> : <Eye size={18} />}</button>
           </div>
         </div>
+
+        {motif && !erreur && !erreurInitiale && <p role="status" className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200">
+          <RefreshCw size={17} className="mt-0.5 shrink-0" />{motif}
+        </p>}
 
         {(erreur || erreurInitiale) && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
           <AlertTriangle size={17} className="mt-0.5 shrink-0" />{erreur || erreurInitiale}

@@ -40,3 +40,38 @@ describe('enregistrement et impression directe', () => {
     fireEvent(window, new Event('afterprint'));
   });
 });
+
+
+describe('ordre de virement : réimpression depuis le registre', () => {
+  it('réimprime une DED par virement sans repasser par le formulaire', async () => {
+    const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await user.type(screen.getByLabelText('Identifiant'), 'comptable');
+    await user.type(screen.getByLabelText('Mot de passe'), 'compta1234');
+    await user.click(screen.getByRole('button', { name: /Se connecter/ }));
+    await screen.findByRole('heading', { name: 'Livre de caisse' });
+    await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
+    await user.click(screen.getByRole('button', { name: /Ajouter un compte bancaire/ }));
+    const compte = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
+    await user.type(within(compte).getByLabelText('Banque'), 'BNI/C');
+    await user.type(within(compte).getByLabelText('Numéro de compte'), '00005 111');
+    await user.click(within(compte).getByRole('button', { name: 'Enregistrer le compte' }));
+    await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
+    const saisie = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
+    await user.type(within(saisie).getByLabelText('Libellé'), 'OXYGENE');
+    await user.type(within(saisie).getByLabelText('Tiers / bénéficiaire'), 'OXYGENE MADA');
+    await user.type(within(saisie).getByLabelText('Montant (Ar)'), '7000');
+    await user.click(within(saisie).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+    fireEvent(window, new Event('afterprint'));
+    // La feuille disparaît ; le registre reste maître, l'ordre est réimprimable.
+    expect(document.querySelector('.print-ordre-virement')).toBeNull();
+    const numero = JSON.parse(localStorage.getItem(CLE_LIVRE)!).virements.ecritures[0].numero as string;
+    await user.click(screen.getByRole('button', { name: `Imprimer l’ordre de virement ${numero}` }));
+    await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(2));
+    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent('OXYGENE MADA');
+    expect(document.querySelector('.print-ordre-virement')).toHaveTextContent(numero);
+  });
+});

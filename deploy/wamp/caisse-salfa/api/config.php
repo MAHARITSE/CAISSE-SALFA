@@ -70,6 +70,9 @@ function salfa_config_defaut(): array
         'prefixe' => 'salfa_',
         'prefixe_session' => 'salfa_session_',
         'mode_session' => 'mixte',      // 'mixte' (PHP + MySQL) ou 'mysql' (sessions uniquement en base)
+        // Inactivité tolérée avant déconnexion, en secondes (300 à 28800).
+        // 1800 = 30 minutes : une pause ne ferme plus la caisse en pleine saisie.
+        'duree_session' => 1800,
         'sel_session' => '',
         'debug' => false,
         'limite_requetes' => SALFA_DEFAUT_LIMITE,

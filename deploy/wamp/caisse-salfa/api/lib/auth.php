@@ -7,7 +7,27 @@
 
 declare(strict_types=1);
 
-const SALFA_DUREE_SESSION = 60; // fenêtre de présence, renouvelée par les onglets ouverts
+/**
+ * Fenêtre d'inactivité d'une session, en secondes.
+ *
+ * Elle valait 60 secondes : une minute de pause (téléphone, mise en veille,
+ * onglet suspendu par Chrome) suffisait à renvoyer tout le monde à l'écran de
+ * connexion, en pleine saisie. Trente minutes d'inactivité réelle protègent
+ * encore un poste partagé ; la déconnexion manuelle, elle, reste immédiate.
+ *
+ * `duree_session` du fichier de configuration permet de l'ajuster sans toucher
+ * au code (valeur en secondes, bornée ci-dessous).
+ */
+const SALFA_DUREE_SESSION_DEFAUT = 1800;
+const SALFA_DUREE_SESSION_MIN = 300;      // 5 minutes
+const SALFA_DUREE_SESSION_MAX = 28800;    // 8 heures
+
+function salfa_duree_session(): int
+{
+    $valeurs = salfa_config();
+    $duree = (int) ($valeurs['duree_session'] ?? SALFA_DUREE_SESSION_DEFAUT);
+    return max(SALFA_DUREE_SESSION_MIN, min(SALFA_DUREE_SESSION_MAX, $duree > 0 ? $duree : SALFA_DUREE_SESSION_DEFAUT));
+}
 const SALFA_MAX_ESSAIS = 8;                 // par fenêtre et par adresse
 const SALFA_FENETRE_ESSAIS = 15 * 60;       // 15 minutes
 const SALFA_LONGUEUR_MDP = 8;
@@ -24,7 +44,11 @@ function salfa_demarrer_session(): void
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
-    @ini_set('session.gc_maxlifetime', (string) SALFA_DUREE_SESSION);
+    // Le ramasse-miettes de PHP supprime un fichier de session resté inactif
+    // plus longtemps que `gc_maxlifetime` : elle doit donc couvrir toute la
+    // fenêtre d'inactivité, pas une valeur plus courte. Le `.htaccess` du paquet
+    // fixe aussi 3600 s ; on garde le maximum des deux.
+    @ini_set('session.gc_maxlifetime', (string) max(salfa_duree_session(), 3600));
     session_name('salfa_session');
     session_set_cookie_params([
         'lifetime' => 0,
@@ -69,6 +93,9 @@ function salfa_etat_session(): array
         'ok' => true,
         'connecte' => $utilisateur !== null,
         'utilisateur' => $utilisateur,
+        // Durée d'inactivité appliquée par le serveur : l'interface aligne sa
+        // présence dessus et peut l'annoncer dans le motif de déconnexion.
+        'dureeSession' => salfa_duree_session(),
     ];
 }
 
@@ -99,7 +126,7 @@ function salfa_utilisateur_courant(bool $exiger = true): ?array
     // Le cookie Chrome peut être restauré après fermeture. Sans contact récent
     // d'un onglet de la caisse, la session ne doit plus être réutilisable.
     $derniere = (int) ($_SESSION['derniere_activite'] ?? 0);
-    if ($derniere <= 0 || time() - $derniere > SALFA_DUREE_SESSION) {
+    if ($derniere <= 0 || time() - $derniere > salfa_duree_session()) {
         salfa_fermer_session();
         if ($exiger) throw new SalFaErreur('Session expirée. Reconnectez-vous.', 401, 'session_expiree');
         return null;
@@ -113,7 +140,7 @@ function salfa_utilisateur_courant(bool $exiger = true): ?array
     }
     $_SESSION['derniere_activite'] = time();
     if (salfa_session_en_base()) {
-        salfa_executer('UPDATE ' . salfa_table('sessions') . ' SET expire_le = DATE_ADD(NOW(3), INTERVAL ? SECOND) WHERE jeton_hash = ?', [SALFA_DUREE_SESSION, salfa_hacher_jeton((string) $session['jeton'])]);
+        salfa_executer('UPDATE ' . salfa_table('sessions') . ' SET expire_le = DATE_ADD(NOW(3), INTERVAL ? SECOND) WHERE jeton_hash = ?', [salfa_duree_session(), salfa_hacher_jeton((string) $session['jeton'])]);
     }
     return [
         'id' => (int) $ligne['id'],
@@ -173,7 +200,7 @@ function salfa_connecter(array $corps): array
         salfa_executer('DELETE FROM ' . salfa_table('sessions') . ' WHERE expire_le < NOW()');
         salfa_executer(
             'INSERT INTO ' . salfa_table('sessions') . ' (id, utilisateur_id, jeton_hash, ip, agent, expire_le) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(3), INTERVAL ? SECOND))',
-            [salfa_identifiant_aleatoire(), (int) $utilisateur['id'], salfa_hacher_jeton($jeton), salfa_ip(), salfa_agent(), SALFA_DUREE_SESSION]
+            [salfa_identifiant_aleatoire(), (int) $utilisateur['id'], salfa_hacher_jeton($jeton), salfa_ip(), salfa_agent(), salfa_duree_session()]
         );
     }
     salfa_executer('UPDATE ' . salfa_table('utilisateurs') . ' SET derniere_connexion = NOW(3) WHERE id = ?', [(int) $utilisateur['id']]);

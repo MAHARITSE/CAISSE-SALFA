@@ -93,28 +93,41 @@ describe('changement de son propre mot de passe', () => {
 
 describe('expiration de présence locale', () => {
   beforeEach(() => { localStorage.clear(); retenirSessionLocale(null); });
-  it('restaure une session récente et refuse sa restauration après une minute sans contact', async () => {
+  it('garde la caisse ouverte pendant une pause et ne la referme qu’après 30 minutes', async () => {
     const comptes = await amorcerComptesLocaux();
     const id = comptes[0].id;
     const temps = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     retenirSessionLocale({ id });
-    temps.mockReturnValue(1_030_000);
+    // Une pause de plusieurs minutes ne ferme plus la caisse : chaque contrôle
+    // réussi repousse l'échéance, comme le font les onglets ouverts.
+    temps.mockReturnValue(1_000_000 + 5 * 60_000);
     expect(await restaurerSessionLocale()).toMatchObject({ id });
-    temps.mockReturnValue(1_090_001);
+    temps.mockReturnValue(1_000_000 + 25 * 60_000);
+    expect(await restaurerSessionLocale()).toMatchObject({ id });
+    // Sans aucun contrôle pendant plus de 30 minutes, la reconnexion est exigée.
+    retenirSessionLocale({ id });
+    temps.mockReturnValue(1_000_000 + 25 * 60_000 + 30 * 60_000 + 1);
     expect(await restaurerSessionLocale()).toBeNull();
     expect(renouvelerSessionLocale(id)).toBe(false);
   });
   it('renouvelle une session partagée active, mais ne ressuscite pas une déconnexion ou un autre compte', () => {
     const temps = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     retenirSessionLocale({ id: 'a' });
-    temps.mockReturnValue(1_050_000);
+    temps.mockReturnValue(1_000_000 + 20 * 60_000);
     expect(renouvelerSessionLocale('a')).toBe(true);
-    temps.mockReturnValue(1_100_000);
+    // Chaque vérification repousse l'échéance : la présence reste continue.
+    temps.mockReturnValue(1_000_000 + 45 * 60_000);
     expect(renouvelerSessionLocale('a')).toBe(true);
     retenirSessionLocale({ id: 'b' });
     expect(renouvelerSessionLocale('a')).toBe(false);
     retenirSessionLocale(null);
     expect(renouvelerSessionLocale('b')).toBe(false);
+  });
+  it('refuse un horodatage dans le futur plutôt que de faire confiance à une horloge fausse', () => {
+    const temps = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    retenirSessionLocale({ id: 'a' });
+    temps.mockReturnValue(900_000);
+    expect(renouvelerSessionLocale('a')).toBe(false);
   });
   it('refuse les anciennes sessions sans horodatage', async () => {
     retenirSessionLocale({ id: 'a' });

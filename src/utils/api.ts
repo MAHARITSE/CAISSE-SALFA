@@ -47,6 +47,12 @@ export interface Utilisateur {
 export interface EtatSession {
   connecte: boolean;
   utilisateur: Utilisateur | null;
+  /**
+   * Inactivité tolérée annoncée par le serveur, en secondes. L'interface aligne
+   * sa fenêtre de présence dessus : une durée différente d'un côté et de l'autre
+   * déconnectait la caisse alors que le serveur la considérait encore ouverte.
+   */
+  dureeSession?: number;
 }
 
 /**
@@ -117,7 +123,11 @@ export async function sante(): Promise<{ revision: number; exercice: number | nu
 
 export async function session(): Promise<EtatSession> {
   const reponse = await appeler<EtatSession & { ok: boolean }>('session');
-  return { connecte: Boolean(reponse.connecte), utilisateur: reponse.utilisateur ?? null };
+  return {
+    connecte: Boolean(reponse.connecte),
+    utilisateur: reponse.utilisateur ?? null,
+    ...(typeof reponse.dureeSession === 'number' && reponse.dureeSession > 0 ? { dureeSession: reponse.dureeSession } : {}),
+  };
 }
 
 export async function connexion(identifiant: string, motDePasse: string): Promise<EtatSession> {
