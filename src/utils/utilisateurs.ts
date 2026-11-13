@@ -239,7 +239,17 @@ export async function changerMonMotDePasse(actuel: string, nouveau: string): Pro
 }
 
 export const CLE_SESSION_LOCALE = 'salfa_session_locale_v1';
-export const DUREE_PRESENCE_LOCALE_MS = 60_000;
+
+/**
+ * Fenêtre d'inactivité d'une session, hors serveur comme sur WAMP.
+ *
+ * Elle était de 60 secondes : la moindre coupure d'un onglet — mise en veille du
+ * poste, onglet suspendu par Chrome, changement de fenêtre de plus d'une minute —
+ * déconnectait la caisse en pleine saisie. Trente minutes d'inactivité réelle
+ * suffisent à protéger un poste partagé sans interrompre le travail ; la
+ * déconnexion manuelle reste immédiate.
+ */
+export const DUREE_INACTIVITE_LOCALE_MS = 30 * 60_000;
 
 /** Mémorise le compte connecté hors serveur, pour retrouver qui change son mot de passe. */
 export function retenirSessionLocale(compte: { id: string } | null): void {
@@ -256,12 +266,24 @@ function lireSessionLocale(): { id: string; derniereActivite?: number } | null {
   } catch { return null; }
 }
 
-/** Renouvelle uniquement une session encore valide, sans ressusciter une session déconnectée. */
-export function renouvelerSessionLocale(id: string): boolean {
+/**
+ * Renouvelle uniquement une session encore valide, sans ressusciter une session
+ * déconnectée : un onglet resté ouvert garde la caisse accessible, une
+ * déconnexion explicite ne se rejoue pas.
+ *
+ * `maintenant` est injectable pour les tests ; l'application utilise l'horloge.
+ */
+export function renouvelerSessionLocale(id: string, maintenant = Date.now()): boolean {
   try {
     const session = lireSessionLocale();
-    if (!document.cookie.split(';').some(c => c.trim() === 'salfa_session_locale=1') || !session || session.id !== id || typeof session.derniereActivite !== 'number' || Date.now() - session.derniereActivite > DUREE_PRESENCE_LOCALE_MS || Date.now() < session.derniereActivite) return false;
-    localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id, derniereActivite: Date.now() }));
+    const horodatage = session?.derniereActivite;
+    if (!document.cookie.split(';').some(c => c.trim() === 'salfa_session_locale=1')) return false;
+    if (!session || session.id !== id || typeof horodatage !== 'number') return false;
+    // Un horodatage dans le futur (horloge système modifiée) est considéré comme
+    // inactif : mieux vaut redemander le mot de passe que faire confiance à une date fausse.
+    const inactivite = maintenant - horodatage;
+    if (inactivite > DUREE_INACTIVITE_LOCALE_MS || inactivite < 0) return false;
+    localStorage.setItem(CLE_SESSION_LOCALE, JSON.stringify({ id, derniereActivite: maintenant }));
     return true;
   } catch { return false; }
 }

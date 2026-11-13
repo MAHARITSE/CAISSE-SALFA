@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, BookOpenCheck, Check, Layers, Pencil, PenLine, RotateCcw, ShieldCheck, Tags,
+  AlertTriangle, BookOpenCheck, Check, Landmark, Layers, Pencil, PenLine, RotateCcw, ShieldCheck, Tags,
   Trash2, UserPlus, Users, X,
 } from 'lucide-react';
 import { Modale } from './Modale';
 import { Confirmation } from './Confirmation';
 import { listerComptes, creerCompte, modifierCompte, supprimerCompte, LONGUEUR_MIN_MOT_DE_PASSE } from '../utils/utilisateurs';
 import { ROLES, libelleRole, resumeDroits, type Compte, type Role } from '../utils/roles';
+import type { ActionVirement } from '../utils/api';
+import type { RegistreVirements } from '../utils/virements';
+import { GestionComptesBancaires } from './GestionComptesBancaires';
 
 interface Props {
   /** Réglages de la caisse, ouverts depuis Administration. */
@@ -17,6 +20,10 @@ interface Props {
   nombreModeles: number;
   /** Compte connecté : on ne se supprime pas soi-même par mégarde. */
   compteCourant?: { identifiant: string } | null;
+  /** Comptes bancaires et RIB de la caisse, réglés depuis cette page. */
+  registreVirements: RegistreVirements;
+  onMutationVirement: (action: ActionVirement) => Promise<boolean>;
+  erreurExterne: string | null;
 }
 
 type Formulaire =
@@ -34,7 +41,10 @@ const formulaireVide = (): Formulaire => ({
  * saisie, les catégories et l'en-tête des bordereaux, auparavant éparpillés dans
  * le livre journal, sont désormais rangés à cet endroit.
  */
-export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEntete, nombreModeles, compteCourant }: Props) {
+export function Administration({
+  onOuvrirModeles, onOuvrirCategories, onOuvrirEntete, nombreModeles, compteCourant,
+  registreVirements, onMutationVirement, erreurExterne,
+}: Props) {
   const [comptes, setComptes] = useState<Compte[] | null>(null);
   const [erreur, setErreur] = useState('');
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
@@ -92,10 +102,11 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
     }
   }
 
-  const reglages = [
-    { cle: 'modeles', titre: 'Modèles de saisie', detail: `${nombreModeles} modèle${nombreModeles > 1 ? 's' : ''} de bordereau`, icone: Layers, action: onOuvrirModeles },
-    { cle: 'categories', titre: 'Catégories de saisie', detail: 'Recettes et dépenses, séparément', icone: Tags, action: onOuvrirCategories },
-    { cle: 'entete', titre: 'En-tête des bordereaux', detail: 'Un seul en-tête pour les deux documents', icone: PenLine, action: onOuvrirEntete },
+  /** Réglages du livre de caisse seulement : le livre des virements a les siens. */
+  const reglagesJournal = [
+    { cle: 'modeles', titre: 'Modèles de saisie', detail: `Modèles du bordereau de caisse · ${nombreModeles} enregistré${nombreModeles > 1 ? 's' : ''}`, icone: Layers, action: onOuvrirModeles },
+    { cle: 'categories', titre: 'Catégories de saisie', detail: 'Recettes et dépenses de la caisse, séparément', icone: Tags, action: onOuvrirCategories },
+    { cle: 'entete', titre: 'En-tête des bordereaux', detail: 'Un seul en-tête pour les deux documents de caisse', icone: PenLine, action: onOuvrirEntete },
   ];
 
   return <div className="space-y-5">
@@ -107,19 +118,21 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
       <button type="button" className="ml-auto text-emerald-700 dark:text-emerald-400 hover:underline" onClick={() => setConfirmation('')}>Fermer</button>
     </p>}
 
-    {/* Réglages de la caisse : ils étaient dans le livre journal. */}
-    <section className="card p-5" aria-label="Réglages de la caisse">
+    {/* Deux livres, deux jeux de réglages : rien ne se mélange. */}
+    <section className="card p-5" aria-label="Livre de caisse — modèles et catégories">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100"><BookOpenCheck size={17} className="text-brand-700 dark:text-brand-300" />Réglages de la caisse</h2>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Modèles de saisie, catégories et en-tête des bordereaux : tout se règle ici.</p>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100"><BookOpenCheck size={17} className="text-brand-700 dark:text-brand-300" />Livre de caisse</h2>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Recettes et dépenses en espèces : leurs modèles de saisie, leurs catégories et l’en-tête des bordereaux.</p>
         </div>
+        <span className="badge badge-neutral">Journal</span>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        {reglages.map(({ cle, titre, detail, icone: Icone, action }) => <button
+        {reglagesJournal.map(({ cle, titre, detail, icone: Icone, action }) => <button
           key={cle}
           type="button"
           onClick={action}
+          aria-label={titre}
           className="group flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/40"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 group-hover:bg-white"><Icone size={17} /></span>
@@ -128,6 +141,20 @@ export function Administration({ onOuvrirModeles, onOuvrirCategories, onOuvrirEn
             <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{detail}</span>
           </span>
         </button>)}
+      </div>
+    </section>
+
+    {/* Livre des virements : comptes bancaires, RIB et bénéficiaires. */}
+    <section className="card p-5" aria-label="Livre des virements — comptes et bénéficiaires">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100"><Landmark size={17} className="text-brand-700 dark:text-brand-300" />Livre des virements</h2>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">Virements bancaires : les comptes de l’hôpital et leur RIB. Les clients et les fournisseurs se règlent directement dans l’onglet « Livre des virements ».</p>
+        </div>
+        <span className="badge badge-neutral">Banque</span>
+      </div>
+      <div className="mt-4 rounded-xl border border-slate-200 p-4 dark:border-slate-700" role="region" aria-label="Comptes bancaires et RIB">
+        <GestionComptesBancaires registre={registreVirements} onMutation={onMutationVirement} erreurExterne={erreurExterne} />
       </div>
     </section>
 

@@ -14,8 +14,10 @@ import { libelleRole, type Role } from '../utils/roles';
  *
  * Le mot de passe ne quitte jamais cet écran autrement que par le formulaire.
  */
-export function Connexion({ erreurInitiale, onConnecte }: {
+export function Connexion({ erreurInitiale, motif, onConnecte }: {
   erreurInitiale?: string | null;
+  /** Pourquoi la session précédente s'est fermée (expiration, révocation…). */
+  motif?: string;
   onConnecte: (etat: EtatSession) => void;
 }) {
   const [identifiant, setIdentifiant] = useState('');
@@ -133,12 +135,12 @@ export function Connexion({ erreurInitiale, onConnecte }: {
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm dark:bg-brand-600"><HeartPulse size={23} strokeWidth={2} /></span>
           <div className="min-w-0">
             <p className="text-lg font-extrabold leading-none tracking-tight text-brand-950 dark:text-brand-300">SALFA</p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Caisse principale · Gestion de caisse</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Caisse et Trésorerie · SALFA</p>
           </div>
         </div>
 
         <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à la caisse</h1>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100"><LogIn size={20} className="text-brand-700 dark:text-brand-400" />Connexion à Caisse et Trésorerie</h1>
           <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">Ouvrez la session avec votre compte : chaque rôle retrouve ses pages.</p>
         </div>
 
@@ -262,6 +264,10 @@ export function Connexion({ erreurInitiale, onConnecte }: {
             >{afficher ? <EyeOff size={18} /> : <Eye size={18} />}</button>
           </div>
         </div>
+
+        {motif && !erreur && !erreurInitiale && <p role="status" className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200">
+          <RefreshCw size={17} className="mt-0.5 shrink-0" />{motif}
+        </p>}
 
         {(erreur || erreurInitiale) && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
           <AlertTriangle size={17} className="mt-0.5 shrink-0" />{erreur || erreurInitiale}

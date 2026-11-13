@@ -20,7 +20,7 @@ describe('impression de la sélection affichée', () => {
     sauvegarderLivre(livreTest(livre), 0);
     render(<App />);
     const user = userEvent.setup();
-    await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+    await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
     await user.type(screen.getByLabelText('Identifiant'), 'admin');
     await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
     await user.click(screen.getByRole('button', { name: /Se connecter/ }));

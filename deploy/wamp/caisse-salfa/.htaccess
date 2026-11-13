@@ -31,7 +31,10 @@ DirectoryIndex index.html index.php
   </FilesMatch>
 </IfModule>
 
-# Limites PHP pour l'import d'une sauvegarde complète (32 Mo) et session d'1 heure.
+# Limites PHP pour l'import d'une sauvegarde complète (32 Mo).
+# `session.gc_maxlifetime` n'est qu'un filet de sécurité du ramasse-miettes :
+# la fenêtre d'inactivité réellement appliquée est `duree_session` dans l'API
+# (30 minutes par défaut, réglable de 5 minutes à 8 heures).
 <IfModule mod_php.c>
   php_value post_max_size 32M
   php_value upload_max_filesize 32M

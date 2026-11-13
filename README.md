@@ -125,15 +125,49 @@ garder les versions verrouillées par `package-lock.json`.
 - **Numérotation stable** : `RC-AAAA-0001` / `DP-AAAA-0001`. Les compteurs sont
   persistés : supprimer une pièce ne libère pas son numéro. Une modification
   conserve le numéro et la date de création d’origine.
-- **Livre des virements** : l’administrateur et le comptable peuvent ajouter des
-  comptes (banque et numéro), saisir et corriger les recettes ou DED par virement,
-  filtrer le registre et imprimer des bordereaux individuels ou un état séparant
-  recettes et dépenses. Les séries `VR-AAAA-0001` et `VD-AAAA-0001` sont
-  distinctes des pièces de caisse. Le bouton « Préparer BNI/C et BNI/D » crée
-  les comptes manquants sans numéro ; complétez leurs références avec le bouton
-  de modification, notamment celles de BNI/D à partir de son RIB. Les comptes
-  déjà enregistrés ne sont pas remplacés. Aucun solde bancaire n’est calculé ; la
-  clôture en espèces ne modifie pas le registre bancaire.
+- **Deux livres, deux jeux de réglages** : Administration range d’un côté le
+  **livre de caisse** (modèles de saisie, catégories, en-tête des bordereaux) et
+  de l’autre le **livre des virements** (comptes bancaires et RIB). Aucun réglage
+  d’un livre ne se règle dans la section de l’autre.
+- **Comptes bancaires et RIB, réglés dans Administration** : la section
+  « Comptes bancaires et RIB » liste les comptes de l’hôpital et permet de les
+  **ajouter**, de les **modifier** ou de les **supprimer** (banque, numéro de
+  compte / RIB, titulaire — donneur d’ordre —, adresse et code banque à cinq
+  chiffres). Un compte dont le numéro manque porte la mention « RIB à
+  compléter » ; le bouton « Préparer BNI/C et BNI/D » crée les deux comptes
+  manquants sans numéro, à compléter ensuite. Un compte qui porte des virements
+  ne peut pas être supprimé : ses ordres déjà émis perdraient leur RIB — son
+  numéro se corrige, il ne se retire pas. Ce réglage est réservé à
+  l’administrateur ; le livre des virements, lui, ne fait que les utiliser.
+- **Clients et fournisseurs** : le bénéficiaire d’un virement vient d’une fiche,
+  tenue dans le livre des virements. Un **client** pour une recette ; un
+  **fournisseur** pour une DED, dont le **RIB est obligatoire** (établissement
+  bancaire et numéro de compte) puisqu’il s’imprime sur l’ordre de virement. Le
+  choix de la fiche remplit le nom et les mentions du bénéficiaire, qui restent
+  modifiables pour une pièce particulière. Aucun virement ne s’enregistre sans
+  fiche ; les pièces antérieures gardent leur tiers écrit à la main. Une fiche
+  qui porte des virements ne se supprime pas, elle se corrige.
+- **Livre des virements** : l’administrateur et le comptable saisissent et
+  corrigent les recettes ou DED par virement sur les comptes réglés dans
+  Administration, filtrent le registre et impriment des bordereaux individuels
+  ou un état séparant recettes et dépenses. Les séries `VR-AAAA-0001` et
+  `VD-AAAA-0001` sont distinctes des pièces de caisse. Aucun solde bancaire n’est
+  calculé ; la clôture en espèces ne modifie pas le registre bancaire.
+- **Ordre de virement obligatoire** : chaque **DED par virement** imprime
+  aussitôt, sans aperçu, l’**ordre de virement** du formulaire BNI 114018 remis à
+  la banque. La feuille A4 porte le même ordre deux fois, séparés par un trait de
+  découpe : la moitié haute part à la banque, la moitié basse reste en souche —
+  quelle que soit la moitié détachée, la pièce est complète. Date, compte débité
+  et son RIB, bénéficiaire, montant en chiffres et en toutes lettres, référence,
+  observations et signature y figurent ; le titre, le nom de la banque et les
+  mentions du modèle sont reproduits, sans aucune image : le document n’embarque
+  pas de logo et se complète au besoin à la main. L’ordre est réimprimable depuis
+  la ligne du virement.
+  Les recettes par virement n’impriment rien : rien n’est à envoyer à la banque.
+  Les mentions propres au bénéficiaire (adresse, établissement bancaire, compte
+  ou RIB) et le caractère permanent ou occasionnel se saisissent dans le
+  formulaire du virement ; **une mention laissée vide reste en blanc sur le
+  papier**, à compléter à la main, pour ne jamais bloquer un enregistrement.
 - **Annulation de suppression** : la dernière écriture supprimée peut être
   restaurée depuis le journal tant qu’elle n’a pas été remplacée par une autre
   opération de suppression.
@@ -167,6 +201,14 @@ garder les versions verrouillées par `package-lock.json`.
   exécuté par l’application. Un export brut SQL sert au diagnostic local.
 - **Onglet Exercices & clôtures** : exercice en cours, solde reporté, historique
   des clôtures et téléchargement d’une archive autonome par exercice.
+- **Exemples de démonstration** : sur un livre encore vide, « Données &
+  sauvegardes » propose de charger un jeu d’exemples — écritures de caisse avec
+  leurs lignes de détail, deux comptes BNI avec leur RIB, clients, fournisseurs et
+  virements datés de l’année en cours. Le chargement demande une confirmation et
+  télécharge la sauvegarde SQL du livre en place ; il disparaît dès la première
+  pièce enregistrée. Le livre des virements a le sien : « Charger des exemples »
+  y ajoute les comptes et les fiches manquants sans rien remplacer, et les deux
+  virements d’exemple tant que le registre n’en contient aucun.
 - **Livres antérieurs** : un livre créé avant cette version reste lisible ; il
   est converti à l’ouverture, les années passées étant archivées et l’année
   courante ouverte, avec un avertissement explicite.
@@ -287,6 +329,7 @@ src/
     SaisieEcriture.tsx            formulaire recette/dépense et postes
     LivreJournal.tsx              journal, détails et dépliage des postes
     Bordereau.tsx                 document imprimable et sa boîte de dialogue
+    OrdreVirement.tsx             ordre de virement bancaire (demi-A4, formulaire BNI)
     EnteteBordereauModal.tsx      éditeur de l’en-tête commun (polices, images libres)
     Synthese.tsx                  indicateurs et solde initial
     Analyse.tsx                   statistiques par catégorie et ratio
@@ -330,7 +373,13 @@ En mode serveur, les demandes sont partagées dans une table MySQL créée au pr
 
 L'icône enveloppe dans l'en-tête ouvre les messages privés, regroupés en conversations par correspondant et affichés sous forme de bulles, dans l'ordre chronologique. Chaque utilisateur peut choisir un destinataire actif, envoyer un message, répondre et marquer les messages reçus comme lus ; le compteur est actualisé environ toutes les 15 secondes. Sur le serveur, l'API ne renvoie que les messages envoyés ou reçus par le compte connecté. La table MySQL `messages_prives` est créée au premier accès : elle doit être sauvegardée avec la base (les exports du livre ne la comprennent pas). En mode local de démonstration, les messages restent dans le navigateur et ne sont pas protégés contre une personne ayant accès à son stockage ; utiliser le mode serveur pour la confidentialité et le partage entre ordinateurs.
 
-La session est partagée entre les onglets et fenêtres du navigateur et reste active après actualisation. Tant qu’un onglet de la caisse est ouvert, il renouvelle la session toutes les 15 secondes. Après environ 60 secondes sans contact, la session expire et une reconnexion est nécessaire, même si Chrome restaure le cookie. Une réouverture plus rapide peut conserver la session ; une coupure réseau, la mise en veille de l’ordinateur ou la suspension des onglets par Chrome peuvent aussi entraîner une déconnexion alors que Chrome est ouvert. Pour une fermeture immédiate sur un poste partagé, utilisez « Se déconnecter ». Un compte désactivé ou une session révoquée nécessite aussi une reconnexion.
+La session est partagée entre les onglets et fenêtres du navigateur et reste active après actualisation. Tant qu’un onglet de la caisse est ouvert, il signale sa présence toutes les 15 secondes et au retour dans l’onglet.
+
+Une session n’est fermée qu’après **30 minutes sans activité** (`duree_session`, en secondes, dans la configuration de l’API — de 5 minutes à 8 heures). La fenêtre était auparavant de 60 secondes : une pause téléphonique, une mise en veille ou un onglet suspendu par Chrome renvoyait à l’écran de connexion en pleine saisie. L’interface lit la durée annoncée par le serveur : les deux côtés ne peuvent plus diverger.
+
+Trois situations n’entraînent **aucune** déconnexion, parce qu’elles ne prouvent pas que la session est fermée : une coupure réseau, une réponse lente du serveur, un onglet momentanément inactif. Quand la session est réellement close, l’écran de connexion indique **pourquoi** : expiration après inactivité, révocation, ou autre compte ouvert sur le poste.
+
+Reste une déconnexion attendue : fermer le navigateur, ou cliquer « Se déconnecter » sur un poste partagé. Un compte désactivé par l’administrateur exige aussi une reconnexion.
 
 Pour les alertes de messages, la cloche flottante active ou désactive le son ; le choix est conservé dans ce navigateur. Une notification système peut aussi signaler les nouveaux messages si elle a été autorisée dans les paramètres du site. La vérification a lieu environ toutes les 15 secondes tant que l'application est ouverte et connectée. Chrome peut bloquer le son avant une interaction et il n'y a pas d'alerte lorsque le site est fermé. Les notifications système exigent HTTPS reconnu ou localhost ; elles sont indépendantes de la cloche sonore.
 
@@ -342,7 +391,7 @@ Le nom du modèle est utilisé comme libellé initial de l'écriture (en majuscu
 
 En mode serveur, si un autre utilisateur modifie le livre pendant une saisie, l'application recharge la dernière révision et réessaie automatiquement l'enregistrement lorsque cela ne risque pas d'écraser une écriture. Si la pièce en cours de modification a elle-même changé ou a été supprimée, ou si l'exercice ou la catégorie n'est plus valide, le formulaire conserve la saisie et signale le problème ; copiez votre travail, fermez le formulaire puis rechargez le livre pour comparer les données. Une erreur réseau n'est jamais réessayée automatiquement, afin d'éviter de créer une pièce en double.
 
-Après l'enregistrement d'une écriture, la fenêtre d'impression du navigateur est sollicitée directement, sans écran d'aperçu dans l'application. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
+Après l'enregistrement d'une écriture, la fenêtre d'impression du navigateur est sollicitée directement, sans écran d'aperçu dans l'application. Il en va de même pour l'ordre de virement imprimé après chaque DED par virement : choisissez une imprimante A4, puis découpez la feuille au trait indiqué. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
 
 ### Messages privés, son et présence
 

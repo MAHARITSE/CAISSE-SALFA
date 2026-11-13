@@ -14,7 +14,7 @@ async function ouvrirJournal() {
   const user = userEvent.setup();
   const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
   render(<App />);
-  await screen.findByRole('heading', { name: /Connexion à la caisse/ });
+  await screen.findByRole('heading', { name: /Connexion à Caisse et Trésorerie/ });
   await user.type(screen.getByLabelText('Identifiant'), 'admin');
   await user.type(screen.getByLabelText('Mot de passe'), 'admin1234');
   await user.click(screen.getByRole('button', { name: /Se connecter/ }));

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 function salfa_registre_vide(): array
 {
-    return ['comptes' => [], 'ecritures' => [], 'compteurs' => (object) []];
+    return ['comptes' => [], 'ecritures' => [], 'tiers' => [], 'compteurs' => (object) []];
 }
 
 /** Valide tout le registre avant sauvegarde ou restauration. */
@@ -20,9 +20,42 @@ function salfa_valider_registre_virements(mixed $brut): array
     foreach ($brut['comptes'] as $c) {
         if (!is_array($c)) throw new SalFaErreur('Compte bancaire invalide.', 400, 'virements_invalides');
         $compte = ['id' => salfa_champ($c, 'id', 120), 'banque' => salfa_champ($c, 'banque', 120), 'numeroCompte' => salfa_champ($c, 'numeroCompte', 120, false)];
+        // Identité imprimée sur l'ordre de virement : absente des livres antérieurs.
+        foreach (['titulaire' => 200, 'adresse' => 200, 'codeBanque' => 5] as $cle => $max) {
+            $valeur = salfa_champ($c, $cle, $max, false);
+            if ($valeur === '') continue;
+            if ($cle === 'codeBanque' && !preg_match('/^\d{5}$/', $valeur)) throw new SalFaErreur('Code banque : cinq chiffres attendus.', 400, 'virements_invalides');
+            $compte[$cle] = $valeur;
+        }
         $cle = mb_strtolower($compte['banque']) . "\0" . mb_strtolower($compte['numeroCompte']);
         if (isset($idsComptes[$compte['id']]) || isset($clesComptes[$cle])) throw new SalFaErreur('Compte bancaire en double.', 400, 'doublon');
         $idsComptes[$compte['id']] = true; $clesComptes[$cle] = true; $comptes[] = $compte;
+    }
+    // Clients (recettes) et fournisseurs (DED) : le bénéficiaire des virements.
+    $tiersBruts = array_key_exists('tiers', $brut) ? $brut['tiers'] : [];
+    if (!is_array($tiersBruts) || count($tiersBruts) > 5000) throw new SalFaErreur('Clients et fournisseurs invalides.', 400, 'virements_invalides');
+    $tiers = []; $idsTiers = []; $nomsTiers = [];
+    foreach ($tiersBruts as $t) {
+        if (!is_array($t)) throw new SalFaErreur('Client ou fournisseur invalide.', 400, 'virements_invalides');
+        $type = $t['type'] ?? '';
+        if (!in_array($type, ['CLIENT', 'FOURNISSEUR'], true)) throw new SalFaErreur('Type de client ou de fournisseur invalide.', 400, 'virements_invalides');
+        $fiche = [
+            'id' => salfa_champ($t, 'id', 120),
+            'type' => $type,
+            'nom' => salfa_champ($t, 'nom', 200),
+            'telephone' => salfa_champ($t, 'telephone', 40, false),
+            'adresse' => salfa_champ($t, 'adresse', 200, false),
+            'banque' => salfa_champ($t, 'banque', 120, false),
+            'numeroCompte' => salfa_champ($t, 'numeroCompte', 120, false),
+        ];
+        // Le RIB d'un fournisseur est imprimé sur l'ordre de virement : sans lui
+        // la banque ne saurait pas où créditer l'argent.
+        if ($type === 'FOURNISSEUR' && ($fiche['banque'] === '' || $fiche['numeroCompte'] === '')) {
+            throw new SalFaErreur('Renseignez le RIB du fournisseur : il figure sur l’ordre de virement.', 400, 'rib_manquant');
+        }
+        $cle = $type . "\0" . mb_strtolower($fiche['nom']);
+        if (isset($idsTiers[$fiche['id']]) || isset($nomsTiers[$cle])) throw new SalFaErreur('Client ou fournisseur en double.', 400, 'doublon');
+        $idsTiers[$fiche['id']] = true; $nomsTiers[$cle] = true; $tiers[] = $fiche;
     }
     $ecritures = []; $ids = []; $numeros = []; $minima = [];
     foreach ($brut['ecritures'] as $v) {
@@ -48,6 +81,18 @@ function salfa_valider_registre_virements(mixed $brut): array
             if (!salfa_horodatage_valide($modifie)) throw new SalFaErreur('Date de modification invalide.', 400, 'virements_invalides');
             $e['updatedAt'] = $modifie;
         }
+        // Mentions de l'ordre de virement remis à la banque, facultatives.
+        foreach (['beneficiaireAdresse', 'beneficiaireBanque', 'beneficiaireCompte'] as $cle) {
+            $valeur = salfa_champ($v, $cle, 200, false);
+            if ($valeur !== '') $e[$cle] = $valeur;
+        }
+        if (($v['permanent'] ?? false) === true) $e['permanent'] = true;
+        // Fiche du bénéficiaire : absente des virements antérieurs aux fiches.
+        if (isset($v['tiersId']) && $v['tiersId'] !== '') {
+            $tiersId = salfa_champ($v, 'tiersId', 120);
+            if (!isset($idsTiers[$tiersId])) throw new SalFaErreur('Client ou fournisseur introuvable pour ce virement.', 400, 'tiers_absent');
+            $e['tiersId'] = $tiersId;
+        }
         $ecritures[] = $e;
     }
     $compteurs = [];
@@ -56,7 +101,7 @@ function salfa_valider_registre_virements(mixed $brut): array
         $compteurs[$cle] = $valeur;
     }
     foreach ($minima as $cle => $_) if (!isset($compteurs[$cle])) throw new SalFaErreur('Compteur de virement manquant.', 400, 'virements_invalides');
-    return ['comptes' => $comptes, 'ecritures' => $ecritures, 'compteurs' => (object) $compteurs];
+    return ['comptes' => $comptes, 'ecritures' => $ecritures, 'tiers' => $tiers, 'compteurs' => (object) $compteurs];
 }
 
 function salfa_lire_registre_virements(): array

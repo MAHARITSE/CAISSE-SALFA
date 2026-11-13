@@ -1,4 +1,4 @@
-import type { CompteVirement, NouvelleOperationVirement, Virement } from './virements';
+import type { CompteVirement, NouvelleOperationVirement, Tiers, Virement } from './virements';
 import type { Ecriture, MasqueSaisie, Sauvegarde, Sens } from '../types';
 import { normaliserEntetes, type DocumentEntete, type EnteteDocument } from './entete';
 import { categoriesParDefaut } from './constants';
@@ -47,6 +47,12 @@ export interface Utilisateur {
 export interface EtatSession {
   connecte: boolean;
   utilisateur: Utilisateur | null;
+  /**
+   * Inactivité tolérée annoncée par le serveur, en secondes. L'interface aligne
+   * sa fenêtre de présence dessus : une durée différente d'un côté et de l'autre
+   * déconnectait la caisse alors que le serveur la considérait encore ouverte.
+   */
+  dureeSession?: number;
 }
 
 /**
@@ -117,7 +123,11 @@ export async function sante(): Promise<{ revision: number; exercice: number | nu
 
 export async function session(): Promise<EtatSession> {
   const reponse = await appeler<EtatSession & { ok: boolean }>('session');
-  return { connecte: Boolean(reponse.connecte), utilisateur: reponse.utilisateur ?? null };
+  return {
+    connecte: Boolean(reponse.connecte),
+    utilisateur: reponse.utilisateur ?? null,
+    ...(typeof reponse.dureeSession === 'number' && reponse.dureeSession > 0 ? { dureeSession: reponse.dureeSession } : {}),
+  };
 }
 
 export async function connexion(identifiant: string, motDePasse: string): Promise<EtatSession> {
@@ -191,6 +201,11 @@ export type ActionVirement =
   | { operation: 'ajouter_compte'; compte: CompteVirement }
   | { operation: 'ajouter_comptes'; comptes: CompteVirement[] }
   | { operation: 'modifier_compte'; compte: CompteVirement }
+  | { operation: 'supprimer_compte'; compteId: string }
+  | { operation: 'ajouter_tiers'; tiers: Tiers }
+  | { operation: 'modifier_tiers'; tiers: Tiers }
+  | { operation: 'supprimer_tiers'; tiersId: string }
+  | { operation: 'charger_exemples'; exemple: { comptes?: CompteVirement[]; tiers?: Tiers[]; virements?: NouvelleOperationVirement[] } }
   | { operation: 'ajouter'; virement: NouvelleOperationVirement }
   | { operation: 'modifier'; virement: Virement };
 

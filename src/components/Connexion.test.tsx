@@ -29,6 +29,12 @@ vi.mock('../utils/api', () => ({ MODE_API: true, ErreurApi, sante, connexion, co
 import { Connexion } from './Connexion';
 
 describe('connexion en mode serveur', () => {
+  it('annonce « Caisse et Trésorerie »', () => {
+    sante.mockResolvedValue({ revision: 0 });
+    render(<Connexion onConnecte={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Connexion à Caisse et Trésorerie' })).toBeInTheDocument();
+  });
+
   it('demande les accès MySQL quand l’accès par défaut de WAMP est refusé', async () => {
     sante.mockRejectedValue(new ErreurApi('Accès refusé par MySQL.', 'mysql_injoignable', 503));
     render(<Connexion onConnecte={vi.fn()} />);

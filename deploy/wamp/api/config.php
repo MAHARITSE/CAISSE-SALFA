@@ -33,7 +33,7 @@ if (!defined('SALFA_API')) {
  * `api/index.php?action=sante` la renvoie : le pied de page signale un paquet
  * dont l'interface et l'API ne sont pas de la même version.
  */
-const SALFA_VERSION_API = '1.3.0';
+const SALFA_VERSION_API = '1.4.0';
 
 const SALFA_ANNEE_MIN = 1900;
 const SALFA_ANNEE_MAX = 9999;
@@ -70,6 +70,9 @@ function salfa_config_defaut(): array
         'prefixe' => 'salfa_',
         'prefixe_session' => 'salfa_session_',
         'mode_session' => 'mixte',      // 'mixte' (PHP + MySQL) ou 'mysql' (sessions uniquement en base)
+        // Inactivité tolérée avant déconnexion, en secondes (300 à 28800).
+        // 1800 = 30 minutes : une pause ne ferme plus la caisse en pleine saisie.
+        'duree_session' => 1800,
         'sel_session' => '',
         'debug' => false,
         'limite_requetes' => SALFA_DEFAUT_LIMITE,
