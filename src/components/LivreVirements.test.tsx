@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LivreVirements } from './LivreVirements';
 import { categoriesParDefaut } from '../utils/constants';
@@ -168,6 +168,41 @@ describe('livre des virements', () => {
     expect(screen.queryByRole('region', { name: /Synthèse des virements/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Afficher la synthèse' }));
     expect(screen.getByRole('region', { name: /Synthèse des virements/ })).toBeInTheDocument();
+  });
+  it('charge des exemples depuis le livre : fiches seules si des virements existent déjà', async () => {
+    const user = userEvent.setup();
+    // Registre vide : les exemples comprennent comptes, fiches et deux virements.
+    const onMutation = vi.fn().mockResolvedValue(true);
+    const props = { categories: categoriesParDefaut(), entete: entetesParDefaut(), onMutation, erreurExterne: null };
+    render(<LivreVirements {...props} registre={registreVirementsVide()} />);
+    await user.click(screen.getByRole('button', { name: /Charger des exemples/ }));
+    let dialogue = screen.getByRole('dialog', { name: 'Charger des exemples de virements' });
+    expect(dialogue).toHaveTextContent('Comptes bancaires à ajouter : 2');
+    expect(dialogue).toHaveTextContent('Clients et fournisseurs à ajouter : 4');
+    await user.click(within(dialogue).getByRole('button', { name: 'Charger les exemples' }));
+    expect(onMutation).toHaveBeenCalledWith({
+      operation: 'charger_exemples',
+      exemple: expect.objectContaining({
+        comptes: expect.arrayContaining([expect.objectContaining({ banque: 'BNI/C' })]),
+        tiers: expect.anything(),
+        virements: expect.any(Array),
+      }),
+    });
+    expect(screen.queryByRole('dialog', { name: 'Charger des exemples de virements' })).toBeNull();
+
+    // Sur un registre qui porte déjà un virement, seules les fiches manquantes
+    // sont proposées : l'historique n'est jamais complété d'office.
+    cleanup();
+    const onMutation2 = vi.fn().mockResolvedValue(true);
+    render(<LivreVirements {...props} onMutation={onMutation2} registre={registre} />);
+    await user.click(screen.getByRole('button', { name: /Charger des exemples/ }));
+    dialogue = screen.getByRole('dialog', { name: 'Charger des exemples de virements' });
+    expect(dialogue).toHaveTextContent(/Virements d’exemple : non proposés/);
+    await user.click(within(dialogue).getByRole('button', { name: 'Charger les exemples' }));
+    const action = onMutation2.mock.calls[0][0];
+    expect(action.operation).toBe('charger_exemples');
+    expect(action.exemple.virements).toBeUndefined();
+    expect(action.exemple.comptes.length + action.exemple.tiers.length).toBeGreaterThan(0);
   });
   it('réserve l’onglet aux rôles autorisés et inclut le registre aux sauvegardes', () => {
     expect(ongletsAutorises('admin')).toContain('virements');

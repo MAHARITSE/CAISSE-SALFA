@@ -205,6 +205,7 @@ export type ActionVirement =
   | { operation: 'ajouter_tiers'; tiers: Tiers }
   | { operation: 'modifier_tiers'; tiers: Tiers }
   | { operation: 'supprimer_tiers'; tiersId: string }
+  | { operation: 'charger_exemples'; exemple: { comptes?: CompteVirement[]; tiers?: Tiers[]; virements?: NouvelleOperationVirement[] } }
   | { operation: 'ajouter'; virement: NouvelleOperationVirement }
   | { operation: 'modifier'; virement: Virement };
 

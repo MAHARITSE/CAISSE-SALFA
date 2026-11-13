@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Eye, EyeOff, Landmark, Pencil, Plus, Printer,
-  Search, SlidersHorizontal, X,
+  Search, SlidersHorizontal, Sparkles, X,
 } from 'lucide-react';
 import type { Categories, LigneJournal, Sens } from '../types';
 import type { ActionVirement } from '../utils/api';
@@ -14,6 +14,7 @@ import { Modale } from './Modale';
 import { ModaleBordereau } from './Bordereau';
 import { ModaleOrdreVirement } from './OrdreVirement';
 import { GestionTiersVirements } from './GestionTiersVirements';
+import { fichesExempleManquantes, virementsExempleManquants } from '../utils/demonstration';
 
 interface Props {
   registre: RegistreVirements;
@@ -45,6 +46,9 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const [recherche, setRecherche] = useState('');
   /** Les cartes de synthèse se replient, comme celles du livre journal. */
   const [afficherSynthese, setAfficherSynthese] = useState(true);
+  /** Exemples proposés : fiches manquantes, et virements tant que le registre est vide. */
+  const [exemplesOuverts, setExemplesOuverts] = useState(false);
+  const [exemplesEnCours, setExemplesEnCours] = useState(false);
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
   const soumission = useRef(false);
@@ -89,6 +93,31 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   }
   /** La saisie reste fermée tant qu'aucun compte n'est réglé (Administration). */
   const saisiePossible = registre.comptes.length > 0;
+
+  /**
+   * Exemples : les comptes et fiches manquants peuvent toujours être ajoutés,
+   * les virements seulement si le registre n'en porte encore aucun — ils ne
+   * doivent jamais modifier un historique réel.
+   */
+  const fichesExemple = fichesExempleManquantes(registre);
+  const virementsExemple = virementsExempleManquants(registre);
+  const exemplesDisponibles = fichesExemple.comptes.length + fichesExemple.tiers.length + virementsExemple.length > 0;
+
+  async function chargerExemples() {
+    if (exemplesEnCours) return;
+    setExemplesEnCours(true); setErreur('');
+    try {
+      const exemple = {
+        ...(fichesExemple.comptes.length ? { comptes: fichesExemple.comptes } : {}),
+        ...(fichesExemple.tiers.length ? { tiers: fichesExemple.tiers } : {}),
+        ...(virementsExemple.length ? { virements: virementsExemple } : {}),
+      };
+      if (await onMutation({ operation: 'charger_exemples', exemple })) setExemplesOuverts(false);
+      else setErreur('Les exemples n’ont pas été enregistrés. Vérifiez le message et réessayez.');
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Exemples non enregistrés.');
+    } finally { setExemplesEnCours(false); }
+  }
 
   function nouveau(sens: Sens) {
     setEdition(null); setErreur('');
@@ -225,6 +254,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
         <button type="button" className={`btn-secondary ${!afficherSynthese ? '!border-slate-300 dark:!border-slate-700' : ''}`} aria-expanded={afficherSynthese} aria-label={afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'} title={afficherSynthese ? 'Masquer les cartes de synthèse' : 'Afficher les cartes de synthèse'} onClick={() => setAfficherSynthese(v => !v)}>
           {afficherSynthese ? <EyeOff size={16} /> : <Eye size={16} />}<span>{afficherSynthese ? 'Masquer la synthèse' : 'Afficher la synthèse'}</span>
         </button>
+        {exemplesDisponibles && <button type="button" className="btn-secondary" onClick={() => setExemplesOuverts(true)} title="Ajouter des comptes, des clients, des fournisseurs et des virements d’exemple"><Sparkles size={16} />Charger des exemples</button>}
         <button type="button" className="btn-secondary" disabled={!lignes.length} title={lignes.length ? 'Imprimer les virements affichés' : 'Aucun virement à imprimer'} onClick={() => void imprimerEtat()}><Printer size={16} />Imprimer</button>
       </div>
     </div>
@@ -315,6 +345,23 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     <div className="card p-5" role="region" aria-label="Clients et fournisseurs">
       <GestionTiersVirements registre={registre} onMutation={onMutation} erreurExterne={erreurExterne} />
     </div>
+    {exemplesOuverts && <Modale titre="Charger des exemples de virements" sousTitre="Des données de démonstration, ajoutées à ce registre." icone={<Sparkles size={22} />} largeur="petite" onFermer={() => { if (!exemplesEnCours) setExemplesOuverts(false); }}>
+      <div className="space-y-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+        <p>Rien n’est remplacé : les exemples s’ajoutent à ce qui existe déjà, et tout ce qui porte le même nom est ignoré.</p>
+        <ul className="space-y-1 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800">
+          <li>Comptes bancaires à ajouter : <strong>{fichesExemple.comptes.length}</strong> (BNI/C et BNI/D avec leur RIB)</li>
+          <li>Clients et fournisseurs à ajouter : <strong>{fichesExemple.tiers.length}</strong></li>
+          <li>Virements d’exemple : {virementsExemple.length
+            ? <strong>{virementsExemple.length} (une recette reçue et une DED payée)</strong>
+            : <span>non proposés, car ce registre contient déjà des virements</span>}</li>
+        </ul>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Vous pourrez corriger ou supprimer chaque fiche et chaque virement depuis ce livre.</p>
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" className="btn-secondary" disabled={exemplesEnCours} onClick={() => setExemplesOuverts(false)}>Annuler</button>
+        <button type="button" className="btn-primary" disabled={exemplesEnCours} onClick={() => void chargerExemples()}>{exemplesEnCours ? 'Chargement…' : 'Charger les exemples'}</button>
+      </div>
+    </Modale>}
     {impression && <ModaleBordereau ligne={impression.ligne} entete={entete} compteVirement={impression.compte} onFermer={() => setImpression(null)} onErreur={() => setErreur('Impossible d’ouvrir l’impression du bordereau.')} />}
     {ordre && <ModaleOrdreVirement virement={ordre.virement} compte={ordre.compte} entete={entete} onFermer={() => setOrdre(null)} onErreur={() => setErreur("Impossible de confirmer l’ouverture de l’impression de l’ordre de virement. Réessayez depuis la ligne du virement.")} />}
   </section>;

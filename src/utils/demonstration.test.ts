@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { ecrituresExemple, exempleDisponible, jeuDeDemonstration, registreExemple, resumeExemple } from './demonstration';
+import {
+  ecrituresExemple, exempleDisponible, fichesExemple, fichesExempleManquantes, jeuDeDemonstration,
+  registreExemple, resumeExemple, virementsExempleManquants,
+} from './demonstration';
+import { ajouterCompteVirement, ajouterTiers, registreVirementsVide } from './virements';
 import { livreTest } from '../test/fixtures';
 import { validerSauvegarde } from './validation';
 import { totaliser } from './ledger';
@@ -59,5 +63,21 @@ describe('jeu de démonstration', () => {
   it('résume ce qui sera chargé, pour la confirmation', () => {
     expect(resumeExemple(annee)).toContain(`${annee}`);
     expect(resumeExemple(annee)).toMatch(/écritures de caisse/);
+  });
+
+  it('ajoute à un registre en service les seules fiches manquantes, jamais les virements', () => {
+    const vide = registreVirementsVide();
+    expect(fichesExempleManquantes(vide).comptes).toHaveLength(2);
+    expect(fichesExempleManquantes(vide).tiers).toHaveLength(4);
+    expect(virementsExempleManquants(vide)).toHaveLength(2);
+
+    // BNI/C existe déjà : il n'est pas reproposé, les autres fiches si.
+    const existant = ajouterCompteVirement(vide, fichesExemple().comptes[0]);
+    expect(fichesExempleManquantes(existant).comptes.map(c => c.banque)).toEqual(['BNI/D']);
+    const avecClient = ajouterTiers(existant, fichesExemple().tiers[0]);
+    expect(fichesExempleManquantes(avecClient).tiers.map(t => t.nom)).not.toContain('ASSOCIATION FANILO');
+
+    // Dès qu'un virement existe, plus aucun virement d'exemple n'est proposé.
+    expect(virementsExempleManquants(registreExemple(annee))).toEqual([]);
   });
 });

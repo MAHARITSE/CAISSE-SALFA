@@ -206,7 +206,9 @@ garder les versions verrouillées par `package-lock.json`.
   leurs lignes de détail, deux comptes BNI avec leur RIB, clients, fournisseurs et
   virements datés de l’année en cours. Le chargement demande une confirmation et
   télécharge la sauvegarde SQL du livre en place ; il disparaît dès la première
-  pièce enregistrée.
+  pièce enregistrée. Le livre des virements a le sien : « Charger des exemples »
+  y ajoute les comptes et les fiches manquants sans rien remplacer, et les deux
+  virements d’exemple tant que le registre n’en contient aucun.
 - **Livres antérieurs** : un livre créé avant cette version reste lisible ; il
   est converti à l’ouverture, les années passées étant archivées et l’année
   courante ouverte, avec un avertissement explicite.

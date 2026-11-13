@@ -5,4 +5,4 @@
  * vérifie, et le pied de page signale une API (SALFA_VERSION_API) plus ancienne
  * que l'interface.
  */
-export const VERSION_APPLICATION = '1.5.0';
+export const VERSION_APPLICATION = '1.6.0';

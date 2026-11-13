@@ -13,7 +13,7 @@ import { DemandesPrecision } from './components/DemandesPrecision';
 import { Synthese } from './components/Synthese';
 import { LivreJournal } from './components/LivreJournal';
 import { LivreVirements } from './components/LivreVirements';
-import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterTiers, modifierTiers, supprimerTiersVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterTiers, modifierTiers, supprimerTiersVirement, ajouterExemplesVirements, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide } from './utils/virements';
 import type { ActionVirement } from './utils/api';
 import { SaisieEcriture } from './components/SaisieEcriture';
 import { GestionMasquesModal } from './components/GestionMasquesModal';
@@ -352,6 +352,7 @@ export function App() {
       if (action.operation === 'ajouter_tiers') return ajouterTiers(registre, action.tiers);
       if (action.operation === 'modifier_tiers') return modifierTiers(registre, action.tiers);
       if (action.operation === 'supprimer_tiers') return supprimerTiersVirement(registre, action.tiersId);
+      if (action.operation === 'charger_exemples') return ajouterExemplesVirements(registre, action.exemple);
       if (action.operation === 'ajouter') return ajouterVirement(registre, action.virement);
       return modifierVirement(registre, action.virement);
     };
@@ -365,6 +366,7 @@ export function App() {
       : action.operation === 'ajouter_tiers' ? 'Client ou fournisseur ajouté.'
       : action.operation === 'modifier_tiers' ? 'Client ou fournisseur modifié.'
       : action.operation === 'supprimer_tiers' ? 'Client ou fournisseur supprimé.'
+      : action.operation === 'charger_exemples' ? 'Exemples ajoutés au livre des virements.'
       : ['ajouter_compte', 'ajouter_comptes', 'modifier_compte'].includes(action.operation) ? 'Compte bancaire enregistré.' : 'Virement enregistré.');
     return reussi;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterTiers, modifierTiers, supprimerTiersVirement, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide, validerRegistreVirements, type NouvelleOperationVirement, type Tiers } from './virements';
+import { ajouterCompteVirement, ajouterComptesVirement, modifierCompteVirement, supprimerCompteVirement, ajouterTiers, modifierTiers, supprimerTiersVirement, ajouterExemplesVirements, ajouterVirement, modifierVirement, peutGererVirements, registreVirementsVide, validerRegistreVirements, type NouvelleOperationVirement, type Tiers } from './virements';
 
 const compte = { id: 'b1', banque: 'BNI', numeroCompte: '000001' };
 const client: Tiers = { id: 't-client', type: 'CLIENT', nom: 'Association FANILO', telephone: '034 00 000 00', adresse: 'Toliara', banque: '', numeroCompte: '' };
@@ -111,5 +111,26 @@ describe('règles du registre de virements indépendant', () => {
     });
     expect(ancien.ecritures[0].tiersId).toBeUndefined();
     expect(modifierVirement(ancien, { ...ancien.ecritures[0], libelle: 'Corrigé' }).ecritures[0].libelle).toBe('Corrigé');
+  });
+
+  it('ajoute des exemples en bloc, sans doublon ni second passage', () => {
+    const exemple = {
+      comptes: [{ id: 'x-c', banque: 'BNI/C', numeroCompte: '00005 1' }, { id: 'x-d', banque: 'BNI/D', numeroCompte: '00005 2' }],
+      tiers: [{ id: 'x-f', type: 'FOURNISSEUR' as const, nom: 'OXYGENE', telephone: '', adresse: '', banque: 'BOA', numeroCompte: '1' }],
+      virements: [{ ...depense, id: 'x-v', compteId: 'x-c', tiersId: 'x-f', tiers: 'OXYGENE' }],
+    };
+    const une = ajouterExemplesVirements(registreVirementsVide(), exemple);
+    expect(une.comptes).toHaveLength(2);
+    expect(une.tiers).toHaveLength(1);
+    expect(une.ecritures.map(v => v.numero)).toEqual(['VD-2026-0001']);
+    // Deuxième passage : rien n'est dupliqué.
+    const deux = ajouterExemplesVirements(une, exemple);
+    expect(deux.comptes).toHaveLength(2);
+    expect(deux.tiers).toHaveLength(1);
+    expect(deux.ecritures).toHaveLength(1);
+    // Un compte déjà présent sous un autre identifiant est reconnu par son RIB.
+    const autre = ajouterExemplesVirements(registreVirementsVide(), { comptes: [{ id: 'y', banque: 'bni/c', numeroCompte: '00005 1' }] });
+    expect(autre.comptes).toHaveLength(1);
+    expect(ajouterExemplesVirements(autre, { comptes: exemple.comptes }).comptes).toHaveLength(2);
   });
 });

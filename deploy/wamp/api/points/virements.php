@@ -76,6 +76,44 @@ salfa_point('virements', function (): array {
             }
             if (count($restants) === count($registre['tiers'])) throw new SalFaErreur('Client ou fournisseur introuvable.', 404, 'tiers_absent');
             $registre['tiers'] = $restants;
+        } elseif ($operation === 'charger_exemples') {
+            // Exemples de démonstration : ajoutés à ce qui existe, jamais substitués.
+            $exemple = $corps['exemple'] ?? null;
+            if (!is_array($exemple)) throw new SalFaErreur('Exemples manquants.', 400, 'virements_invalides');
+            $comptes = $exemple['comptes'] ?? [];
+            $tiers = $exemple['tiers'] ?? [];
+            $virements = $exemple['virements'] ?? [];
+            if (!is_array($comptes) || !is_array($tiers) || !is_array($virements)) throw new SalFaErreur('Exemples invalides.', 400, 'virements_invalides');
+            if (count($comptes) > 500 || count($tiers) > 500 || count($virements) > 500) throw new SalFaErreur('Exemples trop volumineux.', 400, 'virements_invalides');
+            $clesComptes = [];
+            foreach ($registre['comptes'] as $compte) $clesComptes[mb_strtolower($compte['banque']) . "\0" . mb_strtolower($compte['numeroCompte'])] = true;
+            foreach ($comptes as $compte) {
+                if (!is_array($compte)) throw new SalFaErreur('Compte bancaire invalide.', 400, 'virements_invalides');
+                $cle = mb_strtolower($compte['banque'] ?? '') . "\0" . mb_strtolower($compte['numeroCompte'] ?? '');
+                if (isset($clesComptes[$cle])) continue;
+                $clesComptes[$cle] = true;
+                $registre['comptes'][] = $compte;
+            }
+            $clesTiers = [];
+            foreach ($registre['tiers'] as $fiche) $clesTiers[($fiche['type'] ?? '') . "\0" . mb_strtolower($fiche['nom'] ?? '')] = true;
+            foreach ($tiers as $fiche) {
+                if (!is_array($fiche)) throw new SalFaErreur('Client ou fournisseur invalide.', 400, 'virements_invalides');
+                $cle = ($fiche['type'] ?? '') . "\0" . mb_strtolower($fiche['nom'] ?? '');
+                if (isset($clesTiers[$cle])) continue;
+                $clesTiers[$cle] = true;
+                $registre['tiers'][] = $fiche;
+            }
+            foreach ($virements as $v) {
+                if (!is_array($v)) throw new SalFaErreur('Virement d’exemple invalide.', 400, 'virements_invalides');
+                $sens = $v['sens'] ?? ''; $date = $v['date'] ?? '';
+                if (!in_array($sens, ['RECETTE', 'DEPENSE'], true) || !salfa_date_valide($date)) throw new SalFaErreur('Date ou type de virement invalide.', 400, 'virements_invalides');
+                $cle = ($sens === 'RECETTE' ? 'VR' : 'VD') . '-' . substr($date, 0, 4);
+                $suivant = ($registre['compteurs'][$cle] ?? 0) + 1;
+                if ($suivant > 999999999) throw new SalFaErreur('Limite de numérotation atteinte.', 400, 'virements_invalides');
+                $v['numero'] = $cle . '-' . str_pad((string) $suivant, 4, '0', STR_PAD_LEFT);
+                $v['createdAt'] = gmdate('c'); unset($v['updatedAt']);
+                $registre['ecritures'][] = $v; $registre['compteurs'][$cle] = $suivant;
+            }
         } elseif ($operation === 'ajouter') {
             $v = $corps['virement'] ?? null;
             if (!is_array($v)) throw new SalFaErreur('Virement manquant.', 400, 'virements_invalides');

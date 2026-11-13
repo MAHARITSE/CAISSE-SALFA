@@ -111,8 +111,11 @@ export function ecrituresExemple(annee: number): Ecriture[] {
   return donnees.ecritures;
 }
 
-/** Comptes bancaires de l'hôpital, avec le RIB imprimé sur les ordres de virement. */
-export function registreExemple(annee: number): RegistreVirements {
+/**
+ * Fiches et comptes d'exemple, sans aucun virement : ils peuvent être ajoutés à
+ * un livre déjà en service, là où les pièces d'exemple, elles, ne le peuvent pas.
+ */
+export function fichesExemple(): RegistreVirements {
   let registre = ajouterCompteVirement({ comptes: [], ecritures: [], tiers: [], compteurs: {} }, {
     id: 'exemple-compte-bni-c', banque: 'BNI/C', numeroCompte: '00005 00401234567',
     titulaire: 'SALFA — Hôpital Loterana Toliary Tanambao', adresse: 'BP 99 — Toliara', codeBanque: '00005',
@@ -137,7 +140,12 @@ export function registreExemple(annee: number): RegistreVirements {
     id: 'exemple-four-medical', type: 'FOURNISSEUR', nom: 'MÉDICAL SERVICE', telephone: '034 05 678 90',
     adresse: 'Bazar Be — Toliara', banque: 'BNI', numeroCompte: '00005 00223344556',
   });
-  registre = ajouterVirement(registre, {
+  return validerRegistreVirements(registre);
+}
+
+/** Virements d'exemple : une recette reçue et une DED payée, avec ses mentions. */
+export function virementsExemple(annee: number): RegistreVirements['ecritures'] {
+  let registre = ajouterVirement(fichesExemple(), {
     id: 'exemple-vr-1', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 1, 15), sens: 'RECETTE',
     libelle: 'VERSEMENT ASSOCIATION FANILO', categorie: 'Subventions & dons', tiers: 'ASSOCIATION FANILO',
     tiersId: 'exemple-client-fanilo', reference: 'VIR-2026-0115', observation: 'Exemple : recette reçue par virement.',
@@ -152,6 +160,13 @@ export function registreExemple(annee: number): RegistreVirements {
     beneficiaireAdresse: 'Zone industrielle — Antananarivo', beneficiaireBanque: 'BOA',
     beneficiaireCompte: '00004 98765432101',
   });
+  return registre.ecritures;
+}
+
+/** Registre complet d'exemple : comptes, clients, fournisseurs et virements. */
+export function registreExemple(annee: number): RegistreVirements {
+  let registre = fichesExemple();
+  for (const virement of virementsExemple(annee)) registre = ajouterVirement(registre, virement);
   return validerRegistreVirements(registre);
 }
 
@@ -181,6 +196,33 @@ export function exempleDisponible(livre: Sauvegarde): boolean {
   return livre.ecritures.length === 0
     && (livre.virements?.ecritures.length ?? 0) === 0
     && (livre.virements?.tiers.length ?? 0) === 0;
+}
+
+/**
+ * Fiches d'exemple ajoutables à un livre déjà en service : comptes bancaires et
+ * clients/fournisseurs manquants. Les virements, eux, changeraient l'historique
+ * et ne sont donc proposés que sur un registre vide.
+ */
+export function fichesExempleManquantes(registre: RegistreVirements | undefined): {
+  comptes: RegistreVirements['comptes']; tiers: RegistreVirements['tiers'];
+} {
+  const exemple = fichesExemple();
+  const comptesActuels = registre?.comptes ?? [];
+  const tiersActuels = registre?.tiers ?? [];
+  const cleCompte = (c: { banque: string; numeroCompte: string }) =>
+    `${c.banque.toLocaleLowerCase('fr')}\0${c.numeroCompte.toLocaleLowerCase('fr')}`;
+  const cleTiers = (t: { type: string; nom: string }) => `${t.type}\0${t.nom.toLocaleLowerCase('fr')}`;
+  const comptesExistants = new Set(comptesActuels.map(cleCompte));
+  const tiersExistants = new Set(tiersActuels.map(cleTiers));
+  return {
+    comptes: exemple.comptes.filter(c => !comptesExistants.has(cleCompte(c))),
+    tiers: exemple.tiers.filter(t => !tiersExistants.has(cleTiers(t))),
+  };
+}
+
+/** Virements d'exemple ajoutables seulement si le registre n'en porte aucun. */
+export function virementsExempleManquants(registre: RegistreVirements | undefined): RegistreVirements['ecritures'] {
+  return (registre?.ecritures.length ?? 0) === 0 ? virementsExemple(new Date().getFullYear()) : [];
 }
 
 /** Résumé lisible, affiché dans la confirmation. */

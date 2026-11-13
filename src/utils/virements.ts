@@ -317,3 +317,45 @@ export function verifierTiersDuVirement(registre: RegistreVirements, virement: P
     exiger(false, `Le RIB de « ${fiche.nom} » n’est pas renseigné : complétez sa fiche avant de l’utiliser.`);
   }
 }
+
+/**
+ * Ajout d'exemples en une seule écriture : comptes, fiches et virements arrivent
+ * ensemble ou pas du tout, pour ne jamais laisser un registre à moitié rempli.
+ * Chaque élément déjà présent est ignoré, jamais dupliqué.
+ */
+export function ajouterExemplesVirements(
+  registre: RegistreVirements,
+  exemple: { comptes?: CompteVirement[]; tiers?: Tiers[]; virements?: NouvelleOperationVirement[] },
+): RegistreVirements {
+  const cleCompte = (c: { banque: string; numeroCompte: string }) =>
+    `${c.banque.toLocaleLowerCase('fr')}\0${c.numeroCompte.toLocaleLowerCase('fr')}`;
+  const cleTiers = (t: { type: string; nom: string }) => `${t.type}\0${t.nom.toLocaleLowerCase('fr')}`;
+  const idsComptes = new Set(registre.comptes.map(c => c.id));
+  const clesComptes = new Set(registre.comptes.map(cleCompte));
+  const idsTiers = new Set(registre.tiers.map(t => t.id));
+  const clesTiers = new Set(registre.tiers.map(cleTiers));
+
+  let suivant: RegistreVirements = registre;
+  const comptes = (exemple.comptes ?? []).filter(c => {
+    if (idsComptes.has(c.id) || clesComptes.has(cleCompte(c))) return false;
+    idsComptes.add(c.id); clesComptes.add(cleCompte(c));
+    return true;
+  });
+  if (comptes.length) suivant = ajouterComptesVirement(suivant, comptes);
+
+  const tiers = (exemple.tiers ?? []).filter(t => {
+    if (idsTiers.has(t.id) || clesTiers.has(cleTiers(t))) return false;
+    idsTiers.add(t.id); clesTiers.add(cleTiers(t));
+    return true;
+  });
+  for (const fiche of tiers) suivant = ajouterTiers(suivant, fiche);
+
+  // Un virement d'exemple déjà chargé n'est jamais ajouté deux fois.
+  const idsVirements = new Set(suivant.ecritures.map(v => v.id));
+  for (const virement of exemple.virements ?? []) {
+    if (idsVirements.has(virement.id)) continue;
+    suivant = ajouterVirement(suivant, virement);
+    idsVirements.add(virement.id);
+  }
+  return suivant;
+}
