@@ -133,9 +133,9 @@ export function Administration({
           type="button"
           onClick={action}
           aria-label={titre}
-          className="group flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/40"
+          className="group flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-left transition-colors hover:border-brand-300 hover:bg-brand-50/40 dark:hover:border-brand-700 dark:hover:bg-brand-950/30"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 group-hover:bg-white"><Icone size={17} /></span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 group-hover:bg-white dark:group-hover:bg-brand-900/70"><Icone size={17} /></span>
           <span className="min-w-0">
             <span className="block text-xs font-semibold text-slate-800 dark:text-slate-200">{titre}</span>
             <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{detail}</span>
@@ -172,7 +172,7 @@ export function Administration({
 
       {/* Les trois rôles, rappelés en clair. */}
       <ul className="mt-4 grid gap-2 sm:grid-cols-3">
-        {ROLES.map(role => <li key={role.valeur} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 p-3.5">
+        {ROLES.map(role => <li key={role.valeur} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3.5">
           <div className="flex items-center justify-between gap-2">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
               {role.valeur === 'admin' ? <ShieldCheck size={16} className="text-brand-700 dark:text-brand-300" /> : null}{role.libelle}
@@ -281,7 +281,7 @@ export function Administration({
           <div className="grid gap-2 sm:grid-cols-3">
             {ROLES.map(role => <label
               key={role.valeur}
-              className={`cursor-pointer rounded-xl border p-3 text-xs transition-colors ${formulaire.role === role.valeur ? 'border-brand-400 bg-brand-50/60' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}
+              className={`cursor-pointer rounded-xl border p-3 text-xs transition-colors ${formulaire.role === role.valeur ? 'border-brand-400 bg-brand-50/60 dark:border-brand-600 dark:bg-brand-950/50' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'}`}
             >
               <span className="flex items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
                 <input

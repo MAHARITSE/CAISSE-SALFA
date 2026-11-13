@@ -3,7 +3,7 @@ import { AlertCircle, ArrowDown, ArrowDownLeft, ArrowUp, ArrowUpRight, Layers, P
 import type { MasqueSaisie, Sens } from '../types';
 import { MAX_DETAILS } from '../utils/constants';
 import { formatAr, masqueMajuscules, parserMontant } from '../utils/format';
-import { ChampMontant } from './ChampMontant';
+import { ChampMontant, formaterSaisieMontant } from './ChampMontant';
 import { identifiant } from '../utils/ledger';
 import { Modale } from './Modale';
 import { Confirmation } from './Confirmation';
@@ -37,7 +37,7 @@ export function GestionMasquesModal({ masques, erreurExterne, onSauvegarderMasqu
   function ouvrir(m?: MasqueSaisie) {
     setEditionId(m?.id ?? null); setNom(m?.nom ?? ''); setSens(m?.sens ?? 'RECETTE');
     setDescription(m?.description ?? '');
-    setPostes(m?.lignes.map(l => ({ id: identifiant('p'), description: l.description, montant: l.montantDefaut == null ? '' : String(l.montantDefaut) })) ?? []);
+    setPostes(m?.lignes.map(l => ({ id: identifiant('p'), description: l.description, montant: l.montantDefaut == null ? '' : formaterSaisieMontant(String(l.montantDefaut)) })) ?? []);
     setNouveau(''); setNouveauMontant(''); setErreur(''); setModifie(false); setFormulaire(true);
   }
   function fermer() {

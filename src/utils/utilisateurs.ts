@@ -1,5 +1,5 @@
 import { identifiant as nouvelIdentifiant } from './ledger';
-import { MODE_API } from './api';
+import { appelerComptes, MODE_API } from './api';
 import type { Compte, Role } from './roles';
 
 /**
@@ -95,7 +95,6 @@ export async function amorcerComptesLocaux(): Promise<Compte[]> {
 /** Liste utilisable par l'interface : jamais de secret. */
 export async function listerComptes(): Promise<Compte[]> {
   if (MODE_API) {
-    const { appelerComptes } = await import('./api');
     const reponse = await appelerComptes<{ comptes: Compte[] }>('utilisateurs');
     return reponse.comptes ?? [];
   }
@@ -112,7 +111,6 @@ export async function creerCompte(compte: {
     throw new Error(`Le mot de passe doit contenir au moins ${LONGUEUR_MIN_MOT_DE_PASSE} caractères.`);
   }
   if (MODE_API) {
-    const { appelerComptes } = await import('./api');
     const reponse = await appelerComptes<{ compte: Compte }>('utilisateurs-creer', { methode: 'POST', corps: { ...compte, identifiant } });
     return reponse.compte;
   }
@@ -141,7 +139,6 @@ export async function modifierCompte(
     throw new Error(`Le mot de passe doit contenir au moins ${LONGUEUR_MIN_MOT_DE_PASSE} caractères.`);
   }
   if (MODE_API) {
-    const { appelerComptes } = await import('./api');
     const reponse = await appelerComptes<{ compte: Compte }>('utilisateurs-modifier', { methode: 'POST', corps: { id, ...changements } });
     return reponse.compte;
   }
@@ -173,7 +170,6 @@ export async function modifierCompte(
 /** Supprime un compte, sauf le dernier administrateur actif. */
 export async function supprimerCompte(id: string): Promise<void> {
   if (MODE_API) {
-    const { appelerComptes } = await import('./api');
     await appelerComptes<{ ok: boolean }>('utilisateurs-supprimer', { methode: 'POST', corps: { id } });
     return;
   }
@@ -217,7 +213,6 @@ export async function changerMonMotDePasse(actuel: string, nouveau: string): Pro
     throw new Error('Le nouveau mot de passe doit être différent de l’ancien.');
   }
   if (MODE_API) {
-    const { appelerComptes } = await import('./api');
     await appelerComptes<{ ok: boolean }>('mot-de-passe', {
       methode: 'POST',
       corps: { motDePasseActuel: actuel, motDePasse: nouveau },

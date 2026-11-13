@@ -32,12 +32,14 @@ describe('livre des virements', () => {
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     const dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
     await user.type(within(dialogue).getByLabelText('Libellé'), 'Facture');
-    await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
+    const champMontant = within(dialogue).getByLabelText('Montant (Ar)');
+    await user.type(champMontant, '1250000');
+    expect(champMontant).toHaveValue('1\u202f250\u202f000');
     // Le fournisseur se choisit dans les fiches : son RIB part avec le virement.
     await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'), fournisseur.id);
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
-      sens: 'DEPENSE', montant: 5000, compteId: 'banque', libelle: 'Facture',
+      sens: 'DEPENSE', montant: 1250000, compteId: 'banque', libelle: 'Facture',
       tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
       beneficiaireBanque: 'BOA', beneficiaireCompte: '00004 123', beneficiaireAdresse: 'Lot II Antananarivo',
     }) });
@@ -131,6 +133,62 @@ describe('livre des virements', () => {
     expect(screen.getByRole('button', { name: 'Imprimer' })).toBeDisabled();
     ouvrir.mockRestore();
   });
+  it('filtre les virements par fournisseur ou client et adapte la liste au type choisi', async () => {
+    const user = userEvent.setup();
+    const avecDeuxTiers = ajouterVirement(registre, {
+      id: 'v2', compteId: compte.id, date: '2026-05-14', sens: 'DEPENSE', libelle: 'Achat oxygène',
+      categorie: 'Divers', tiers: fournisseur.nom, tiersId: fournisseur.id, reference: 'FAC-02', observation: '', montant: 4500,
+      createdAt: '2026-05-14T10:00:00Z', beneficiaireBanque: fournisseur.banque, beneficiaireCompte: fournisseur.numeroCompte,
+    });
+    render(<LivreVirements registre={avecDeuxTiers} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);
+
+    const selectTiers = screen.getByLabelText('Filtrer par fournisseur ou client');
+    expect(screen.getByText('Cotisation')).toBeInTheDocument();
+    expect(screen.getByText('Achat oxygène')).toBeInTheDocument();
+
+    await user.selectOptions(selectTiers, fournisseur.id);
+    expect(screen.queryByText('Cotisation')).not.toBeInTheDocument();
+    expect(screen.getByText('Achat oxygène')).toBeInTheDocument();
+    expect(screen.getByText('Filtres actifs')).toBeInTheDocument();
+
+    // Passer à « Recettes » réinitialise un fournisseur incompatible et ne propose plus que les clients.
+    await user.click(screen.getByRole('button', { name: 'Recettes' }));
+    expect(selectTiers).toHaveValue('');
+    expect(screen.getByText('Cotisation')).toBeInTheDocument();
+    expect(within(selectTiers).queryByText(fournisseur.nom)).toBeNull();
+    expect(within(selectTiers).getByText(client.nom)).toBeInTheDocument();
+
+    await user.selectOptions(selectTiers, client.id);
+    expect(screen.getByText('Cotisation')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
+    expect(selectTiers).toHaveValue('');
+    expect(screen.getByText('Achat oxygène')).toBeInTheDocument();
+    expect(screen.getByText('Aucun filtre')).toBeInTheDocument();
+  });
+  it('classe les virements par ordre chronologique et se place sur la dernière ligne', () => {
+    const defiler = vi.fn();
+    Object.defineProperty(HTMLTableRowElement.prototype, 'scrollIntoView', { configurable: true, value: defiler });
+    try {
+      const avecDeuxDates = ajouterVirement(registre, {
+        id: 'v2', compteId: compte.id, date: '2026-06-03', sens: 'DEPENSE', libelle: 'Dernier virement',
+        categorie: 'Divers', tiers: fournisseur.nom, tiersId: fournisseur.id, reference: 'FAC-03', observation: '', montant: 8000,
+        createdAt: '2026-06-03T10:00:00Z', beneficiaireBanque: fournisseur.banque, beneficiaireCompte: fournisseur.numeroCompte,
+      });
+      render(<LivreVirements registre={avecDeuxDates} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn()} erreurExterne={null} />);
+      const tableau = screen.getByRole('table', { name: 'Virements enregistrés' });
+      const lignesCorps = tableau.querySelectorAll('tbody tr');
+      expect(lignesCorps).toHaveLength(2);
+      expect(lignesCorps[0]).toHaveTextContent('Cotisation');
+      expect(lignesCorps[1]).toHaveTextContent('Dernier virement');
+      expect(within(lignesCorps[1] as HTMLElement).getByTitle('Ligne active')).toBeInTheDocument();
+      expect(defiler).toHaveBeenCalledTimes(1);
+      expect(defiler).toHaveBeenCalledWith({ behavior: 'instant', block: 'end', inline: 'nearest' });
+      expect(defiler.mock.instances[0]).toHaveTextContent('Dernier virement');
+    } finally {
+      delete (HTMLTableRowElement.prototype as Partial<HTMLTableRowElement>).scrollIntoView;
+    }
+  });
   it('présente la même synthèse et la même barre de période que le livre journal', async () => {
     const user = userEvent.setup();
     const annee = new Date().getFullYear();
@@ -178,7 +236,7 @@ describe('livre des virements', () => {
     await user.click(screen.getByRole('button', { name: /Charger des exemples/ }));
     let dialogue = screen.getByRole('dialog', { name: 'Charger des exemples de virements' });
     expect(dialogue).toHaveTextContent('Comptes bancaires à ajouter : 2');
-    expect(dialogue).toHaveTextContent('Clients et fournisseurs à ajouter : 4');
+    expect(dialogue).toHaveTextContent('Clients et fournisseurs à ajouter : 9');
     await user.click(within(dialogue).getByRole('button', { name: 'Charger les exemples' }));
     expect(onMutation).toHaveBeenCalledWith({
       operation: 'charger_exemples',

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Eye, EyeOff, Landmark, Pencil, Plus, Printer,
   Search, SlidersHorizontal, Sparkles, X,
@@ -11,6 +11,7 @@ import { identifiant } from '../utils/ledger';
 import type { CompteVirement, RegistreVirements, Virement } from '../utils/virements';
 import { ajouterVirement, ribComplet } from '../utils/virements';
 import { Modale } from './Modale';
+import { ChampMontant, formaterSaisieMontant } from './ChampMontant';
 import { ModaleBordereau } from './Bordereau';
 import { ModaleOrdreVirement } from './OrdreVirement';
 import { GestionTiersVirements } from './GestionTiersVirements';
@@ -39,6 +40,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const [edition, setEdition] = useState<Virement | null>(null);
   const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
   const [filtreCompte, setFiltreCompte] = useState('');
+  const [filtreTiers, setFiltreTiers] = useState('');
   const [filtreSens, setFiltreSens] = useState<'TOUS' | Sens>('TOUS');
   /** Période affichée : un mois précis, ou tout l'historique du registre. */
   const [toutAfficher, setToutAfficher] = useState(true);
@@ -55,20 +57,103 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
   const [impression, setImpression] = useState<{ ligne: LigneJournal; compte: CompteVirement } | null>(null);
   /** Ordre de virement imprimé juste après l'enregistrement d'une DED. */
   const [ordre, setOrdre] = useState<{ virement: Virement; compte: CompteVirement } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const prevLignesRef = useRef<Virement[]>([]);
+  const derniereLigneRef = useRef<HTMLTableRowElement | null>(null);
+  const doitDefilerVersDerniere = useRef(true);
   const comptes = useMemo(() => new Map(registre.comptes.map(c => [c.id, c])), [registre.comptes]);
   const fiches = useMemo(() => new Map(registre.tiers.map(t => [t.id, t])), [registre.tiers]);
+  const fournisseursFiltres = useMemo(
+    () => registre.tiers.filter(t => t.type === 'FOURNISSEUR').slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    [registre.tiers],
+  );
+  const clientsFiltres = useMemo(
+    () => registre.tiers.filter(t => t.type === 'CLIENT').slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    [registre.tiers],
+  );
+  const autresTiersLibres = useMemo(() => {
+    const nomsConnus = new Set(registre.tiers.map(t => t.nom.trim().toLocaleLowerCase('fr')));
+    const vus = new Set<string>();
+    const resultat: string[] = [];
+    for (const v of registre.ecritures) {
+      if (filtreSens !== 'TOUS' && v.sens !== filtreSens) continue;
+      if (v.tiersId && fiches.has(v.tiersId)) continue;
+      const nom = v.tiers.trim();
+      const cle = nom.toLocaleLowerCase('fr');
+      if (!nom || nomsConnus.has(cle) || vus.has(cle)) continue;
+      vus.add(cle);
+      resultat.push(nom);
+    }
+    return resultat.sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [registre.ecritures, registre.tiers, fiches, filtreSens]);
   const lignes = useMemo(() => registre.ecritures.filter(v => {
     if (filtreCompte && v.compteId !== filtreCompte) return false;
     if (filtreSens !== 'TOUS' && v.sens !== filtreSens) return false;
+    if (filtreTiers) {
+      if (filtreTiers.startsWith('nom:')) {
+        const nomCible = filtreTiers.slice(4).trim().toLocaleLowerCase('fr');
+        if (v.tiers.trim().toLocaleLowerCase('fr') !== nomCible) return false;
+      } else {
+        const ficheFiltre = fiches.get(filtreTiers);
+        const correspondId = v.tiersId === filtreTiers;
+        const correspondNomAncien = !v.tiersId && ficheFiltre
+          && v.tiers.trim().toLocaleLowerCase('fr') === ficheFiltre.nom.trim().toLocaleLowerCase('fr');
+        if (!correspondId && !correspondNomAncien) return false;
+      }
+    }
     if (!toutAfficher && !v.date.startsWith(filtreMois)) return false;
     const q = recherche.trim().toLocaleLowerCase('fr');
     return !q || [v.numero, v.libelle, v.categorie, v.tiers, v.reference, comptes.get(v.compteId)?.banque, comptes.get(v.compteId)?.numeroCompte].some(t => t?.toLocaleLowerCase('fr').includes(q));
-  }).slice().sort((a, b) => b.date.localeCompare(a.date) || b.numero.localeCompare(a.numero)), [registre, filtreCompte, filtreSens, toutAfficher, filtreMois, recherche, comptes]);
+  }).slice().sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt) || a.numero.localeCompare(b.numero) || a.id.localeCompare(b.id)), [registre, filtreCompte, filtreTiers, filtreSens, toutAfficher, filtreMois, recherche, comptes, fiches]);
+
+  useEffect(() => {
+    const prevLignes = prevLignesRef.current;
+    prevLignesRef.current = lignes;
+
+    if (!lignes.length) {
+      setActiveId(null);
+      return;
+    }
+
+    if (prevLignes.length > 0 && prevLignes.length > lignes.length) {
+      setActiveId(actuelle => {
+        if (actuelle && !lignes.some(l => l.id === actuelle)) {
+          const idxSupprime = prevLignes.findIndex(p => p.id === actuelle);
+          const suivante = (idxSupprime !== -1 ? lignes[idxSupprime] : null) || lignes[idxSupprime - 1] || lignes[lignes.length - 1];
+          return suivante ? suivante.id : null;
+        }
+        return actuelle;
+      });
+      return;
+    }
+
+    if (lignes.length > prevLignes.length && prevLignes.length > 0) {
+      const ajouts = lignes.filter(l => !prevLignes.some(p => p.id === l.id));
+      if (ajouts.length > 0) {
+        setActiveId(ajouts[ajouts.length - 1].id);
+        return;
+      }
+    }
+
+    setActiveId(actuelle => {
+      if (!actuelle || !lignes.some(l => l.id === actuelle)) {
+        return lignes[lignes.length - 1]?.id ?? null;
+      }
+      return actuelle;
+    });
+  }, [lignes]);
+
+  useEffect(() => {
+    if (!doitDefilerVersDerniere.current || !lignes.length || !derniereLigneRef.current) return;
+    doitDefilerVersDerniere.current = false;
+    derniereLigneRef.current.scrollIntoView?.({ behavior: 'instant', block: 'end', inline: 'nearest' });
+  }, [lignes]);
+
   /** Totaux de la sélection affichée : ils suivent les filtres, comme au journal. */
   const total = (sens: Sens) => lignes.filter(v => v.sens === sens).reduce((s, v) => s + v.montant, 0);
   const recettes = total('RECETTE');
   const depenses = total('DEPENSE');
-  const filtreActif = Boolean(filtreCompte || filtreSens !== 'TOUS' || recherche.trim() || !toutAfficher);
+  const filtreActif = Boolean(filtreCompte || filtreTiers || filtreSens !== 'TOUS' || recherche.trim() || !toutAfficher);
   const periode = toutAfficher ? 'Toutes périodes' : moisLisible(filtreMois);
 
   function moisLisible(mois: string): string {
@@ -88,8 +173,20 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     setFiltreMois(valeur);
     setToutAfficher(false);
   }
+  function changerSens(sens: 'TOUS' | Sens) {
+    setFiltreSens(sens);
+    if (sens !== 'TOUS' && filtreTiers) {
+      if (filtreTiers.startsWith('nom:')) {
+        setFiltreTiers('');
+      } else {
+        const fiche = fiches.get(filtreTiers);
+        const typeAttendu = sens === 'RECETTE' ? 'CLIENT' : 'FOURNISSEUR';
+        if (fiche && fiche.type !== typeAttendu) setFiltreTiers('');
+      }
+    }
+  }
   function reinitialiser() {
-    setFiltreCompte(''); setFiltreSens('TOUS'); setRecherche(''); setToutAfficher(true);
+    setFiltreCompte(''); setFiltreTiers(''); setFiltreSens('TOUS'); setRecherche(''); setToutAfficher(true);
   }
   /** La saisie reste fermée tant qu'aucun compte n'est réglé (Administration). */
   const saisiePossible = registre.comptes.length > 0;
@@ -112,7 +209,10 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
         ...(fichesExemple.tiers.length ? { tiers: fichesExemple.tiers } : {}),
         ...(virementsExemple.length ? { virements: virementsExemple } : {}),
       };
-      if (await onMutation({ operation: 'charger_exemples', exemple })) setExemplesOuverts(false);
+      if (await onMutation({ operation: 'charger_exemples', exemple })) {
+        if (virementsExemple.length > 0) doitDefilerVersDerniere.current = true;
+        setExemplesOuverts(false);
+      }
       else setErreur('Les exemples n’ont pas été enregistrés. Vérifiez le message et réessayez.');
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Exemples non enregistrés.');
@@ -133,7 +233,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     setEdition(v); setErreur('');
     setFormulaire({
       date: v.date, sens: v.sens, compteId: v.compteId, libelle: v.libelle, categorie: v.categorie,
-      tiers: v.tiers, reference: v.reference, observation: v.observation, montant: String(v.montant),
+      tiers: v.tiers, reference: v.reference, observation: v.observation, montant: formaterSaisieMontant(String(v.montant)),
       beneficiaireAdresse: v.beneficiaireAdresse ?? '', beneficiaireBanque: v.beneficiaireBanque ?? '',
       beneficiaireCompte: v.beneficiaireCompte ?? '', permanent: v.permanent === true,
       tiersId: v.tiersId ?? '',
@@ -203,6 +303,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
     })();
     try {
       if (await onMutation(action)) {
+        if (!edition) doitDefilerVersDerniere.current = true;
         setFormulaire(null); setEdition(null);
         // Toute autorisation de dépense par virement part à la banque : l'ordre de
         // virement s'imprime aussitôt, sur une demi-feuille A4, sans action de plus.
@@ -288,11 +389,35 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
         <div className="segmented" aria-label="Filtrer les virements par type">
-          {(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(sens => <button key={sens} type="button" aria-pressed={filtreSens === sens} onClick={() => setFiltreSens(sens)}>{sens === 'TOUS' ? 'Tous' : sens === 'RECETTE' ? 'Recettes' : 'DED / dépenses'}</button>)}
+          {(['TOUS', 'RECETTE', 'DEPENSE'] as const).map(sens => <button key={sens} type="button" aria-pressed={filtreSens === sens} onClick={() => changerSens(sens)}>{sens === 'TOUS' ? 'Tous' : sens === 'RECETTE' ? 'Recettes' : 'DED / dépenses'}</button>)}
         </div>
         <select className="field !w-auto max-w-56 !py-2 !text-sm" aria-label="Filtrer par compte" value={filtreCompte} onChange={e => setFiltreCompte(e.target.value)}>
           <option value="">Tous les comptes</option>
           {registre.comptes.map(c => <option key={c.id} value={c.id}>{libelleCompte(c)}</option>)}
+        </select>
+        <select className="field !w-auto max-w-60 !py-2 !text-sm" aria-label="Filtrer par fournisseur ou client" value={filtreTiers} onChange={e => setFiltreTiers(e.target.value)}>
+          <option value="">
+            {filtreSens === 'DEPENSE'
+              ? 'Tous les fournisseurs'
+              : filtreSens === 'RECETTE'
+                ? 'Tous les clients'
+                : 'Tous les fournisseurs / clients'}
+          </option>
+          {filtreSens !== 'RECETTE' && fournisseursFiltres.length > 0 && (
+            <optgroup label="Fournisseurs (DED)">
+              {fournisseursFiltres.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
+            </optgroup>
+          )}
+          {filtreSens !== 'DEPENSE' && clientsFiltres.length > 0 && (
+            <optgroup label="Clients (recettes)">
+              {clientsFiltres.map(t => <option key={t.id} value={t.id}>{t.nom}</option>)}
+            </optgroup>
+          )}
+          {autresTiersLibres.length > 0 && (
+            <optgroup label="Autres bénéficiaires">
+              {autresTiersLibres.map(nom => <option key={`nom:${nom}`} value={`nom:${nom}`}>{nom}</option>)}
+            </optgroup>
+          )}
         </select>
         <div className="relative min-w-44 flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
@@ -303,15 +428,134 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
       </div>
     </section>
 
-    {erreur && !formulaire && <p role="alert" className="text-sm text-rose-700">{erreur}</p>}
-    <div className="card overflow-x-auto"><table className="w-full text-left text-sm" aria-label="Virements enregistrés"><thead><tr>{['Date', 'N°', 'Compte bancaire', 'Type', 'Libellé', 'Catégorie', 'Montant', 'Actions'].map(x => <th key={x} className="border-b p-3">{x}</th>)}</tr></thead><tbody>
-      {lignes.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-slate-500">Aucun virement pour cette sélection.</td></tr>}
-      {lignes.map(v => <tr key={v.id} className="border-b border-slate-100 dark:border-slate-700"><td className="p-3 whitespace-nowrap">{dateFr(v.date)}</td><td className="p-3">{v.numero}</td><td className="p-3">{comptes.get(v.compteId) ? libelleCompte(comptes.get(v.compteId)!) : 'Compte introuvable'}</td><td className="p-3">{v.sens === 'RECETTE' ? 'Recette' : 'DED'}</td><td className="p-3">{v.libelle}</td><td className="p-3">{v.categorie}</td><td className="p-3 whitespace-nowrap text-right">{montantAffiche(v.montant)}</td><td className="p-3 whitespace-nowrap"><button type="button" className="icon-button" title="Modifier" aria-label={`Modifier ${v.numero}`} onClick={() => modifier(v)}><Pencil size={16} /></button><button type="button" className="icon-button" title="Imprimer le bordereau" aria-label={`Imprimer le bordereau ${v.numero}`} onClick={() => imprimerPiece(v)}><Printer size={16} /></button>{v.sens === 'DEPENSE' && <button type="button" className="icon-button" title="Réimprimer l’ordre de virement" aria-label={`Imprimer l’ordre de virement ${v.numero}`} onClick={() => imprimerOrdre(v)}><Landmark size={16} /></button>}</td></tr>)}
-    </tbody></table></div>
+    {erreur && !formulaire && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/50 dark:text-rose-300">{erreur}</p>}
+    <section className="card overflow-hidden" aria-label="Registre des virements">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <Landmark size={18} className="text-brand-700 dark:text-brand-400" />
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Registre des virements</h2>
+            <p aria-live="polite" className="mt-0.5 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+              {periode} · {lignes.length} virement{lignes.length > 1 ? 's' : ''}{filtreActif ? ' affiché(s) sur la sélection' : ''}
+            </p>
+          </div>
+        </div>
+        <span className="badge badge-neutral">MGA · ariary</span>
+      </div>
+      {filtreActif && <p className="border-b border-amber-100 bg-amber-50/70 px-5 py-2 text-xs text-amber-900 sm:text-sm dark:border-amber-950/60 dark:bg-amber-950/40 dark:text-amber-200">Vue filtrée : les totaux portent sur la sélection.</p>}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[880px] text-left text-sm" aria-label="Virements enregistrés">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wider text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
+              <th scope="col" className="px-4 py-2.5 font-semibold">Date</th>
+              <th scope="col" className="px-3 py-2.5 font-semibold">N°</th>
+              <th scope="col" className="px-3 py-2.5 font-semibold">Compte bancaire</th>
+              <th scope="col" className="px-3 py-2.5 font-semibold">Type</th>
+              <th scope="col" className="px-3 py-2.5 font-semibold">Libellé & bénéficiaire</th>
+              <th scope="col" className="px-3 py-2.5 font-semibold">Catégorie</th>
+              <th scope="col" className="px-3 py-2.5 text-right font-semibold">Montant (Ar)</th>
+              <th scope="col" className="px-3 py-2.5 text-center font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lignes.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center">
+                  <Landmark size={30} className="mx-auto mb-2.5 text-slate-300 dark:text-slate-600" />
+                  <p className="text-base font-semibold text-slate-700 dark:text-slate-300">Aucun virement pour cette sélection.</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {filtreActif
+                      ? 'Essayez une autre période ou réinitialisez les filtres.'
+                      : saisiePossible
+                        ? 'Enregistrez une recette ou une DED par virement ci-dessus.'
+                        : exemplesDisponibles
+                          ? 'Chargez les données d’exemple (comptes BNI, clients, fournisseurs et virements) pour découvrir ce module.'
+                          : 'Configurez d’abord un compte bancaire dans Administration.'}
+                  </p>
+                  {filtreActif ? (
+                    <button type="button" className="btn-secondary mt-3" onClick={reinitialiser}>Réinitialiser les filtres</button>
+                  ) : exemplesDisponibles ? (
+                    <button type="button" className="btn-secondary mt-3" onClick={() => setExemplesOuverts(true)}>
+                      <Sparkles size={15} />Découvrir avec des exemples
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            )}
+            {lignes.map(v => {
+              const compte = comptes.get(v.compteId);
+              const meta = [v.tiers, v.reference, v.observation].filter((val, idx, arr) => val && arr.indexOf(val) === idx).join(' · ');
+              const estActive = activeId === v.id;
+              const estEdition = edition?.id === v.id;
+              return (
+                <tr
+                  key={v.id}
+                  ref={v.id === lignes[lignes.length - 1]?.id ? derniereLigneRef : undefined}
+                  onClick={() => setActiveId(v.id)}
+                  className={`border-b transition-all duration-150 cursor-pointer ${
+                    estActive
+                      ? 'bg-emerald-50/90 dark:bg-emerald-950/60 border-l-4 border-l-emerald-600 dark:border-l-emerald-400 font-medium shadow-xs'
+                      : estEdition
+                        ? 'bg-amber-50 dark:bg-amber-950/40 border-l-4 border-l-amber-500'
+                        : 'border-l-4 border-l-transparent border-slate-100 hover:bg-slate-50/80 dark:border-slate-800/80 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <td className="whitespace-nowrap px-4 py-2.5 align-middle">
+                    <div className="flex items-center gap-2">
+                      {estActive && <span className="size-2 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400 shadow-xs" title="Ligne active" />}
+                      <span className="tabular-nums text-slate-700 dark:text-slate-300">{dateFr(v.date)}</span>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 align-middle font-mono text-xs font-medium text-slate-600 dark:text-slate-400 sm:text-sm">{v.numero}</td>
+                  <td className="px-3 py-2.5 align-middle text-slate-700 dark:text-slate-300">{compte ? libelleCompte(compte) : 'Compte introuvable'}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 align-middle">
+                    <span className={`badge ${v.sens === 'RECETTE' ? 'badge-green' : 'badge-red'}`}>
+                      {v.sens === 'RECETTE' ? 'Recette' : 'DED'}
+                    </span>
+                  </td>
+                  <td className="max-w-80 px-3 py-2.5 align-middle">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{v.libelle}</p>
+                      {v.permanent && <span className="badge badge-neutral shrink-0 !px-1.5 !py-0 text-[10px]">Permanent</span>}
+                    </div>
+                    {meta && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{meta}</p>}
+                  </td>
+                  <td className="max-w-44 truncate px-3 py-2.5 align-middle text-slate-700 dark:text-slate-300">{v.categorie}</td>
+                  <td className={`whitespace-nowrap px-3 py-2.5 text-right align-middle font-semibold tabular-nums ${v.sens === 'RECETTE' ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                    {montantAffiche(v.montant)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2 text-center align-middle" onClick={e => e.stopPropagation()}>
+                    <div className="inline-flex items-center justify-center gap-0.5">
+                      <button type="button" className="icon-button" title="Modifier" aria-label={`Modifier ${v.numero}`} onClick={() => { setActiveId(v.id); modifier(v); }}><Pencil size={16} /></button>
+                      <button type="button" className="icon-button" title="Imprimer le bordereau" aria-label={`Imprimer le bordereau ${v.numero}`} onClick={() => imprimerPiece(v)}><Printer size={16} /></button>
+                      {v.sens === 'DEPENSE' && <button type="button" className="icon-button" title="Réimprimer l’ordre de virement" aria-label={`Imprimer l’ordre de virement ${v.numero}`} onClick={() => imprimerOrdre(v)}><Landmark size={16} /></button>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          {lignes.length > 0 && (
+            <tfoot>
+              <tr className="border-t border-slate-200 bg-slate-50 font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100">
+                <td colSpan={6} className="px-4 py-2.5 text-xs sm:text-sm">
+                  {filtreActif ? 'Totaux de la sélection' : 'Totaux de la période'}
+                  <span className="ml-3 font-normal text-slate-500 dark:text-slate-400">
+                    Recettes : <strong className="tabular-nums text-emerald-700 dark:text-emerald-400">{formatAr(recettes)}</strong> · DED : <strong className="tabular-nums text-rose-700 dark:text-rose-400">{formatAr(depenses)}</strong>
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400">{lignes.length} pièce(s)</td>
+                <td />
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </section>
     {formulaire && <Modale titre={edition ? `Modifier ${edition.numero}` : formulaire.sens === 'RECETTE' ? 'Nouvelle recette par virement' : 'Nouvelle DED par virement'} onFermer={() => { if (!occupe) { setFormulaire(null); setErreur(''); } }}><form className="space-y-3" onSubmit={e => void enregistrerVirement(e)}>
       <div className="grid gap-3 sm:grid-cols-2"><label className="label">Date du virement<input className="field" type="date" required value={formulaire.date} onChange={e => champ('date', e.target.value)} /></label><label className="label">Compte bancaire<select className="field" required value={formulaire.compteId} onChange={e => champ('compteId', e.target.value)}>{registre.comptes.map(c => <option value={c.id} key={c.id}>{libelleCompte(c)}</option>)}</select></label></div>
-      <label className="label">Libellé<input className="field" required maxLength={200} value={formulaire.libelle} onChange={e => champ('libelle', e.target.value)} /></label>
-      <div className="grid gap-3 sm:grid-cols-2"><label className="label">Catégorie<select className="field" required value={formulaire.categorie} onChange={e => champ('categorie', e.target.value)}>{[...new Set([...listeCategories, ...(edition ? [edition.categorie] : [])])].map(c => <option key={c}>{c}</option>)}</select></label><label className="label">Montant (Ar)<input className="field" inputMode="numeric" required value={formulaire.montant} onChange={e => champ('montant', e.target.value)} /></label></div>
+      <label className="label">Libellé<input className="field" required maxLength={200} placeholder={formulaire.sens === 'RECETTE' ? 'Ex. Subvention santé communautaire' : 'Ex. Règlement facture oxygène médical'} value={formulaire.libelle} onChange={e => champ('libelle', e.target.value)} /></label>
+      <div className="grid gap-3 sm:grid-cols-2"><div><label className="label" htmlFor="virement-categorie">Catégorie</label><select id="virement-categorie" className="field" required value={formulaire.categorie} onChange={e => champ('categorie', e.target.value)}>{[...new Set([...listeCategories, ...(edition ? [edition.categorie] : [])])].map(c => <option key={c}>{c}</option>)}</select></div><div><ChampMontant label="Montant (Ar)" valeur={formulaire.montant} onChange={val => champ('montant', val)} placeholder="0" obligatoire /></div></div>
       <label className="label">{formulaire.sens === 'RECETTE' ? 'Client qui règle la recette' : 'Fournisseur à payer'}
         <select className="field" required value={formulaire.tiersId} onChange={e => choisirTiers(e.target.value)}>
           <option value="">{formulaire.sens === 'RECETTE' ? 'Choisir un client…' : 'Choisir un fournisseur…'}</option>
@@ -324,7 +568,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
         </span>}
         {ficheChoisie && formulaire.sens === 'RECETTE' && <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">Téléphone : {ficheChoisie.telephone || 'non renseigné'} · Adresse : {ficheChoisie.adresse || 'non renseignée'}</span>}
       </label>
-      <label className="label">Référence du virement<input className="field" maxLength={200} value={formulaire.reference} onChange={e => champ('reference', e.target.value)} /></label>
+      <label className="label">Référence du virement<input className="field" maxLength={200} placeholder="N° facture, avis de crédit ou bordereau…" value={formulaire.reference} onChange={e => champ('reference', e.target.value)} /></label>
       <fieldset className="space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
         <legend className="px-1 text-sm font-semibold">Ordre de virement remis à la banque</legend>
         <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Ces mentions viennent de la fiche du bénéficiaire et figurent sur l’ordre de virement 114018. Une mention laissée vide reste en blanc sur le papier.</p>
@@ -338,7 +582,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
         </div>
       </fieldset>
       <label className="label">Observation<textarea className="field" maxLength={500} value={formulaire.observation} onChange={e => champ('observation', e.target.value)} /></label>
-      {(erreur || erreurExterne) && <p role="alert" className="text-sm text-rose-700">{erreurExterne || erreur}</p>}
+      {(erreur || erreurExterne) && <p role="alert" className="text-sm text-rose-700 dark:text-rose-400">{erreurExterne || erreur}</p>}
       <div className="flex justify-end gap-2"><button type="button" className="btn-secondary" disabled={occupe} onClick={() => setFormulaire(null)}>Annuler</button><button className="btn-primary" disabled={occupe}>Enregistrer</button></div>
     </form></Modale>}
     {/* Clients et fournisseurs : le bénéficiaire de chaque virement vient d'ici. */}
@@ -352,7 +596,7 @@ export function LivreVirements({ registre, categories, entete, onMutation, erreu
           <li>Comptes bancaires à ajouter : <strong>{fichesExemple.comptes.length}</strong> (BNI/C et BNI/D avec leur RIB)</li>
           <li>Clients et fournisseurs à ajouter : <strong>{fichesExemple.tiers.length}</strong></li>
           <li>Virements d’exemple : {virementsExemple.length
-            ? <strong>{virementsExemple.length} (une recette reçue et une DED payée)</strong>
+            ? <strong>{virementsExemple.length} ({virementsExemple.filter(v => v.sens === 'RECETTE').length} recette(s) reçue(s) et {virementsExemple.filter(v => v.sens === 'DEPENSE').length} DED payée(s))</strong>
             : <span>non proposés, car ce registre contient déjà des virements</span>}</li>
         </ul>
         <p className="text-xs text-slate-500 dark:text-slate-400">Vous pourrez corriger ou supprimer chaque fiche et chaque virement depuis ce livre.</p>

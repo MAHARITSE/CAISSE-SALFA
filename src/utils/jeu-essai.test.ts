@@ -25,4 +25,11 @@ describe('jeu d’essai livré', () => {
     expect(livre.entetes).not.toHaveProperty('depense');
     expect(livre.entetes.images.length).toBeGreaterThanOrEqual(2);
   });
+  it('inclut des comptes, clients, fournisseurs et virements d’exemple', () => {
+    expect(livre.virements).toBeDefined();
+    expect(livre.virements!.comptes).toHaveLength(2);
+    expect(livre.virements!.tiers.filter(t => t.type === 'CLIENT').length).toBeGreaterThanOrEqual(4);
+    expect(livre.virements!.tiers.filter(t => t.type === 'FOURNISSEUR').length).toBeGreaterThanOrEqual(5);
+    expect(livre.virements!.ecritures.length).toBeGreaterThanOrEqual(6);
+  });
 });

@@ -28,14 +28,16 @@ describe('jeu de démonstration', () => {
     const registre = registreExemple(annee);
     expect(registre.comptes.map(c => c.banque)).toEqual(['BNI/C', 'BNI/D']);
     expect(registre.comptes.every(c => c.numeroCompte && c.codeBanque === '00005')).toBe(true);
-    expect(registre.tiers.filter(t => t.type === 'CLIENT')).toHaveLength(2);
-    expect(registre.tiers.filter(t => t.type === 'FOURNISSEUR')).toHaveLength(2);
+    expect(registre.tiers.filter(t => t.type === 'CLIENT')).toHaveLength(4);
+    expect(registre.tiers.filter(t => t.type === 'FOURNISSEUR')).toHaveLength(5);
     // Chaque fournisseur porte un RIB complet, comme l'exige la saisie d'une DED.
     for (const f of registre.tiers.filter(t => t.type === 'FOURNISSEUR')) {
       expect(f.banque).not.toBe('');
       expect(f.numeroCompte).not.toBe('');
     }
-    expect(registre.ecritures.map(v => v.numero)).toEqual(['VR-2026-0001', 'VD-2026-0001']);
+    expect(registre.ecritures.map(v => v.numero)).toEqual([
+      'VR-2026-0001', 'VD-2026-0001', 'VR-2026-0002', 'VD-2026-0002', 'VD-2026-0003', 'VR-2026-0003',
+    ]);
     // La DED d'exemple part avec les mentions de son ordre de virement.
     expect(registre.ecritures[1]).toMatchObject({ tiers: 'SOCIÉTÉ OXYGÈNE MADA', beneficiaireBanque: 'BOA' });
   });
@@ -45,7 +47,7 @@ describe('jeu de démonstration', () => {
     const exemple = jeuDeDemonstration(livre, annee);
     const valide = validerSauvegarde(exemple);
     expect(valide.parametres.exercice).toBe(annee);
-    expect(valide.virements?.ecritures).toHaveLength(2);
+    expect(valide.virements?.ecritures).toHaveLength(6);
     const totaux = totaliser(valide.ecritures);
     expect(totaux.recettes).toBeGreaterThan(0);
     expect(totaux.depenses).toBeGreaterThan(0);
@@ -62,14 +64,14 @@ describe('jeu de démonstration', () => {
 
   it('résume ce qui sera chargé, pour la confirmation', () => {
     expect(resumeExemple(annee)).toContain(`${annee}`);
-    expect(resumeExemple(annee)).toMatch(/écritures de caisse/);
+    expect(resumeExemple(annee)).toMatch(/écritures de caisse et 6 virements/);
   });
 
   it('ajoute à un registre en service les seules fiches manquantes, jamais les virements', () => {
     const vide = registreVirementsVide();
     expect(fichesExempleManquantes(vide).comptes).toHaveLength(2);
-    expect(fichesExempleManquantes(vide).tiers).toHaveLength(4);
-    expect(virementsExempleManquants(vide)).toHaveLength(2);
+    expect(fichesExempleManquantes(vide).tiers).toHaveLength(9);
+    expect(virementsExempleManquants(vide)).toHaveLength(6);
 
     // BNI/C existe déjà : il n'est pas reproposé, les autres fiches si.
     const existant = ajouterCompteVirement(vide, fichesExemple().comptes[0]);

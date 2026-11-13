@@ -133,6 +133,14 @@ export function fichesExemple(): RegistreVirements {
     adresse: 'Rue des Écoles — Toliara', banque: 'BNI', numeroCompte: '00005 00998877665',
   });
   registre = ajouterTiers(registre, {
+    id: 'exemple-client-mutuelle', type: 'CLIENT', nom: 'MUTUELLE SANTÉ SUD', telephone: '032 14 567 89',
+    adresse: 'Avenue de France — Toliara', banque: 'BOA', numeroCompte: '00004 00334455667',
+  });
+  registre = ajouterTiers(registre, {
+    id: 'exemple-client-aro', type: 'CLIENT', nom: 'ASSURANCE ARO SANTÉ', telephone: '020 22 201 54',
+    adresse: 'Place de l’Indépendance — Antananarivo', banque: 'BNI', numeroCompte: '00005 00119988776',
+  });
+  registre = ajouterTiers(registre, {
     id: 'exemple-four-oxygene', type: 'FOURNISSEUR', nom: 'SOCIÉTÉ OXYGÈNE MADA', telephone: '020 75 123 45',
     adresse: 'Zone industrielle — Antananarivo', banque: 'BOA', numeroCompte: '00004 98765432101',
   });
@@ -140,25 +148,69 @@ export function fichesExemple(): RegistreVirements {
     id: 'exemple-four-medical', type: 'FOURNISSEUR', nom: 'MÉDICAL SERVICE', telephone: '034 05 678 90',
     adresse: 'Bazar Be — Toliara', banque: 'BNI', numeroCompte: '00005 00223344556',
   });
+  registre = ajouterTiers(registre, {
+    id: 'exemple-four-pharmacie', type: 'FOURNISSEUR', nom: 'PHARMACIE CENTRALE SALFA', telephone: '020 22 612 30',
+    adresse: 'Andravoahangy — Antananarivo', banque: 'BNI', numeroCompte: '00005 00445566778',
+  });
+  registre = ajouterTiers(registre, {
+    id: 'exemple-four-jirama', type: 'FOURNISSEUR', nom: 'JIRAMA TOLIARA', telephone: '020 94 410 12',
+    adresse: 'Boulevard Lyautey — Toliara', banque: 'BFV-SG', numeroCompte: '00008 00778899001',
+  });
+  registre = ajouterTiers(registre, {
+    id: 'exemple-four-imprimerie', type: 'FOURNISSEUR', nom: 'IMPRIMERIE DU SUD', telephone: '034 41 220 18',
+    adresse: 'Sanfily — Toliara', banque: 'BOA', numeroCompte: '00004 00556677889',
+  });
   return validerRegistreVirements(registre);
 }
 
-/** Virements d'exemple : une recette reçue et une DED payée, avec ses mentions. */
+/** Virements d'exemple : recettes reçues et DED payées, réparties sur les comptes, clients et fournisseurs. */
 export function virementsExemple(annee: number): RegistreVirements['ecritures'] {
   let registre = ajouterVirement(fichesExemple(), {
     id: 'exemple-vr-1', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 1, 15), sens: 'RECETTE',
     libelle: 'VERSEMENT ASSOCIATION FANILO', categorie: 'Subventions & dons', tiers: 'ASSOCIATION FANILO',
-    tiersId: 'exemple-client-fanilo', reference: 'VIR-2026-0115', observation: 'Exemple : recette reçue par virement.',
+    tiersId: 'exemple-client-fanilo', reference: `VIR-${annee}-0115`, observation: 'Exemple : recette reçue par virement.',
     montant: 1_200_000, createdAt: new Date(annee, 0, 15, 10, 0, 0).toISOString(),
   });
   registre = ajouterVirement(registre, {
     id: 'exemple-vd-1', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 2, 20), sens: 'DEPENSE',
     libelle: 'ACHAT OXYGÈNE MÉDICAL', categorie: 'Consommables médicaux', tiers: 'SOCIÉTÉ OXYGÈNE MADA',
-    tiersId: 'exemple-four-oxygene', reference: 'FACT-2026-0218',
+    tiersId: 'exemple-four-oxygene', reference: `FACT-${annee}-0218`,
     observation: 'Exemple : la DED porte son ordre de virement BNI 114018.',
     montant: 980_000, createdAt: new Date(annee, 1, 20, 11, 0, 0).toISOString(),
     beneficiaireAdresse: 'Zone industrielle — Antananarivo', beneficiaireBanque: 'BOA',
     beneficiaireCompte: '00004 98765432101',
+  });
+  registre = ajouterVirement(registre, {
+    id: 'exemple-vr-2', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 2, 25), sens: 'RECETTE',
+    libelle: 'PRISE EN CHARGE MUTUELLE SANTÉ SUD', categorie: 'Remboursements', tiers: 'MUTUELLE SANTÉ SUD',
+    tiersId: 'exemple-client-mutuelle', reference: `VIR-${annee}-0225`,
+    observation: 'Règlement trimestriel des dossiers mutualistes.',
+    montant: 1_650_000, createdAt: new Date(annee, 1, 25, 9, 30, 0).toISOString(),
+  });
+  registre = ajouterVirement(registre, {
+    id: 'exemple-vd-2', compteId: 'exemple-compte-bni-d', date: dateDe(annee, 3, 4), sens: 'DEPENSE',
+    libelle: 'APPROVISIONNEMENT MÉDICAMENTS ESSENTIELS', categorie: 'Achats médicaments', tiers: 'PHARMACIE CENTRALE SALFA',
+    tiersId: 'exemple-four-pharmacie', reference: `FAC-PH-${annee}-084`,
+    observation: 'Dotation mensuelle pharmacie de l’hôpital.',
+    montant: 2_450_000, createdAt: new Date(annee, 2, 4, 14, 15, 0).toISOString(),
+    beneficiaireAdresse: 'Andravoahangy — Antananarivo', beneficiaireBanque: 'BNI',
+    beneficiaireCompte: '00005 00445566778',
+  });
+  registre = ajouterVirement(registre, {
+    id: 'exemple-vd-3', compteId: 'exemple-compte-bni-d', date: dateDe(annee, 3, 12), sens: 'DEPENSE',
+    libelle: 'FACTURE EAU ET ÉLECTRICITÉ HÔPITAL', categorie: 'Eau & électricité', tiers: 'JIRAMA TOLIARA',
+    tiersId: 'exemple-four-jirama', reference: `JIR-${annee}-0312`,
+    observation: 'Virement permanent mensuel JIRAMA.',
+    montant: 640_000, createdAt: new Date(annee, 2, 12, 10, 45, 0).toISOString(),
+    beneficiaireAdresse: 'Boulevard Lyautey — Toliara', beneficiaireBanque: 'BFV-SG',
+    beneficiaireCompte: '00008 00778899001', permanent: true,
+  });
+  registre = ajouterVirement(registre, {
+    id: 'exemple-vr-3', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 3, 18), sens: 'RECETTE',
+    libelle: 'RÈGLEMENT DOSSIERS ASSURANCE ARO', categorie: 'Remboursements', tiers: 'ASSURANCE ARO SANTÉ',
+    tiersId: 'exemple-client-aro', reference: `VIR-ARO-${annee}-18`,
+    observation: 'Remboursement hospitalisations conventionnées.',
+    montant: 890_000, createdAt: new Date(annee, 2, 18, 15, 20, 0).toISOString(),
   });
   return registre.ecritures;
 }
@@ -227,5 +279,6 @@ export function virementsExempleManquants(registre: RegistreVirements | undefine
 
 /** Résumé lisible, affiché dans la confirmation. */
 export function resumeExemple(annee = new Date().getFullYear()): string {
-  return `${NOMBRE_EXEMPLES} écritures de caisse et 2 virements sur l'exercice ${annee}, pour un total de ${nb(ecrituresExemple(annee).reduce((s, e) => s + e.montant, 0))} Ar de pièces.`;
+  const nbVirements = virementsExemple(annee).length;
+  return `${NOMBRE_EXEMPLES} écritures de caisse et ${nbVirements} virements sur l'exercice ${annee}, pour un total de ${nb(ecrituresExemple(annee).reduce((s, e) => s + e.montant, 0))} Ar de pièces.`;
 }

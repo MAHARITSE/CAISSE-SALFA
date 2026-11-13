@@ -9,6 +9,8 @@
  */
 import { writeFileSync } from 'node:fs';
 import { creerDonnees } from '../src/utils/ledger';
+import { fichesExemple } from '../src/utils/demonstration';
+import { ajouterVirement, validerRegistreVirements } from '../src/utils/virements';
 import { validerSauvegarde } from '../src/utils/validation';
 import type { Ecriture, LigneDetail, Sauvegarde, Sens } from '../src/types';
 import { CATEGORIES_DEPENSE, CATEGORIES_RECETTE, MODE_UNIQUE } from '../src/utils/constants';
@@ -216,6 +218,94 @@ const depenses = new Set(ecritures.filter(e => e.sens === 'DEPENSE').map(e => e.
 for (const categorie of recettes) if (!CATEGORIES_RECETTE.includes(categorie)) throw new Error(`Catégorie de recette inconnue : ${categorie}`);
 for (const categorie of depenses) if (!CATEGORIES_DEPENSE.includes(categorie)) throw new Error(`Catégorie de dépense inconnue : ${categorie}`);
 
+// Registre des virements : comptes BNI/C et BNI/D, clients, fournisseurs et opérations sur les 3 mois.
+let virements = fichesExemple();
+const fichesTiers = new Map(virements.tiers.map(t => [t.id, t]));
+const operationsVirement: Array<{
+  moisIndex: number; jour: number; id: string; compteId: string; sens: Sens;
+  libelle: string; categorie: string; tiersId: string; reference: string;
+  observation: string; montant: number; permanent?: boolean;
+}> = [
+  {
+    moisIndex: 0, jour: 8, id: 'essai-vr-1', compteId: 'exemple-compte-bni-c', sens: 'RECETTE',
+    libelle: 'SUBVENTION ASSOCIATION FANILO', categorie: 'Subventions & dons',
+    tiersId: 'exemple-client-fanilo', reference: 'VIR-2026-0908',
+    observation: 'Versement semestriel de soutien au dispensaire.', montant: 2_200_000,
+  },
+  {
+    moisIndex: 0, jour: 15, id: 'essai-vd-1', compteId: 'exemple-compte-bni-c', sens: 'DEPENSE',
+    libelle: 'ACHAT OXYGÈNE MÉDICAL', categorie: 'Consommables médicaux',
+    tiersId: 'exemple-four-oxygene', reference: 'FACT-2026-0915',
+    observation: 'Recharge bouteilles oxygène bloc et urgences.', montant: 980_000,
+  },
+  {
+    moisIndex: 0, jour: 25, id: 'essai-vd-2', compteId: 'exemple-compte-bni-d', sens: 'DEPENSE',
+    libelle: 'APPROVISIONNEMENT MÉDICAMENTS ESSENTIELS', categorie: 'Achats médicaments',
+    tiersId: 'exemple-four-pharmacie', reference: 'FAC-PH-2026-0925',
+    observation: 'Dotation mensuelle pharmacie SALFA.', montant: 2_450_000,
+  },
+  {
+    moisIndex: 1, jour: 6, id: 'essai-vr-2', compteId: 'exemple-compte-bni-c', sens: 'RECETTE',
+    libelle: 'PRISE EN CHARGE MUTUELLE SANTÉ SUD', categorie: 'Remboursements',
+    tiersId: 'exemple-client-mutuelle', reference: 'VIR-MUT-2026-1006',
+    observation: 'Règlement des dossiers mutualistes du trimestre.', montant: 1_650_000,
+  },
+  {
+    moisIndex: 1, jour: 14, id: 'essai-vd-3', compteId: 'exemple-compte-bni-d', sens: 'DEPENSE',
+    libelle: 'FACTURE EAU ET ÉLECTRICITÉ HÔPITAL', categorie: 'Eau & électricité',
+    tiersId: 'exemple-four-jirama', reference: 'JIR-2026-1014',
+    observation: 'Virement permanent mensuel JIRAMA.', montant: 640_000, permanent: true,
+  },
+  {
+    moisIndex: 1, jour: 21, id: 'essai-vd-4', compteId: 'exemple-compte-bni-c', sens: 'DEPENSE',
+    libelle: 'CONSOMMABLES ET RÉACTIFS LABORATOIRE', categorie: 'Consommables médicaux',
+    tiersId: 'exemple-four-medical', reference: 'MS-2026-1021',
+    observation: 'Commande réactifs et kits de dépistage.', montant: 760_000,
+  },
+  {
+    moisIndex: 2, jour: 5, id: 'essai-vr-3', compteId: 'exemple-compte-bni-c', sens: 'RECETTE',
+    libelle: 'RÈGLEMENT DOSSIERS ASSURANCE ARO', categorie: 'Remboursements',
+    tiersId: 'exemple-client-aro', reference: 'VIR-ARO-2026-1105',
+    observation: 'Remboursement hospitalisations conventionnées.', montant: 890_000,
+  },
+  {
+    moisIndex: 2, jour: 11, id: 'essai-vr-4', compteId: 'exemple-compte-bni-c', sens: 'RECETTE',
+    libelle: 'APPUI ONG SANTÉ MADAGASCAR', categorie: 'Subventions & dons',
+    tiersId: 'exemple-client-madagascar', reference: 'VIR-ONG-2026-1111',
+    observation: 'Contribution programme maternité et vaccination.', montant: 1_400_000,
+  },
+  {
+    moisIndex: 2, jour: 18, id: 'essai-vd-5', compteId: 'exemple-compte-bni-d', sens: 'DEPENSE',
+    libelle: 'IMPRESSION CARNETS ET ORDONNANCES', categorie: 'Fournitures de bureau',
+    tiersId: 'exemple-four-imprimerie', reference: 'IMP-2026-1118',
+    observation: 'Carnets de caisse et fiches patients.', montant: 320_000,
+  },
+];
+for (const op of operationsVirement) {
+  const periode = mois[op.moisIndex] ?? mois[mois.length - 1];
+  const date = dateIso(periode.annee, periode.mois, op.jour);
+  const fiche = fichesTiers.get(op.tiersId)!;
+  virements = ajouterVirement(virements, {
+    id: op.id,
+    compteId: op.compteId,
+    date,
+    sens: op.sens,
+    libelle: op.libelle,
+    categorie: op.categorie,
+    tiers: fiche.nom,
+    tiersId: fiche.id,
+    reference: op.reference,
+    observation: op.observation,
+    montant: op.montant,
+    createdAt: `${date}T10:00:00.000Z`,
+    ...(fiche.adresse ? { beneficiaireAdresse: fiche.adresse } : {}),
+    ...(fiche.banque ? { beneficiaireBanque: fiche.banque } : {}),
+    ...(fiche.numeroCompte ? { beneficiaireCompte: fiche.numeroCompte } : {}),
+    ...(op.permanent ? { permanent: true } : {}),
+  });
+}
+virements = validerRegistreVirements(virements);
+
 const sauvegarde: Sauvegarde = validerSauvegarde({
   ...donnees,
   // L'en-tête n'est pas figé : le livre affiche celui livré par l'application.
@@ -227,6 +317,7 @@ const sauvegarde: Sauvegarde = validerSauvegarde({
   exportedAt: new Date().toISOString(),
   ecritures,
   compteurs,
+  virements,
 });
 
 // Deux noms pointent le même contenu : le fichier à importer, et celui lu par demo/charger-demo.html.

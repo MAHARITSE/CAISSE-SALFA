@@ -3,7 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, Check, Layers, Plus, Trash2, AlertCircle, 
 import type { Categories, Ecriture, MasqueSaisie, Sens } from '../types';
 import { MAX_DETAILS, MONTANT_MAX } from '../utils/constants';
 import { aujourdHui, formatAr, majusculesDebutMots, masqueMajuscules, parserMontant } from '../utils/format';
-import { ChampMontant } from './ChampMontant';
+import { ChampMontant, formaterSaisieMontant } from './ChampMontant';
 import { identifiant } from '../utils/ledger';
 import { validerEcriture } from '../utils/validation';
 import { Modale } from './Modale';
@@ -42,9 +42,9 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
   const [tiers, setTiers] = useState(edition?.tiers ?? '');
   const [reference, setReference] = useState(edition?.reference ?? '');
   const [observation, setObservation] = useState(edition?.observation ?? '');
-  const [montantSimple, setMontantSimple] = useState(edition?.lignesDetail?.length ? '' : edition ? String(edition.montant) : '');
+  const [montantSimple, setMontantSimple] = useState(edition?.lignesDetail?.length ? '' : edition ? formaterSaisieMontant(String(edition.montant)) : '');
   const [detaille, setDetaille] = useState(Boolean(edition?.lignesDetail?.length));
-  const [lignes, setLignes] = useState<LigneBrouillon[]>(edition?.lignesDetail?.map(d => ({ id: d.id, description: d.libelle, montant: String(d.montant) })) ?? []);
+  const [lignes, setLignes] = useState<LigneBrouillon[]>(edition?.lignesDetail?.map(d => ({ id: d.id, description: d.libelle, montant: formaterSaisieMontant(String(d.montant)) })) ?? []);
   const [nouveauPoste, setNouveauPoste] = useState('');
   const [nouveauMontant, setNouveauMontant] = useState('');
   const [erreur, setErreur] = useState('');
@@ -178,7 +178,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
       <Modale titre={edition ? `Modifier ${edition.numero}` : estRecette ? 'Nouvelle recette' : 'Nouvelle dépense'}
         sousTitre={`${numero} · ${estRecette ? 'Encaissement' : 'Décaissement'} en ariary (MGA)`}
         icone={estRecette ? <ArrowDownLeft size={22} /> : <ArrowUpRight size={22} className="text-rose-600 dark:text-rose-400" />}
-        enteteClass={estRecette ? 'bg-emerald-50/70' : 'bg-rose-50/70'} onFermer={demanderFermeture}
+        enteteClass={estRecette ? 'bg-emerald-50/70 dark:bg-emerald-950/40' : 'bg-rose-50/70 dark:bg-rose-950/40'} onFermer={demanderFermeture}
         pied={<div className="flex flex-wrap items-center justify-between gap-3"><div><span className="label">Total {estRecette ? 'recette' : 'dépense'}</span><p aria-live="polite" className={`text-2xl font-bold tabular-nums ${estRecette ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>{formatAr(total)}</p></div><div className="flex gap-2"><button type="button" className="btn-secondary" onClick={demanderFermeture}>Annuler</button><button type="submit" form={formId} className={estRecette ? 'btn-primary' : 'btn-danger'} disabled={enregistrement}><Check size={16} />{enregistrement ? 'Enregistrement…' : 'Enregistrer'}</button></div></div>}>
         <form id={formId} onSubmit={enregistrer} className="space-y-5" onChange={changer}
           onCompositionStart={() => { compositionEnCours.current = true; }}
@@ -248,7 +248,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
             <div><label className="label" htmlFor={`${formId}-reference`}>Référence de la pièce</label><input id={`${formId}-reference`} className="field" maxLength={200} value={reference} onChange={e => setReference(e.target.value)} placeholder="Facture, chèque, bordereau…" /></div>
             <div><label className="label" htmlFor={`${formId}-observation`}>Observation</label><input id={`${formId}-observation`} className="field" maxLength={2000} value={observation} onChange={e => setObservation(e.target.value)} placeholder="Information complémentaire (facultatif)" /></div>
           </div>
-          <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 p-4 space-y-4" aria-label="Montants de l’écriture">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-4 space-y-4" aria-label="Montants de l’écriture">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-base font-semibold">Montant de l’opération</h3>
               <div className="segmented" aria-label="Mode de saisie du montant"><button type="button" aria-pressed={!detaille} onClick={() => { setDetaille(false); changer(); }}>Montant unique</button><button type="button" aria-pressed={detaille} onClick={() => { setDetaille(true); changer(); }}>Détail par postes</button></div>

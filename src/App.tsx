@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BookOpen, CalendarCheck, CalendarClock, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Database, Download, Eye, EyeOff, HeartPulse, KeyRound, Landmark, LogOut, Plus, Printer, RefreshCw, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Settings2, X } from 'lucide-react';
 import type { DonneesCaisse, Ecriture, FiltresJournal, LigneJournal, Sens } from './types';
 import { useLivre } from './hooks/useLivre';
@@ -154,6 +154,21 @@ export function App() {
       if (obs) obs.disconnect();
     };
   }, [session, onglet, afficherSynthese, livre]);
+
+  const premierRenduOnglet = useRef(true);
+  useLayoutEffect(() => {
+    if (premierRenduOnglet.current) {
+      premierRenduOnglet.current = false;
+      return;
+    }
+    try {
+      if (window.scrollY > 0 || document.documentElement.scrollTop > 0) {
+        window.scrollTo?.({ top: 0, behavior: 'instant' });
+      }
+    } catch {
+      /* environnement sans scrollTo */
+    }
+  }, [onglet]);
 
   useEffect(() => {
     if (!notification) return;
@@ -653,7 +668,7 @@ export function App() {
           </section></div>
           {!erreur ? <LivreJournal key={cleEntete} lignes={lignes} soldeOuverture={ouverture} periode={periode} recettes={totauxSelection.recettes} depenses={totauxSelection.depenses} soldeFin={soldeFin} filtreActif={filtreActif} peutModifier={saisieOuverte && !archiveConsultee} enEditionId={saisie?.edition?.id ?? null} onEditer={e => setSaisie({ sens: e.sens, edition: e })} onDemanderPrecision={administre && !archiveConsultee ? setDemandeCible : undefined} onSupprimer={id => setASupprimer(livre.ecritures.find(e => e.id === id) ?? null)} onReinitialiser={reinitialiser} entetes={livre.entetes} onEnregistrerEntete={enregistrerEnteteDocument} onNouvelleEcriture={saisieOuverte && !archiveConsultee ? sens => setSaisie({ sens, edition: null }) : undefined} /> : <section className="card p-12 text-center text-sm text-slate-500 dark:text-slate-400"><Database size={32} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />Le livre n’est pas affiché tant que le stockage n’a pas été récupéré.</section>}
         </>}
-        {onglet === 'virements' && peutGererVirements(role) && (erreur ? <p className="card p-8 text-sm text-slate-500">Récupérez le stockage pour consulter les virements.</p> : <LivreVirements registre={livre.virements ?? registreVirementsVide()} categories={livre.categories} entete={livre.entetes} onMutation={enregistrerVirement} erreurExterne={erreur} />)}
+        {onglet === 'virements' && peutGererVirements(role) && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les virements.</p> : <LivreVirements registre={livre.virements ?? registreVirementsVide()} categories={livre.categories} entete={livre.entetes} onMutation={enregistrerVirement} erreurExterne={erreur} />)}
         {onglet === 'analyse' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour afficher les statistiques.</p> : <><div className="no-print flex flex-wrap items-center gap-2"><div className="flex items-center rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"><button className="icon-button" aria-label="Mois précédent" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, -1))}><ChevronLeft size={16} /></button><input type="month" className="w-40 bg-transparent px-2 py-2 text-sm font-semibold text-slate-700 outline-none dark:text-slate-200" aria-label="Mois de l’analyse" min={administre ? '1900-01' : `${exercice}-01`} max={administre ? '9999-12' : `${exercice}-12`} value={mois} onChange={e => changerMois(e.target.value)} /><button className="icon-button" aria-label="Mois suivant" disabled={toutAfficher} onClick={() => changerMois(decalerMois(mois, 1))}><ChevronRight size={16} /></button></div><button className={`btn-secondary ${toutAfficher ? '!border-brand-700 !bg-brand-50 !text-brand-800 dark:!border-brand-500 dark:!bg-brand-950/80 dark:!text-brand-300' : ''}`} aria-pressed={toutAfficher} onClick={() => setToutAfficher(v => !v)}>Toutes périodes</button></div><Synthese soldeInitial={soldeBaseJournal} exercice={exerciceAffiche} exerciceOuvert={exercice} exercicesDisponibles={exercicesDisponibles} onChangerExercice={changerExerciceConsulte} reportPrecedent={livre.parametres.reportPrecedent} cloturePossible={cloturePossible} onCloturer={ouvrirCloture} onSoldeInitial={changerSolde} peutModifierSolde={soldeModifiable} recettes={totauxPeriode.recettes} depenses={totauxPeriode.depenses} soldeFin={soldeFin} periode={periode} nombreEcritures={duMois.length} erreurExterne={erreur} /><Analyse lignes={duMois} periode={periode} categoriesDepense={livre.categories.depense} onModifierCategorieDepense={saisieOuverte && !archiveConsultee ? modifierCategorieDepense : undefined} raisonLectureSeule={archiveConsultee ? 'Exercice clôturé : les catégories sont en lecture seule.' : !saisieOuverte ? 'Votre rôle permet la consultation uniquement.' : undefined} /></>)}
         {onglet === 'exercices' && (erreur ? <p className="card p-8 text-sm text-slate-500 dark:text-slate-400">Récupérez le stockage pour consulter les exercices.</p> : <Exercices livre={livre} administrateur={administre} exerciceActif={exerciceAffiche} onCloturer={ouvrirCloture} onTelechargerArchive={telechargerArchive} onOuvrirExercice={changerExerciceConsulte} />)}
         {onglet === 'donnees' && <DonneesSauvegardes livre={livre} administrateur={administre} erreur={erreur} onRestaurer={restaurerLivre} onRecharger={rechargerLivre} />}

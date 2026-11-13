@@ -66,7 +66,7 @@ export function Synthese({ soldeInitial, exercice, exerciceOuvert, exercicesDisp
           {enArchive
             ? <span className="badge badge-neutral" title="Exercice clôturé en consultation">Clôturé</span>
             : peutModifierSolde
-              ? <button className="icon-button" aria-label="Modifier le solde d’ouverture du livre" title="Modifier le solde initial" onClick={() => { setValeur(String(soldeInitial)); setErreur(''); setEdition(true); }}><Pencil size={15} /></button>
+              ? <button className="icon-button" aria-label="Modifier le solde d’ouverture du livre" title="Modifier le solde initial" onClick={() => { setValeur(formaterSaisieMontant(String(soldeInitial), true)); setErreur(''); setEdition(true); }}><Pencil size={15} /></button>
               : <span className="badge badge-neutral" title="Seul l’administrateur modifie le solde d’ouverture">Lecture seule</span>}</div><p className="summary-note">{enArchive ? `Solde d’ouverture archivé de l’exercice ${exercice}` : reportPrecedent ? `Report de la clôture ${reportPrecedent.annee} : ${formatAr(reportPrecedent.solde)}` : 'Report antérieur à l’historique conservé'}</p>
         {!enArchive && cloturePossible && peutModifierSolde && <button className="mt-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 hover:underline sm:text-sm" onClick={onCloturer}><CalendarCheck size={14} />Clôturer l’exercice {exercice}</button>}</article>
     </section>

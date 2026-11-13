@@ -2,8 +2,8 @@
   "format": "CAISSE-SALFA",
   "version": 1,
   "revision": 0,
-  "updatedAt": "2026-11-04T13:57:03.615Z",
-  "exportedAt": "2026-11-04T13:57:03.615Z",
+  "updatedAt": "2026-11-13T06:46:05.701Z",
+  "exportedAt": "2026-11-13T06:46:05.701Z",
   "ecritures": [
     {
       "id": "essai-2026-RC-2026-0001",
@@ -1714,6 +1714,7 @@
       "nom": "Bordereau recettes hôpital",
       "sens": "RECETTE",
       "description": "Les 12 postes du carnet de caisse hospitalier.",
+      "libelle": "RECETTES JOURNALIERES DU SERVICE",
       "lignes": [
         {
           "description": "CONSULTATION"
@@ -1758,6 +1759,7 @@
       "nom": "Charges courantes & fonctionnement",
       "sens": "DEPENSE",
       "description": "Dépenses périodiques d’exploitation.",
+      "libelle": "CHARGES COURANTES D’EXPLOITATION",
       "lignes": [
         {
           "description": "ACHATS MEDICAMENTS"
@@ -1809,7 +1811,281 @@
       "Honoraires",
       "Eau & électricité",
       "Téléphone & internet",
+      "Remboursements & rétrocessions",
+      "Versements bancaires",
       "Divers"
     ]
+  },
+  "virements": {
+    "comptes": [
+      {
+        "id": "exemple-compte-bni-c",
+        "banque": "BNI/C",
+        "numeroCompte": "00005 00401234567",
+        "titulaire": "SALFA — Hôpital Loterana Toliary Tanambao",
+        "adresse": "BP 99 — Toliara",
+        "codeBanque": "00005"
+      },
+      {
+        "id": "exemple-compte-bni-d",
+        "banque": "BNI/D",
+        "numeroCompte": "00005 00409876543",
+        "titulaire": "SALFA — Hôpital Loterana Toliary Tanambao",
+        "adresse": "BP 99 — Toliara",
+        "codeBanque": "00005"
+      }
+    ],
+    "ecritures": [
+      {
+        "id": "essai-vr-1",
+        "numero": "VR-2026-0001",
+        "date": "2026-09-08",
+        "sens": "RECETTE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "SUBVENTION ASSOCIATION FANILO",
+        "categorie": "Subventions & dons",
+        "tiers": "ASSOCIATION FANILO",
+        "reference": "VIR-2026-0908",
+        "observation": "Versement semestriel de soutien au dispensaire.",
+        "montant": 2200000,
+        "createdAt": "2026-09-08T10:00:00.000Z",
+        "beneficiaireAdresse": "Lot II M 45 — Antananarivo",
+        "beneficiaireBanque": "BOA",
+        "beneficiaireCompte": "00004 00112233445",
+        "tiersId": "exemple-client-fanilo"
+      },
+      {
+        "id": "essai-vd-1",
+        "numero": "VD-2026-0001",
+        "date": "2026-09-15",
+        "sens": "DEPENSE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "ACHAT OXYGÈNE MÉDICAL",
+        "categorie": "Consommables médicaux",
+        "tiers": "SOCIÉTÉ OXYGÈNE MADA",
+        "reference": "FACT-2026-0915",
+        "observation": "Recharge bouteilles oxygène bloc et urgences.",
+        "montant": 980000,
+        "createdAt": "2026-09-15T10:00:00.000Z",
+        "beneficiaireAdresse": "Zone industrielle — Antananarivo",
+        "beneficiaireBanque": "BOA",
+        "beneficiaireCompte": "00004 98765432101",
+        "tiersId": "exemple-four-oxygene"
+      },
+      {
+        "id": "essai-vd-2",
+        "numero": "VD-2026-0002",
+        "date": "2026-09-25",
+        "sens": "DEPENSE",
+        "compteId": "exemple-compte-bni-d",
+        "libelle": "APPROVISIONNEMENT MÉDICAMENTS ESSENTIELS",
+        "categorie": "Achats médicaments",
+        "tiers": "PHARMACIE CENTRALE SALFA",
+        "reference": "FAC-PH-2026-0925",
+        "observation": "Dotation mensuelle pharmacie SALFA.",
+        "montant": 2450000,
+        "createdAt": "2026-09-25T10:00:00.000Z",
+        "beneficiaireAdresse": "Andravoahangy — Antananarivo",
+        "beneficiaireBanque": "BNI",
+        "beneficiaireCompte": "00005 00445566778",
+        "tiersId": "exemple-four-pharmacie"
+      },
+      {
+        "id": "essai-vr-2",
+        "numero": "VR-2026-0002",
+        "date": "2026-10-06",
+        "sens": "RECETTE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "PRISE EN CHARGE MUTUELLE SANTÉ SUD",
+        "categorie": "Remboursements",
+        "tiers": "MUTUELLE SANTÉ SUD",
+        "reference": "VIR-MUT-2026-1006",
+        "observation": "Règlement des dossiers mutualistes du trimestre.",
+        "montant": 1650000,
+        "createdAt": "2026-10-06T10:00:00.000Z",
+        "beneficiaireAdresse": "Avenue de France — Toliara",
+        "beneficiaireBanque": "BOA",
+        "beneficiaireCompte": "00004 00334455667",
+        "tiersId": "exemple-client-mutuelle"
+      },
+      {
+        "id": "essai-vd-3",
+        "numero": "VD-2026-0003",
+        "date": "2026-10-14",
+        "sens": "DEPENSE",
+        "compteId": "exemple-compte-bni-d",
+        "libelle": "FACTURE EAU ET ÉLECTRICITÉ HÔPITAL",
+        "categorie": "Eau & électricité",
+        "tiers": "JIRAMA TOLIARA",
+        "reference": "JIR-2026-1014",
+        "observation": "Virement permanent mensuel JIRAMA.",
+        "montant": 640000,
+        "createdAt": "2026-10-14T10:00:00.000Z",
+        "beneficiaireAdresse": "Boulevard Lyautey — Toliara",
+        "beneficiaireBanque": "BFV-SG",
+        "beneficiaireCompte": "00008 00778899001",
+        "permanent": true,
+        "tiersId": "exemple-four-jirama"
+      },
+      {
+        "id": "essai-vd-4",
+        "numero": "VD-2026-0004",
+        "date": "2026-10-21",
+        "sens": "DEPENSE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "CONSOMMABLES ET RÉACTIFS LABORATOIRE",
+        "categorie": "Consommables médicaux",
+        "tiers": "MÉDICAL SERVICE",
+        "reference": "MS-2026-1021",
+        "observation": "Commande réactifs et kits de dépistage.",
+        "montant": 760000,
+        "createdAt": "2026-10-21T10:00:00.000Z",
+        "beneficiaireAdresse": "Bazar Be — Toliara",
+        "beneficiaireBanque": "BNI",
+        "beneficiaireCompte": "00005 00223344556",
+        "tiersId": "exemple-four-medical"
+      },
+      {
+        "id": "essai-vr-3",
+        "numero": "VR-2026-0003",
+        "date": "2026-11-05",
+        "sens": "RECETTE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "RÈGLEMENT DOSSIERS ASSURANCE ARO",
+        "categorie": "Remboursements",
+        "tiers": "ASSURANCE ARO SANTÉ",
+        "reference": "VIR-ARO-2026-1105",
+        "observation": "Remboursement hospitalisations conventionnées.",
+        "montant": 890000,
+        "createdAt": "2026-11-05T10:00:00.000Z",
+        "beneficiaireAdresse": "Place de l’Indépendance — Antananarivo",
+        "beneficiaireBanque": "BNI",
+        "beneficiaireCompte": "00005 00119988776",
+        "tiersId": "exemple-client-aro"
+      },
+      {
+        "id": "essai-vr-4",
+        "numero": "VR-2026-0004",
+        "date": "2026-11-11",
+        "sens": "RECETTE",
+        "compteId": "exemple-compte-bni-c",
+        "libelle": "APPUI ONG SANTÉ MADAGASCAR",
+        "categorie": "Subventions & dons",
+        "tiers": "ONG SANTÉ MADAGASCAR",
+        "reference": "VIR-ONG-2026-1111",
+        "observation": "Contribution programme maternité et vaccination.",
+        "montant": 1400000,
+        "createdAt": "2026-11-11T10:00:00.000Z",
+        "beneficiaireAdresse": "Rue des Écoles — Toliara",
+        "beneficiaireBanque": "BNI",
+        "beneficiaireCompte": "00005 00998877665",
+        "tiersId": "exemple-client-madagascar"
+      },
+      {
+        "id": "essai-vd-5",
+        "numero": "VD-2026-0005",
+        "date": "2026-11-18",
+        "sens": "DEPENSE",
+        "compteId": "exemple-compte-bni-d",
+        "libelle": "IMPRESSION CARNETS ET ORDONNANCES",
+        "categorie": "Fournitures de bureau",
+        "tiers": "IMPRIMERIE DU SUD",
+        "reference": "IMP-2026-1118",
+        "observation": "Carnets de caisse et fiches patients.",
+        "montant": 320000,
+        "createdAt": "2026-11-18T10:00:00.000Z",
+        "beneficiaireAdresse": "Sanfily — Toliara",
+        "beneficiaireBanque": "BOA",
+        "beneficiaireCompte": "00004 00556677889",
+        "tiersId": "exemple-four-imprimerie"
+      }
+    ],
+    "tiers": [
+      {
+        "id": "exemple-client-fanilo",
+        "type": "CLIENT",
+        "nom": "ASSOCIATION FANILO",
+        "telephone": "034 12 345 67",
+        "adresse": "Lot II M 45 — Antananarivo",
+        "banque": "BOA",
+        "numeroCompte": "00004 00112233445"
+      },
+      {
+        "id": "exemple-client-madagascar",
+        "type": "CLIENT",
+        "nom": "ONG SANTÉ MADAGASCAR",
+        "telephone": "020 22 334 45",
+        "adresse": "Rue des Écoles — Toliara",
+        "banque": "BNI",
+        "numeroCompte": "00005 00998877665"
+      },
+      {
+        "id": "exemple-client-mutuelle",
+        "type": "CLIENT",
+        "nom": "MUTUELLE SANTÉ SUD",
+        "telephone": "032 14 567 89",
+        "adresse": "Avenue de France — Toliara",
+        "banque": "BOA",
+        "numeroCompte": "00004 00334455667"
+      },
+      {
+        "id": "exemple-client-aro",
+        "type": "CLIENT",
+        "nom": "ASSURANCE ARO SANTÉ",
+        "telephone": "020 22 201 54",
+        "adresse": "Place de l’Indépendance — Antananarivo",
+        "banque": "BNI",
+        "numeroCompte": "00005 00119988776"
+      },
+      {
+        "id": "exemple-four-oxygene",
+        "type": "FOURNISSEUR",
+        "nom": "SOCIÉTÉ OXYGÈNE MADA",
+        "telephone": "020 75 123 45",
+        "adresse": "Zone industrielle — Antananarivo",
+        "banque": "BOA",
+        "numeroCompte": "00004 98765432101"
+      },
+      {
+        "id": "exemple-four-medical",
+        "type": "FOURNISSEUR",
+        "nom": "MÉDICAL SERVICE",
+        "telephone": "034 05 678 90",
+        "adresse": "Bazar Be — Toliara",
+        "banque": "BNI",
+        "numeroCompte": "00005 00223344556"
+      },
+      {
+        "id": "exemple-four-pharmacie",
+        "type": "FOURNISSEUR",
+        "nom": "PHARMACIE CENTRALE SALFA",
+        "telephone": "020 22 612 30",
+        "adresse": "Andravoahangy — Antananarivo",
+        "banque": "BNI",
+        "numeroCompte": "00005 00445566778"
+      },
+      {
+        "id": "exemple-four-jirama",
+        "type": "FOURNISSEUR",
+        "nom": "JIRAMA TOLIARA",
+        "telephone": "020 94 410 12",
+        "adresse": "Boulevard Lyautey — Toliara",
+        "banque": "BFV-SG",
+        "numeroCompte": "00008 00778899001"
+      },
+      {
+        "id": "exemple-four-imprimerie",
+        "type": "FOURNISSEUR",
+        "nom": "IMPRIMERIE DU SUD",
+        "telephone": "034 41 220 18",
+        "adresse": "Sanfily — Toliara",
+        "banque": "BOA",
+        "numeroCompte": "00004 00556677889"
+      }
+    ],
+    "compteurs": {
+      "VR-2026": 4,
+      "VD-2026": 5
+    }
   }
 }

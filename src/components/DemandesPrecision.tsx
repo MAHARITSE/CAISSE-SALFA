@@ -61,7 +61,7 @@ export function DemandesPrecision({ utilisateur, ecritures, cible, fermer, edite
   return <>
     {(demandes.length > 0 || erreur) && <section className="card no-print p-4" aria-label="Demandes de précision">
       <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold">Demandes de précision · {enAttente.length} en attente</h2><div className="flex gap-2"><button className="btn-secondary" onClick={() => void actualiser()}>Actualiser</button><button className="btn-secondary" onClick={() => setHistorique(!historique)}>{historique ? 'Masquer les demandes complétées' : 'Voir toutes les demandes'}</button></div></div>
-      {erreur && <p role="alert" className="mt-2 text-sm text-rose-700">{erreur}</p>}
+      {erreur && <p role="alert" className="mt-2 text-sm text-rose-700 dark:text-rose-400">{erreur}</p>}
       {visibles.length === 0 && <p className="mt-2 text-sm text-slate-500">Aucune demande en attente.</p>}
       <ul className="mt-2 space-y-2">{visibles.map(d => {
         const e = ecritures.find(x => x.id === d.ecritureId);
@@ -69,7 +69,7 @@ export function DemandesPrecision({ utilisateur, ecritures, cible, fermer, edite
       })}</ul>
     </section>}
     {cible && <Modale titre="Demander une précision" sousTitre={`Pièce ${cible.numero} · ${cible.libelle}`} onFermer={fermer}>
-      <form onSubmit={e => { e.preventDefault(); void creer(); }}><label className="block text-sm font-semibold" htmlFor="demande-message">Que faut-il préciser ?</label><textarea id="demande-message" className="field mt-2" value={message} onChange={e => setMessage(e.target.value)} maxLength={1000} required rows={4} placeholder="Par exemple : préciser la nature de cette dépense et sa catégorie." />{erreur && <p role="alert" className="mt-2 text-sm text-rose-700">{erreur}</p>}<div className="mt-4 flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={fermer}>Annuler</button><button className="btn-primary" disabled={occupe || !message.trim()}>Envoyer la demande</button></div></form>
+      <form onSubmit={e => { e.preventDefault(); void creer(); }}><label className="block text-sm font-semibold" htmlFor="demande-message">Que faut-il préciser ?</label><textarea id="demande-message" className="field mt-2" value={message} onChange={e => setMessage(e.target.value)} maxLength={1000} required rows={4} placeholder="Par exemple : préciser la nature de cette dépense et sa catégorie." />{erreur && <p role="alert" className="mt-2 text-sm text-rose-700 dark:text-rose-400">{erreur}</p>}<div className="mt-4 flex justify-end gap-2"><button type="button" className="btn-secondary" onClick={fermer}>Annuler</button><button className="btn-primary" disabled={occupe || !message.trim()}>Envoyer la demande</button></div></form>
     </Modale>}
   </>;
 }

@@ -280,8 +280,8 @@ export function Messagerie({ utilisateur }: { utilisateur: Utilisateur }) {
           </> : <div className="m-auto p-6 text-center text-sm text-slate-400"><MessageCircle className="mx-auto mb-2" size={28} />Sélectionnez un utilisateur pour commencer une conversation.</div>}
         </section>
       </div>
-      {confirmationEnvoi && <p role="status" className="mt-2 text-sm text-emerald-700">{confirmationEnvoi}</p>}
-      {erreur && <p role="alert" className="mt-2 text-sm text-rose-700">{erreur}</p>}
+      {confirmationEnvoi && <p role="status" className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">{confirmationEnvoi}</p>}
+      {erreur && <p role="alert" className="mt-2 text-sm text-rose-700 dark:text-rose-400">{erreur}</p>}
     </Modale>}
   </>;
 }
