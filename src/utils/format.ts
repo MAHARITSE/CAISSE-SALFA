@@ -49,6 +49,23 @@ export function parserMontant(saisie: string, autoriserNegatif = false): number 
 }
 
 /**
+ * Analyse un montant positif autorisant jusqu'à deux chiffres après la virgule
+ * (ou le point), utilisé pour les virements bancaires.
+ */
+export function parserMontantDecimal(saisie: string): number | null {
+  const propre = saisie.replace(/[\s\u202f\u00a0]/g, '');
+  if (!propre) return null;
+  const correspondance = /^(\d+)(?:[.,](\d{0,2}))?$/.exec(propre)
+    ?? (/^[.,](\d{1,2})$/.exec(propre) ? ['', '0', propre.slice(1)] : null);
+  if (!correspondance) return null;
+  const entier = Number(correspondance[1]);
+  const centimes = Number((correspondance[2] ?? '').padEnd(2, '0'));
+  if (!Number.isSafeInteger(entier) || entier < 0 || entier > MONTANT_MAX) return null;
+  if (entier === MONTANT_MAX && centimes > 0) return null;
+  return (entier * 100 + centimes) / 100;
+}
+
+/**
  * Normalisation des libellés à l'ajout ou à l'enregistrement.
  * Ne pas l'appliquer à chaque frappe : réécrire la valeur native perturbe
  * les suggestions Windows, les remplacements et les compositions IME.

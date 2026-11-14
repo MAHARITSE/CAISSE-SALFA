@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Landmark, Pencil, Plus, Trash2 } from 'lucide-rea
 import type { ActionVirement } from '../utils/api';
 import { identifiant } from '../utils/ledger';
 import type { CompteVirement, RegistreVirements } from '../utils/virements';
+import { ChampCompteBancaire, formaterCompteBancaire } from './ChampCompteBancaire';
 import { Modale } from './Modale';
 
 /**
@@ -29,7 +30,7 @@ const formulaireVide = (): Formulaire => ({ banque: '', numeroCompte: '', titula
 
 /** Numéro lisible : les groupes du RIB sont séparés à l'impression comme à l'écran. */
 export const libelleCompte = (compte: CompteVirement): string =>
-  `${compte.banque} — ${compte.numeroCompte || 'numéro non renseigné'}`;
+  `${compte.banque} — ${formaterCompteBancaire(compte.numeroCompte, compte.codeBanque) || 'numéro non renseigné'}`;
 
 export function GestionComptesBancaires({ registre, onMutation, erreurExterne }: Props) {
   const [ouvert, setOuvert] = useState(false);
@@ -46,7 +47,7 @@ export function GestionComptesBancaires({ registre, onMutation, erreurExterne }:
     setEdite(compte ?? null);
     setFormulaire(compte
       ? {
-        banque: compte.banque, numeroCompte: compte.numeroCompte,
+        banque: compte.banque, numeroCompte: formaterCompteBancaire(compte.numeroCompte, compte.codeBanque),
         titulaire: compte.titulaire ?? '', adresse: compte.adresse ?? '', codeBanque: compte.codeBanque ?? '',
       }
       : formulaireVide());
@@ -170,7 +171,7 @@ export function GestionComptesBancaires({ registre, onMutation, erreurExterne }:
       <form className="space-y-3" onSubmit={e => void enregistrer(e)}>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="label">Banque<input className="field" required maxLength={120} value={formulaire.banque} onChange={e => champ('banque', e.target.value)} /></label>
-          <label className="label">Numéro de compte / RIB<input className="field" maxLength={120} value={formulaire.numeroCompte} onChange={e => champ('numeroCompte', e.target.value)} placeholder="00005 12345678901" /></label>
+          <div><ChampCompteBancaire label="Numéro de compte / RIB" valeur={formulaire.numeroCompte} onChange={v => champ('numeroCompte', v)} /></div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="label">Titulaire du compte (donneur d’ordre)<input className="field" maxLength={200} value={formulaire.titulaire} onChange={e => champ('titulaire', e.target.value)} placeholder="SALFA — Hôpital Loterana Toliary Tanambao" /></label>

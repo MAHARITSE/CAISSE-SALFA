@@ -33,7 +33,7 @@ if (!defined('SALFA_API')) {
  * `api/index.php?action=sante` la renvoie : le pied de page signale un paquet
  * dont l'interface et l'API ne sont pas de la même version.
  */
-const SALFA_VERSION_API = '1.4.0';
+const SALFA_VERSION_API = '1.6.0';
 
 const SALFA_ANNEE_MIN = 1900;
 const SALFA_ANNEE_MAX = 9999;

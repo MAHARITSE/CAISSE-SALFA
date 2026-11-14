@@ -117,48 +117,48 @@ export function ecrituresExemple(annee: number): Ecriture[] {
  */
 export function fichesExemple(): RegistreVirements {
   let registre = ajouterCompteVirement({ comptes: [], ecritures: [], tiers: [], compteurs: {} }, {
-    id: 'exemple-compte-bni-c', banque: 'BNI/C', numeroCompte: '00005 00401234567',
+    id: 'exemple-compte-bni-c', banque: 'BNI/C', numeroCompte: '00005 00041 43200100200 85',
     titulaire: 'SALFA — Hôpital Loterana Toliary Tanambao', adresse: 'BP 99 — Toliara', codeBanque: '00005',
   });
   registre = ajouterCompteVirement(registre, {
-    id: 'exemple-compte-bni-d', banque: 'BNI/D', numeroCompte: '00005 00409876543',
+    id: 'exemple-compte-bni-d', banque: 'BNI/D', numeroCompte: '00005 00041 43200100201 82',
     titulaire: 'SALFA — Hôpital Loterana Toliary Tanambao', adresse: 'BP 99 — Toliara', codeBanque: '00005',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-client-fanilo', type: 'CLIENT', nom: 'ASSOCIATION FANILO', telephone: '034 12 345 67',
-    adresse: 'Lot II M 45 — Antananarivo', banque: 'BOA', numeroCompte: '00004 00112233445',
+    adresse: 'Lot II M 45 — Antananarivo', banque: 'BOA', numeroCompte: '00004 00010 00112233445 19',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-client-madagascar', type: 'CLIENT', nom: 'ONG SANTÉ MADAGASCAR', telephone: '020 22 334 45',
-    adresse: 'Rue des Écoles — Toliara', banque: 'BNI', numeroCompte: '00005 00998877665',
+    adresse: 'Rue des Écoles — Toliara', banque: 'BNI', numeroCompte: '00005 00041 00998877665 34',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-client-mutuelle', type: 'CLIENT', nom: 'MUTUELLE SANTÉ SUD', telephone: '032 14 567 89',
-    adresse: 'Avenue de France — Toliara', banque: 'BOA', numeroCompte: '00004 00334455667',
+    adresse: 'Avenue de France — Toliara', banque: 'BOA', numeroCompte: '00004 00041 00334455667 52',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-client-aro', type: 'CLIENT', nom: 'ASSURANCE ARO SANTÉ', telephone: '020 22 201 54',
-    adresse: 'Place de l’Indépendance — Antananarivo', banque: 'BNI', numeroCompte: '00005 00119988776',
+    adresse: 'Place de l’Indépendance — Antananarivo', banque: 'BNI', numeroCompte: '00005 00001 00119988776 71',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-four-oxygene', type: 'FOURNISSEUR', nom: 'SOCIÉTÉ OXYGÈNE MADA', telephone: '020 75 123 45',
-    adresse: 'Zone industrielle — Antananarivo', banque: 'BOA', numeroCompte: '00004 98765432101',
+    adresse: 'Zone industrielle — Antananarivo', banque: 'BOA', numeroCompte: '00004 00010 98765432101 42',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-four-medical', type: 'FOURNISSEUR', nom: 'MÉDICAL SERVICE', telephone: '034 05 678 90',
-    adresse: 'Bazar Be — Toliara', banque: 'BNI', numeroCompte: '00005 00223344556',
+    adresse: 'Bazar Be — Toliara', banque: 'BNI', numeroCompte: '00005 00041 00223344556 28',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-four-pharmacie', type: 'FOURNISSEUR', nom: 'PHARMACIE CENTRALE SALFA', telephone: '020 22 612 30',
-    adresse: 'Andravoahangy — Antananarivo', banque: 'BNI', numeroCompte: '00005 00445566778',
+    adresse: 'Andravoahangy — Antananarivo', banque: 'BNI', numeroCompte: '00005 00001 00445566778 61',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-four-jirama', type: 'FOURNISSEUR', nom: 'JIRAMA TOLIARA', telephone: '020 94 410 12',
-    adresse: 'Boulevard Lyautey — Toliara', banque: 'BFV-SG', numeroCompte: '00008 00778899001',
+    adresse: 'Boulevard Lyautey — Toliara', banque: 'BFV-SG', numeroCompte: '00008 00041 00778899001 37',
   });
   registre = ajouterTiers(registre, {
     id: 'exemple-four-imprimerie', type: 'FOURNISSEUR', nom: 'IMPRIMERIE DU SUD', telephone: '034 41 220 18',
-    adresse: 'Sanfily — Toliara', banque: 'BOA', numeroCompte: '00004 00556677889',
+    adresse: 'Sanfily — Toliara', banque: 'BOA', numeroCompte: '00004 00041 00556677889 46',
   });
   return validerRegistreVirements(registre);
 }
@@ -178,7 +178,7 @@ export function virementsExemple(annee: number): RegistreVirements['ecritures'] 
     observation: 'Exemple : la DED porte son ordre de virement BNI 114018.',
     montant: 980_000, createdAt: new Date(annee, 1, 20, 11, 0, 0).toISOString(),
     beneficiaireAdresse: 'Zone industrielle — Antananarivo', beneficiaireBanque: 'BOA',
-    beneficiaireCompte: '00004 98765432101',
+    beneficiaireCompte: '00004 00010 98765432101 42',
   });
   registre = ajouterVirement(registre, {
     id: 'exemple-vr-2', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 2, 25), sens: 'RECETTE',
@@ -194,7 +194,7 @@ export function virementsExemple(annee: number): RegistreVirements['ecritures'] 
     observation: 'Dotation mensuelle pharmacie de l’hôpital.',
     montant: 2_450_000, createdAt: new Date(annee, 2, 4, 14, 15, 0).toISOString(),
     beneficiaireAdresse: 'Andravoahangy — Antananarivo', beneficiaireBanque: 'BNI',
-    beneficiaireCompte: '00005 00445566778',
+    beneficiaireCompte: '00005 00001 00445566778 61',
   });
   registre = ajouterVirement(registre, {
     id: 'exemple-vd-3', compteId: 'exemple-compte-bni-d', date: dateDe(annee, 3, 12), sens: 'DEPENSE',
@@ -203,7 +203,7 @@ export function virementsExemple(annee: number): RegistreVirements['ecritures'] 
     observation: 'Virement permanent mensuel JIRAMA.',
     montant: 640_000, createdAt: new Date(annee, 2, 12, 10, 45, 0).toISOString(),
     beneficiaireAdresse: 'Boulevard Lyautey — Toliara', beneficiaireBanque: 'BFV-SG',
-    beneficiaireCompte: '00008 00778899001', permanent: true,
+    beneficiaireCompte: '00008 00041 00778899001 37', permanent: true,
   });
   registre = ajouterVirement(registre, {
     id: 'exemple-vr-3', compteId: 'exemple-compte-bni-c', date: dateDe(annee, 3, 18), sens: 'RECETTE',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import type { Sauvegarde } from './types';
@@ -451,15 +451,62 @@ describe('parcours de caisse', () => {
     expect(screen.queryByRole('button', { name: 'Administration' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Livre journal' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nouvelle recette' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     unmount();
 
-    // Le comptable consulte le journal et l'analyse, sans saisir ni administrer.
+    // Le comptable ouvre le journal, les virements et l'analyse, peut ajouter/imprimer au journal sans administrer.
     render(<App />);
     await ouvrirSession(user, 'comptable', 'compta1234');
     expect(screen.getByRole('button', { name: 'Analyse de la caisse' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Administration' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Nouvelle recette' })).not.toBeInTheDocument();
-    expect(screen.getByText(/Consultation seule/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nouvelle recette' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nouvelle dépense' })).toBeInTheDocument();
+    expect(screen.queryByText(/Consultation seule/)).not.toBeInTheDocument();
+  });
+
+  it('permet au comptable d’ajouter et d’imprimer une recette ou une dépense au journal sans modifier ni supprimer l’existant', async () => {
+    const user = userEvent.setup();
+    const existante = ecritureTest({
+      id: 'dep-existante',
+      numero: `DP-${annee}-0001`,
+      date: aujourdHui(),
+      sens: 'DEPENSE',
+      libelle: 'ACHAT ANTERIEUR',
+      categorie: 'Divers',
+      montant: 15000,
+    });
+    sauvegarderLivre(livreTest({ parametres: parametresTest({ exercice: Number(annee) }), ecritures: [existante] }), 0);
+
+    let imprime = false;
+    const espionPrint = vi.spyOn(window, 'print').mockImplementation(() => {
+      imprime = true;
+      window.dispatchEvent(new Event('afterprint'));
+    });
+
+    try {
+      render(<App />);
+      await ouvrirSession(user, 'comptable', 'compta1234');
+
+      // L'écriture existante peut être réimprimée, mais ni modifiée ni supprimée.
+      expect(screen.getByRole('button', { name: `Imprimer le bordereau DP-${annee}-0001` })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `Modifier DP-${annee}-0001` })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `Supprimer DP-${annee}-0001` })).not.toBeInTheDocument();
+
+      // Le comptable enregistre une nouvelle recette : elle est inscrite au journal et imprimée aussitôt.
+      await user.click(screen.getByRole('button', { name: 'Nouvelle recette' }));
+      const dialogue = screen.getByRole('dialog', { name: 'Nouvelle recette' });
+      expect(within(dialogue).queryByRole('button', { name: 'Gérer' })).not.toBeInTheDocument();
+      await user.type(within(dialogue).getByLabelText(/Libellé de l’écriture/), 'VERSEMENT COMPTABILITE');
+      await user.type(within(dialogue).getByLabelText(/Montant total/), '40000');
+      await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
+
+      await waitFor(() => expect(imprime).toBe(true));
+      expect(screen.getByText(`RC-${annee}-0001`)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `Modifier RC-${annee}-0001` })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: `Supprimer RC-${annee}-0001` })).not.toBeInTheDocument();
+    } finally {
+      espionPrint.mockRestore();
+    }
   });
 
   it('réserve la modification du solde d’ouverture à l’administrateur', async () => {

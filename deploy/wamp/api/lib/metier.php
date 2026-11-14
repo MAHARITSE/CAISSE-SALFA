@@ -8,7 +8,7 @@
 declare(strict_types=1);
 
 /** Insertion ou mise à jour d'une écriture, selon qu'elle existe déjà. */
-function salfa_enregistrer_ecriture(array $e): array
+function salfa_enregistrer_ecriture(array $e, ?string $role = null): array
 {
     $exercice = salfa_exercice_ouvert();
     $valide = salfa_valider_ecriture($e, $exercice);
@@ -20,6 +20,9 @@ function salfa_enregistrer_ecriture(array $e): array
     )->fetch();
 
     if ($existante) {
+        if ($role !== null && !in_array($role, ['admin', 'caissier'], true)) {
+            throw new SalFaErreur('Votre rôle ne permet pas de modifier une écriture existante.', 403, 'role_insuffisant');
+        }
         if ($existante['annee_archive'] !== null) {
             throw new SalFaErreur('Cette écriture appartient à un exercice clôturé : elle ne peut plus être modifiée.', 409, 'exercice_archive');
         }

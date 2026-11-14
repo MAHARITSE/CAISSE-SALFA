@@ -97,7 +97,7 @@ export function genererPdfEcritures(lignes: LigneJournal[], entete: EnteteDocume
       startY: dernier + 3, margin: { left: MARGE, right: MARGE, top: 15, bottom: 15 },
       head: [['Date', 'N° pièce', 'Libellé / détails', 'Catégorie', 'Montant (Ar)']],
       body: groupe.map(l => [dateFr(l.date), l.numero, description(l), l.categorie, montantAffiche(l.montant)]),
-      foot: [[{ content: `TOTAL ${sens === 'RECETTE' ? 'RECETTES' : 'DÉPENSES'}`, colSpan: 4 }, montantAffiche(groupe.reduce((total, l) => total + l.montant, 0))]],
+      foot: [[{ content: `TOTAL ${sens === 'RECETTE' ? 'RECETTES' : 'DÉPENSES'}`, colSpan: 4 }, montantAffiche(groupe.reduce((total, l) => total + Math.round(l.montant * 100), 0) / 100)]],
       showHead: 'everyPage', showFoot: 'lastPage', theme: 'grid',
       styles: { font: 'DejaVu', fontSize: 8, cellPadding: 1.4, overflow: 'linebreak', valign: 'top', textColor: [20, 20, 20], lineColor: [160, 160, 160], lineWidth: 0.1 },
       headStyles: { font: 'DejaVu', fontStyle: 'bold', fillColor: [230, 235, 240], textColor: [20, 20, 20] },

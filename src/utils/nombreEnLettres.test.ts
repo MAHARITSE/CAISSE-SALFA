@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { montantEnLettres, nombreEnLettres } from './nombreEnLettres';
+import { montantEnLettres, nombreEnLettres, sommeAriaryEnLettres, sommeAriaryTitre } from './nombreEnLettres';
 
 describe('montant en toutes lettres', () => {
   it('écrit les nombres comme sur les bordereaux officiels', () => {
@@ -30,9 +30,13 @@ describe('montant en toutes lettres', () => {
     expect(nombreEnLettres(4_042_000)).toBe('quatre millions quarante-deux mille');
   });
 
-  it('produit la phrase du bordereau', () => {
+  it('produit la phrase du bordereau et le format à initiales majuscules des virements', () => {
     // Libellé relevé mot pour mot sur les deux modèles fournis.
     expect(montantEnLettres(4_042_000)).toBe('Arrêté à la somme de quatre millions quarante-deux mille Ariary');
+    expect(sommeAriaryEnLettres(1_100_000.2)).toBe('un million cent mille Ariary vingt');
+    expect(sommeAriaryEnLettres(1_250.01)).toBe('mille deux cent cinquante Ariary un');
+    expect(sommeAriaryTitre(1_100_000)).toBe('Un Million Cent Mille Ariary');
+    expect(sommeAriaryTitre(1_100_000.2)).toBe('Un Million Cent Mille Ariary Vingt');
   });
 
   it('refuse ce qui n’est pas un entier positif', () => {

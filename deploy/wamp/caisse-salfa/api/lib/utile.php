@@ -91,6 +91,26 @@ function salfa_entier(array $donnees, string $cle, int $min, int $max): int
     return $valeur;
 }
 
+/**
+ * Montant positif autorisant jusqu'à deux chiffres après la virgule (virements bancaires).
+ * Conserve un entier lorsque les centimes valent zéro et un flottant arrondi au centime sinon.
+ */
+function salfa_montant_decimal(array $donnees, string $cle, int $max): int|float
+{
+    $valeur = $donnees[$cle] ?? null;
+    if (is_string($valeur) && preg_match('/^\d+(?:[.,]\d{1,2})?$/', $valeur)) {
+        $valeur = (float) str_replace(',', '.', $valeur);
+    }
+    if ((!is_int($valeur) && !is_float($valeur)) || !is_finite((float) $valeur)) {
+        throw new SalFaErreur("Le champ « $cle » doit être un montant valide.", 400, 'champ_invalide');
+    }
+    $centimes = (int) round(((float) $valeur) * 100);
+    if (abs(((float) $valeur) * 100 - $centimes) > 1e-6 || $centimes < 1 || $centimes > $max * 100) {
+        throw new SalFaErreur("Le champ « $cle » doit être compris entre 0,01 et $max (deux chiffres après la virgule maximum).", 400, 'champ_invalide');
+    }
+    return ($centimes % 100 === 0) ? intdiv($centimes, 100) : round($centimes / 100, 2);
+}
+
 function salfa_id(string $valeur): string
 {
     if ($valeur === '') {

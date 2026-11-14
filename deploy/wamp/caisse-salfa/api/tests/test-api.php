@@ -190,6 +190,13 @@ verifier('refuse un entier hors bornes', function () {
     attendreErreur(fn () => salfa_entier(['n' => 500], 'n', 0, 100), 'champ_invalide');
 });
 
+verifier('lit un montant décimal de virement à deux chiffres après la virgule', function () {
+    egal(1250.5, salfa_montant_decimal(['m' => 1250.5], 'm', 100000));
+    egal(1250.75, salfa_montant_decimal(['m' => '1250,75'], 'm', 100000));
+    egal(5000, salfa_montant_decimal(['m' => 5000.0], 'm', 100000));
+    attendreErreur(fn () => salfa_montant_decimal(['m' => 12.345], 'm', 100000), 'champ_invalide');
+});
+
 verifier('nettoie un champ texte', function () {
     egal('abc', salfa_champ(['t' => '  abc  '], 't', 10));
 });

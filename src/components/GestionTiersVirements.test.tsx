@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { GestionTiersVirements } from './GestionTiersVirements';
 import { ajouterCompteVirement, ajouterTiers, ajouterVirement, registreVirementsVide, type Tiers } from '../utils/virements';
 
-const compte = { id: 'b1', banque: 'BNI/C', numeroCompte: '00005 12345678901' };
+const compte = { id: 'b1', banque: 'BNI/C', numeroCompte: '00005 00041 43200100200 85' };
 const client: Tiers = { id: 't-c', type: 'CLIENT', nom: 'ASSOCIATION FANILO', telephone: '034 00 000 00', adresse: 'Toliara', banque: '', numeroCompte: '' };
-const fournisseur: Tiers = { id: 't-f', type: 'FOURNISSEUR', nom: 'SOCIETE OXYGENE', telephone: '020 11 111 11', adresse: 'Lot II Antananarivo', banque: 'BOA', numeroCompte: '00004 98765432101' };
+const fournisseur: Tiers = { id: 't-f', type: 'FOURNISSEUR', nom: 'SOCIETE OXYGENE', telephone: '020 11 111 11', adresse: 'Lot II Antananarivo', banque: 'BOA', numeroCompte: '00004 00010 98765432101 42' };
 
 const registre = () => ajouterVirement(
   ajouterTiers(ajouterTiers(ajouterCompteVirement(registreVirementsVide(), compte), client), fournisseur),
@@ -28,12 +28,12 @@ describe('clients et fournisseurs du livre des virements', () => {
     rendre();
     expect(screen.getByText('SOCIETE OXYGENE')).toBeInTheDocument();
     expect(screen.getByText('ASSOCIATION FANILO')).toBeInTheDocument();
-    expect(screen.getByText('RIB : BOA — 00004 98765432101 · 1 virement(s)')).toBeInTheDocument();
+    expect(screen.getByText('RIB : BOA — 00004 00010 98765432101 42 · 1 virement(s)')).toBeInTheDocument();
     expect(screen.getByText('Client : aucune coordonnée bancaire nécessaire · 0 virement(s)')).toBeInTheDocument();
     expect(screen.getByText('020 11 111 11 · Lot II Antananarivo')).toBeInTheDocument();
   });
 
-  it('ajoute un fournisseur avec son RIB', async () => {
+  it('ajoute un fournisseur avec son RIB formaté selon le masque', async () => {
     const onMutation = rendre();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Ajouter un fournisseur' }));
@@ -42,13 +42,13 @@ describe('clients et fournisseurs du livre des virements', () => {
     await user.type(within(dialogue).getByLabelText('Téléphone'), '020 22 222 22');
     await user.type(within(dialogue).getByLabelText('Adresse'), 'BP 12 Toliara');
     await user.type(within(dialogue).getByLabelText('Établissement bancaire'), 'BNI');
-    await user.type(within(dialogue).getByLabelText('Compte ou RIB'), '00005 11111111111');
+    await user.type(within(dialogue).getByLabelText('Compte ou RIB'), '00005000414320010020085');
     await user.click(within(dialogue).getByRole('button', { name: 'Ajouter la fiche' }));
     expect(onMutation).toHaveBeenCalledWith({
       operation: 'ajouter_tiers',
       tiers: expect.objectContaining({
         type: 'FOURNISSEUR', nom: 'PHARMACIE SALFA', telephone: '020 22 222 22', adresse: 'BP 12 Toliara',
-        banque: 'BNI', numeroCompte: '00005 11111111111',
+        banque: 'BNI', numeroCompte: '00005 00041 43200100200 85',
       }),
     });
     expect(await screen.findByText('Fiche « PHARMACIE SALFA » ajoutée.')).toBeInTheDocument();

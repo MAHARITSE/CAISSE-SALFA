@@ -38,7 +38,7 @@ export interface UtilisateurConnecte {
 export const ROLES: Array<{ valeur: Role; libelle: string; resume: string }> = [
   { valeur: 'admin', libelle: 'Administrateur', resume: 'Tout : Administration, journal, analyse, exercices, données.' },
   { valeur: 'caissier', libelle: 'Caissière', resume: 'Le livre journal seulement : saisie des recettes et des dépenses.' },
-  { valeur: 'comptable', libelle: 'Comptable', resume: 'Journal et analyse en lecture ; saisie et modification des virements.' },
+  { valeur: 'comptable', libelle: 'Comptable', resume: 'Ajout et impression de pièces au journal, analyse en lecture ; saisie et modification des virements.' },
 ];
 
 export function libelleRole(role: Role | string): string {
@@ -65,7 +65,12 @@ export function peutOuvrir(role: Role | string, onglet: OngletApplication): bool
   return ongletsAutorises(role).includes(onglet);
 }
 
-/** La saisie d'écritures est réservée à la caisse et à l'administration. */
+/** L'ajout d'une nouvelle recette ou dépense au journal (avec impression du bordereau) est ouvert à la caisse, au comptable et à l'administration. */
+export function peutAjouterEcriture(role: Role | string): boolean {
+  return role === 'admin' || role === 'caissier' || role === 'comptable';
+}
+
+/** La modification et la suppression d'écritures existantes sont réservées à la caisse et à l'administration. */
 export function peutSaisir(role: Role | string): boolean {
   return role === 'admin' || role === 'caissier';
 }

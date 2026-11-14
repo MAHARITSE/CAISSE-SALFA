@@ -62,17 +62,48 @@ describe('bordereau imprimable conforme aux modèles', () => {
     expect(within(corps[0] as HTMLElement).getByText('VERSEMENT ESPECE BNI C')).toBeInTheDocument();
     expect(within(corps[0] as HTMLElement).getByText('Q-1')).toBeInTheDocument();
     expect(container.querySelectorAll('.bordereau-ligne-vide')).toHaveLength(1);
-    // Le bloc vide s'ajuste pour que le tableau garde toujours la même hauteur.
+    // Le bloc vide absorbe seul l'étirement du tableau (height: 100%) afin que
+    // les lignes remplies gardent leur hauteur exacte de 11,2 mm.
+    const reserve = container.querySelector('.bordereau-ligne-vide__reserve') as HTMLElement;
+    // Une ligne à 11,1 mm + 118,9 mm de réserve : corps de tableau de 130 mm.
+    expect(parseFloat(reserve.style.height)).toBeCloseTo(118.9);
+  });
+
+  it('garde le bordereau d’un virement sur une seule page tout en préservant la hauteur de ligne de 11,2 mm', () => {
+    const { container } = render(
+      <BordereauDocument
+        ligne={ligne('DEPENSE', {
+          numero: 'VD-2026-0002',
+          lignesDetail: undefined,
+          libelle: 'APPROVISIONNEMENT MÉDICAMENTS ESSENTIELS',
+          tiers: 'PHARMACIE CENTRALE SALFA',
+          montant: 2_450_000,
+          reference: 'FAC-PH-2026-084',
+        })}
+        entete={enteteParDefaut('depense')}
+        compteVirement={{ banque: 'BNI/D', numeroCompte: '00005 00041 43200100200 85' }}
+      />,
+    );
+    const feuille = container.querySelector('.bordereau-document');
+    expect(feuille).toHaveClass('bordereau-document--virement');
+    const ligneBanque = container.querySelector('.bordereau-ligne--virement');
+    expect(ligneBanque).toHaveTextContent('Virement bancaire : BNI/D · Compte 00005 00041 43200100200 85');
+    expect(container.querySelectorAll('tbody tr.bordereau-ligne-poste')).toHaveLength(1);
     const bloc = container.querySelector('.bordereau-ligne-vide') as HTMLElement;
-    // Une ligne à 11,1 mm + 118,9 mm de vide : corps de tableau de 130 mm.
-    expect(parseFloat(bloc.style.height)).toBeCloseTo(118.9);
+    expect(bloc).not.toHaveClass('bordereau-ligne-vide--nulle');
+    const reserve = container.querySelector('.bordereau-ligne-vide__reserve') as HTMLElement;
+    // Réserve réduite (85 - 11,1 = 73,9 mm) portée par le bloc vide (tr à height: 100%),
+    // pour que la ligne remplie conserve sa hauteur de 11,2 mm et que tout tienne sur 1 page.
+    expect(parseFloat(reserve.style.height)).toBeCloseTo(73.9);
+    expect(screen.getByText('deux millions quatre cent cinquante mille Ariary')).toBeInTheDocument();
   });
 
   it('réduit seulement le bloc vide quand le tableau contient beaucoup de postes', () => {
     const lignesDetail = Array.from({ length: 12 }, (_, i) => ({ id: `d${i}`, libelle: `POSTE ${i + 1}`, montant: 1000 }));
     const { container } = render(<BordereauDocument ligne={ligne('DEPENSE', { lignesDetail, montant: 12000 })} entete={enteteParDefaut()} />);
     expect(container.querySelectorAll('tbody tr')).toHaveLength(13);
-    expect((container.querySelector('.bordereau-ligne-vide') as HTMLElement).style.height).toBe('0mm');
+    expect(container.querySelector('.bordereau-ligne-vide')).toHaveClass('bordereau-ligne-vide--nulle');
+    expect((container.querySelector('.bordereau-ligne-vide__reserve') as HTMLElement).style.height).toBe('0mm');
     expect(screen.getByText('POSTE 12')).toBeInTheDocument();
     expect(screen.getByText('Médecin Chef')).toBeInTheDocument();
   });

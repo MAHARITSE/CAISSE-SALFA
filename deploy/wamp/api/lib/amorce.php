@@ -280,6 +280,16 @@ function salfa_amorcer_silencieusement(): void
             } catch (Throwable $e) {
                 throw new SalFaErreur('Création du registre de virements impossible. Vérifiez le droit CREATE de MySQL.', 503, 'migration_virements');
             }
+            // Mise à niveau éventuelle d'une base antérieure où l'ancien rôle
+            // « lecteur » existait encore, afin que le compte accède aux virements.
+            try {
+                $tableUtilisateurs = salfa_table('utilisateurs');
+                $pdo->exec("ALTER TABLE $tableUtilisateurs MODIFY COLUMN role ENUM('lecteur','comptable','caissier','admin') NOT NULL DEFAULT 'caissier'");
+                $pdo->exec("UPDATE $tableUtilisateurs SET role = 'comptable' WHERE role = 'lecteur'");
+                $pdo->exec("ALTER TABLE $tableUtilisateurs MODIFY COLUMN role ENUM('comptable','caissier','admin') NOT NULL DEFAULT 'caissier'");
+            } catch (Throwable $e) {
+                // Table déjà conforme ou droits ALTER limités : on n'interrompt pas l'accès.
+            }
         }
         return;
     }

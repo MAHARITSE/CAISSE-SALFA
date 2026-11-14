@@ -1,3 +1,5 @@
+import { majusculesDebutMots } from './format';
+
 /**
  * Montant écrit en toutes lettres, pour la mention « Arrêté à la somme de… »
  * des bordereaux officiels. Orthographe traditionnelle : les traits d'union
@@ -72,11 +74,36 @@ export function nombreEnLettres(valeur: number): string {
   return morceaux.join(' ');
 }
 
-/** Phrase du bordereau : « Arrêtée à la somme de … ariary ». */
+/**
+ * Écrit un montant en Ariary en toutes lettres, avec ses éventuels centimes
+ * directement après « Ariary » (ex. « un million cent mille Ariary vingt »).
+ */
+export function sommeAriaryEnLettres(montant: number): string {
+  if (typeof montant !== 'number' || !Number.isFinite(montant) || montant < 0) {
+    throw new Error('Montant en lettres : montant positif attendu.');
+  }
+  const totalCentimes = Math.round(montant * 100);
+  if (Math.abs(montant * 100 - totalCentimes) > 1e-6) {
+    throw new Error('Montant en lettres : deux chiffres après la virgule maximum.');
+  }
+  const entier = Math.floor(totalCentimes / 100);
+  const centimes = totalCentimes % 100;
+  if (centimes === 0) return `${nombreEnLettres(entier)} Ariary`;
+  return `${nombreEnLettres(entier)} Ariary ${nombreEnLettres(centimes)}`;
+}
+
+/**
+ * Montant en toutes lettres avec majuscule à l'initiale de chaque mot, pour
+ * l'ordre de virement (ex. « Un Million Cent Mille Ariary Vingt »).
+ */
+export function sommeAriaryTitre(montant: number): string {
+  return majusculesDebutMots(sommeAriaryEnLettres(montant));
+}
+
 /**
  * Mention imprimée sous le total, telle qu'elle figure sur les modèles :
  * « Arrêté à la somme de … Ariary ».
  */
 export function montantEnLettres(montant: number): string {
-  return `Arrêté à la somme de ${nombreEnLettres(montant)} Ariary`;
+  return `Arrêté à la somme de ${sommeAriaryEnLettres(montant)}`;
 }

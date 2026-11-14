@@ -12,7 +12,7 @@ import { ongletsAutorises } from '../utils/roles';
 
 const impression = vi.hoisted(() => vi.fn());
 vi.mock('../utils/export-pdf', () => ({ ouvrirEtatPourImpression: impression }));
-const compte = { id: 'banque', banque: 'BNI', numeroCompte: '001234' };
+const compte = { id: 'banque', banque: 'BNI', numeroCompte: '00005 00041 43200100200 85' };
 const client = { id: 't-client', type: 'CLIENT' as const, nom: 'Association FANILO', telephone: '034 00 000 00', adresse: 'Toliara', banque: '', numeroCompte: '' };
 const fournisseur = { id: 't-four', type: 'FOURNISSEUR' as const, nom: 'SOCIETE OXYGENE', telephone: '', adresse: 'Lot II Antananarivo', banque: 'BOA', numeroCompte: '00004 123' };
 
@@ -39,7 +39,7 @@ describe('livre des virements', () => {
     await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'), fournisseur.id);
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
-      sens: 'DEPENSE', montant: 1250000, compteId: 'banque', libelle: 'Facture',
+      sens: 'DEPENSE', montant: 1250000, compteId: 'banque', libelle: 'FACTURE',
       tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
       beneficiaireBanque: 'BOA', beneficiaireCompte: '00004 123', beneficiaireAdresse: 'Lot II Antananarivo',
     }) });
@@ -75,27 +75,34 @@ describe('livre des virements', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Nouvelle recette par virement' })).not.toBeInTheDocument());
     expect(document.querySelector('.print-ordre-virement')).toBeNull();
 
-    // Une DED par virement imprime aussitôt son ordre de virement sur demi-A4.
+    // Une DED par virement imprime aussitôt l'état DED et l'ordre de virement sur demi-A4.
     await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
     dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
-    await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
+    await user.type(within(dialogue).getByLabelText('Libellé'), 'oxygene');
     await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'), fournisseur.id);
     await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+    const etat = document.querySelector('.print-bordereau');
+    expect(etat).not.toBeNull();
+    expect(etat).toHaveTextContent('DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)');
+    expect(etat).toHaveTextContent(`VD-${new Date().getFullYear()}-0001`);
     const feuille = document.querySelector('.print-ordre-virement');
     expect(feuille).not.toBeNull();
     expect(feuille).toHaveTextContent('ORDRE DE VIREMENT');
     expect(feuille).toHaveTextContent('SOCIETE OXYGENE');
-    // Le numéro définitif du serveur figure sur l'ordre : VD-2026-0001.
-    expect(feuille).toHaveTextContent(`Pièce VD-${new Date().getFullYear()}-0001`);
+    // Le numéro définitif du serveur et le libellé en majuscules figurent sur l'ordre.
+    expect(feuille).toHaveTextContent(`VD-${new Date().getFullYear()}-0001`);
+    expect(feuille?.querySelector('.ordre-virement__observation')).toHaveTextContent('OXYGENE');
     expect(feuille).toHaveTextContent('00004 123');
-    expect(feuille?.querySelectorAll('.ordre-virement')).toHaveLength(2);
+    expect(feuille?.querySelectorAll('.ordre-virement')).toHaveLength(1);
+    expect(feuille).not.toHaveTextContent(/moitié haute|souche|découper/i);
     expect(onMutation).toHaveBeenLastCalledWith({ operation: 'ajouter', virement: expect.objectContaining({
-      sens: 'DEPENSE', montant: 5000, beneficiaireCompte: '00004 123', tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
+      sens: 'DEPENSE', montant: 5000, libelle: 'OXYGENE', beneficiaireCompte: '00004 123', tiers: 'SOCIETE OXYGENE', tiersId: fournisseur.id,
     }) });
     // La fin de l'impression rend le registre.
     fireEvent(window, new Event('afterprint'));
+    expect(document.querySelector('.print-bordereau')).toBeNull();
     expect(document.querySelector('.print-ordre-virement')).toBeNull();
     rerender(<LivreVirements {...props} registre={registre} />);
   });
@@ -126,7 +133,7 @@ describe('livre des virements', () => {
     const ouvrir = vi.spyOn(window, 'open').mockReturnValue(fenetre);
     await user.click(screen.getByRole('button', { name: 'Imprimer' }));
     await waitFor(() => expect(impression).toHaveBeenCalled());
-    expect(impression.mock.calls.at(-1)?.[0][0].libelle).toContain('BNI · Compte : 001234');
+    expect(impression.mock.calls.at(-1)?.[0][0].libelle).toContain('BNI · Compte : 00005 00041 43200100200 85');
     expect(impression.mock.calls.at(-1)?.[4]).toBe(true);
     await user.click(screen.getByRole('button', { name: 'DED / dépenses' }));
     expect(screen.getByText(/Aucun virement pour cette sélection/)).toBeInTheDocument();
@@ -271,5 +278,11 @@ describe('livre des virements', () => {
     expect(validerDonnees(livre).virements).toEqual(registre);
     expect(lireSauvegarde(preparerSauvegarde(livre)).virements).toEqual(registre);
     expect(lireSauvegardeSql(preparerSqlLivre(livre)).virements).toEqual(registre);
+  });
+  it('garde la barre de période, filtres et nouvelles pièces toujours épinglée en haut au défilement', () => {
+    render(<LivreVirements registre={registre} categories={categoriesParDefaut()} entete={entetesParDefaut()} onMutation={vi.fn().mockResolvedValue(true)} erreurExterne={null} hauteurEntete={96} />);
+    const barre = screen.getByRole('region', { name: 'Période, filtres et nouvelles pièces' });
+    expect(barre.parentElement).toHaveClass('sticky', 'no-print');
+    expect(barre.parentElement).toHaveStyle({ top: '96px' });
   });
 });

@@ -3,6 +3,7 @@ import { AlertTriangle, Building2, Check, Pencil, Plus, Trash2, UserRound } from
 import type { ActionVirement } from '../utils/api';
 import { identifiant } from '../utils/ledger';
 import { libelleTiers, ribComplet, type RegistreVirements, type Tiers } from '../utils/virements';
+import { ChampCompteBancaire, formaterCompteBancaire } from './ChampCompteBancaire';
 import { Modale } from './Modale';
 
 /**
@@ -56,7 +57,7 @@ export function GestionTiersVirements({ registre, onMutation, erreurExterne }: P
     setFormulaire(fiche
       ? {
         type: fiche.type, nom: fiche.nom, telephone: fiche.telephone,
-        adresse: fiche.adresse, banque: fiche.banque, numeroCompte: fiche.numeroCompte,
+        adresse: fiche.adresse, banque: fiche.banque, numeroCompte: formaterCompteBancaire(fiche.numeroCompte),
       }
       : formulaireVide(type));
     setErreurChamp(''); setErreur('');
@@ -136,7 +137,7 @@ export function GestionTiersVirements({ registre, onMutation, erreurExterne }: P
             </p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               {fiche.type === 'FOURNISSEUR'
-                ? (ribComplet(fiche) ? `RIB : ${fiche.banque} — ${fiche.numeroCompte}` : 'RIB non renseigné')
+                ? (ribComplet(fiche) ? `RIB : ${fiche.banque} — ${formaterCompteBancaire(fiche.numeroCompte)}` : 'RIB non renseigné')
                 : 'Client : aucune coordonnée bancaire nécessaire'}
               {' · '}{utilisations} virement(s)
             </p>
@@ -194,7 +195,7 @@ export function GestionTiersVirements({ registre, onMutation, erreurExterne }: P
           <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Ces mentions sont imprimées sur l’ordre de virement remis à la banque.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="label">Établissement bancaire<input className="field" maxLength={120} value={formulaire.banque} onChange={e => champ('banque', e.target.value)} placeholder="BNI, BOA, CCP…" /></label>
-            <label className="label">Compte ou RIB<input className="field" maxLength={120} value={formulaire.numeroCompte} onChange={e => champ('numeroCompte', e.target.value)} /></label>
+            <div><ChampCompteBancaire label="Compte ou RIB" valeur={formulaire.numeroCompte} onChange={v => champ('numeroCompte', v)} /></div>
           </div>
         </fieldset>
         {erreurChamp && <p role="alert" className="text-xs text-rose-700 dark:text-rose-400">{erreurChamp}</p>}

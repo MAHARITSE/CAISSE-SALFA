@@ -18,6 +18,12 @@ describe('version de l’application', () => {
     expect(VERSION_APPLICATION).toBe(paquet.version);
   });
 
+  it('aligne SALFA_VERSION_API côté PHP sur la version du paquet', () => {
+    const configPhp = lire('deploy/wamp/api/config.php');
+    const correspondance = configPhp.match(/const\s+SALFA_VERSION_API\s*=\s*'([^']+)'/);
+    expect(correspondance?.[1]).toBe(paquet.version);
+  });
+
   it('garde la forme majeure.mineure.correctif', () => {
     expect(VERSION_APPLICATION).toMatch(/^\d+\.\d+\.\d+$/);
   });

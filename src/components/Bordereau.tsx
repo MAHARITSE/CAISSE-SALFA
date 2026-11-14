@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { LigneJournal } from '../types';
 import { dateFr } from '../utils/format';
-import { nombreEnLettres } from '../utils/nombreEnLettres';
+import { sommeAriaryEnLettres } from '../utils/nombreEnLettres';
 import { TITRE_DOCUMENT, type EnteteDocument } from '../utils/entete';
 import { styleLigneEntete } from '../utils/style-entete';
+import { formaterCompteBancaire } from './ChampCompteBancaire';
 
 /** Cases de signature, propres à chaque document. */
 const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
@@ -19,11 +20,14 @@ const SIGNATURES: Record<'RECETTE' | 'DEPENSE', string[]> = {
  * Le bloc occupe la place restante, de sorte que le tableau garde toujours la
  * même hauteur quelle que soit la taille de la pièce. Cotes relevées sur
  * l'imprimé A4 fourni : 11,1 mm par ligne remplie. L'ensemble des lignes
- * remplies et du bloc vide mesure 130 mm. Le bloc vide se réduit jusqu'à zéro
- * sur les pièces détaillées pour préserver la place des signatures et la marge
- * inférieure de 15 mm, sans réduire ni masquer les lignes remplies.
+ * remplies et du bloc vide mesure 130 mm (85 mm de réserve minimale pour un
+ * virement, qui ajoute la ligne de banque et dont le tableau s'étire ensuite
+ * en flex pour ancrer le pied au bas de la première page sans déborder). Le
+ * bloc vide se réduit jusqu'à zéro sur les pièces détaillées pour préserver
+ * la place des signatures et la marge inférieure de 15 mm, sans réduire ni
+ * masquer les lignes remplies.
  */
-const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 130, blocVideMinimum: 0 };
+const TABLEAU = { hauteurLigne: 11.1, lignesTotal: 130, lignesTotalVirement: 85, blocVideMinimum: 0 };
 
 /**
  * Bandeau d'en-tête : sa hauteur suit les lignes de texte. Les images, elles,
@@ -68,8 +72,9 @@ export function BordereauDocument({ ligne, entete, compteVirement }: { ligne: Li
     ? ligne.lignesDetail.map(d => ({ id: d.id, libelle: d.libelle, montant: d.montant, observation: d.reference ?? '' }))
     // Une pièce en montant unique occupe une seule ligne récapitulative.
     : [{ id: 'unique', libelle: ligne.libelle, montant: ligne.montant, observation: ligne.reference ?? '' }];
+  const hauteurTableau = compteVirement ? TABLEAU.lignesTotalVirement : TABLEAU.lignesTotal;
 
-  return <article className="bordereau-document border border-slate-300 bg-white text-black">
+  return <article className={`bordereau-document${compteVirement ? ' bordereau-document--virement' : ''} border border-slate-300 bg-white text-black`}>
     <div className="bordereau-contenu">
       <div className="bordereau-introduction">
         {/* Les images se posent sur la feuille entière, hors du flux du document. */}
@@ -98,7 +103,7 @@ export function BordereauDocument({ ligne, entete, compteVirement }: { ligne: Li
         <h3 className="bordereau-titre">{TITRE_DOCUMENT[recette ? 'recette' : 'depense']}</h3>
 
         <p className="bordereau-piece"><strong>Pièce n°{compteVirement ? ` ${ligne.numero}` : ""}</strong></p>
-        {compteVirement && <p className="bordereau-ligne"><strong>Virement bancaire :</strong> {compteVirement.banque} · Compte {compteVirement.numeroCompte || 'non renseigné'}</p>}
+        {compteVirement && <p className="bordereau-ligne bordereau-ligne--virement"><strong>Virement bancaire :</strong> <span>{compteVirement.banque} · Compte {formaterCompteBancaire(compteVirement.numeroCompte) || 'non renseigné'}</span></p>}
 
         <p className="bordereau-ligne"><span className="bordereau-etiquette">DATE :</span>{' '}{dateFr(ligne.date)}</p>
         <p className="bordereau-ligne">
@@ -124,24 +129,26 @@ export function BordereauDocument({ ligne, entete, compteVirement }: { ligne: Li
           </tr>
         </thead>
         <tbody>
-          {details.map((d, i) => <tr key={d.id}>
+          {details.map((d, i) => <tr key={d.id} className="bordereau-ligne-poste">
             <td className="bordereau-cellule-numero">{i + 1}</td>
             <td className="bordereau-cellule-libelle">{d.libelle}</td>
             <td />
             <td className="bordereau-cellule-montant">{montantModele(d.montant)}</td>
             <td className="bordereau-cellule-observation">{d.observation}</td>
           </tr>)}
-          <tr
-            className="bordereau-ligne-vide"
-            aria-hidden="true"
-            style={{ height: `${Math.max(TABLEAU.blocVideMinimum, TABLEAU.lignesTotal - details.length * TABLEAU.hauteurLigne)}mm` }}
-          >
-            <td />
-            <td />
-            <td />
-            <td />
-            <td />
-          </tr>
+          {(() => {
+            const hauteurVide = Math.max(TABLEAU.blocVideMinimum, hauteurTableau - details.length * TABLEAU.hauteurLigne);
+            return <tr
+              className={`bordereau-ligne-vide${hauteurVide === 0 ? ' bordereau-ligne-vide--nulle' : ''}`}
+              aria-hidden="true"
+            >
+              <td><div className="bordereau-ligne-vide__reserve" style={{ height: `${hauteurVide}mm` }} /></td>
+              <td />
+              <td />
+              <td />
+              <td />
+            </tr>;
+          })()}
         </tbody>
         <tfoot>
           <tr>
@@ -157,7 +164,7 @@ export function BordereauDocument({ ligne, entete, compteVirement }: { ligne: Li
 
     <footer className="bordereau-pied">
       <p className="bordereau-lettres"><span>Arrêté à la somme de{' '}
-        <strong className="bordereau-lettres__montant">{nombreEnLettres(ligne.montant)} Ariary</strong>
+        <strong className="bordereau-lettres__montant">{sommeAriaryEnLettres(ligne.montant)}</strong>
       </span></p>
 
       <div
