@@ -12,8 +12,9 @@ require_once __DIR__ . '/../socle.php';
 salfa_point('ecritures', function (): array {
     salfa_exiger_methode('POST');
     salfa_demarrer_session();
-    return salfa_mutation('caissier', 'ecriture', function (array $corps): string {
-        $resultat = salfa_enregistrer_ecriture(salfa_objet($corps, 'ecriture'));
+    $utilisateur = salfa_utilisateur_courant();
+    return salfa_mutation('comptable', 'ecriture', function (array $corps) use ($utilisateur): string {
+        $resultat = salfa_enregistrer_ecriture(salfa_objet($corps, 'ecriture'), (string) ($utilisateur['role'] ?? ''));
         return (string) $resultat['numero'];
     });
 });

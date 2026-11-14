@@ -110,6 +110,25 @@ for (const sens of ['dépense', 'recette'] as const) {
   }
 }
 
+test('imprime le bordereau d’un virement sur une seule page A4', async ({ page }, info) => {
+  await page.addInitScript(() => { window.print = () => {}; });
+  await page.goto('/?demo=1');
+  await ouvrirSession(page);
+  await page.getByRole('button', { name: 'Livre des virements' }).click();
+  await page.getByRole('button', { name: /^Imprimer le bordereau VD-/ }).first().click();
+  await page.emulateMedia({ media: 'print' });
+  const feuille = page.locator('.print-bordereau .bordereau-document');
+  await expect(feuille).toBeVisible();
+  await verifierDocumentNonTronque(page);
+  const hauteurLignePoste = await feuille.locator('tbody tr.bordereau-ligne-poste').first().evaluate(
+    tr => tr.getBoundingClientRect().height * 25.4 / 96,
+  );
+  expect(hauteurLignePoste).toBeCloseTo(11.2, 0);
+  const pdf = await page.pdf({ format: 'A4', preferCSSPageSize: true, printBackground: true });
+  await info.attach('bordereau-virement.pdf', { body: pdf, contentType: 'application/pdf' });
+  expect(nombrePages(pdf)).toBe(1);
+});
+
 test('un bordereau long peut continuer sur plusieurs pages', async ({ page }, info) => {
   await ouvrirBordereau(page, 'dépense', 30);
   await verifierDocumentNonTronque(page);

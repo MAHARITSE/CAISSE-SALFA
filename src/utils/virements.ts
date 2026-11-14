@@ -1,6 +1,6 @@
 import type { Sens } from '../types';
-import { MAX_ECRITURES } from './constants';
-import { dateValide, exiger, horodatage, montantEntier, objet, tableau, texte } from './validation';
+import { MAX_ECRITURES, MONTANT_MAX } from './constants';
+import { dateValide, exiger, horodatage, objet, tableau, texte } from './validation';
 import type { Role } from './roles';
 
 /** Registre distinct : ces montants ne font pas partie du solde en espèces. */
@@ -140,6 +140,17 @@ function compteValide(valeur: unknown): CompteVirement {
   };
 }
 
+/** Montant positif d'un virement bancaire : jusqu'à deux chiffres après la virgule. */
+function montantVirement(valeur: unknown): number {
+  exiger(typeof valeur === 'number' && Number.isFinite(valeur), 'Montant du virement : montant numérique attendu.');
+  const centimes = Math.round(valeur * 100);
+  exiger(
+    Math.abs(valeur * 100 - centimes) < 1e-6 && centimes > 0 && centimes <= MONTANT_MAX * 100,
+    `Montant du virement : montant positif jusqu’à ${MONTANT_MAX.toLocaleString('fr-FR')} Ar (deux chiffres après la virgule maximum) attendu.`,
+  );
+  return centimes / 100;
+}
+
 function virementValide(valeur: unknown): Virement {
   const v = objet(valeur, 'Virement');
   const date = dateValide(v.date, 'Date du virement');
@@ -149,8 +160,7 @@ function virementValide(valeur: unknown): Virement {
   const correspondance = /^(VR|VD)-(\d{4})-(\d{4,9})$/.exec(numero);
   exiger(correspondance && correspondance[1] === prefixe && correspondance[2] === date.slice(0, 4), 'Numéro de virement invalide pour ce type ou cette année.');
   exiger(Number(correspondance[3]) > 0, 'Numéro de virement invalide.');
-  const montant = montantEntier(v.montant, 'Montant du virement');
-  exiger(montant > 0, 'Le montant du virement doit être positif.');
+  const montant = montantVirement(v.montant);
   return {
     id: texte(v.id, 'Identifiant du virement', 120, true),
     numero, date, sens: v.sens,

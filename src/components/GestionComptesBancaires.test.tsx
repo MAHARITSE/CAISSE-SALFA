@@ -2,16 +2,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GestionComptesBancaires } from './GestionComptesBancaires';
-import { ajouterCompteVirement, ajouterVirement, registreVirementsVide } from '../utils/virements';
+import { ajouterCompteVirement, ajouterTiers, ajouterVirement, registreVirementsVide } from '../utils/virements';
 
 const bniC = { id: 'b-c', banque: 'BNI/C', numeroCompte: '', titulaire: 'SALFA TOLIARA', codeBanque: '00005' };
-const bniD = { id: 'b-d', banque: 'BNI/D', numeroCompte: '00005 12345678901' };
+const bniD = { id: 'b-d', banque: 'BNI/D', numeroCompte: '00005 00041 43200100200 85' };
+const fournisseur = {
+  id: 't-four', type: 'FOURNISSEUR' as const, nom: 'OXYGENE MADA', telephone: '',
+  adresse: 'Antananarivo', banque: 'BOA', numeroCompte: '00004 00010 98765432101 42',
+};
 
 const registre = ajouterVirement(
-  ajouterCompteVirement(ajouterCompteVirement(registreVirementsVide(), bniC), bniD),
+  ajouterTiers(ajouterCompteVirement(ajouterCompteVirement(registreVirementsVide(), bniC), bniD), fournisseur),
   {
     id: 'v1', compteId: bniD.id, date: '2026-11-12', sens: 'DEPENSE', libelle: 'OXYGENE',
-    categorie: 'Médical', tiers: 'OXYGENE MADA', reference: '', observation: '',
+    categorie: 'Médical', tiers: 'OXYGENE MADA', tiersId: fournisseur.id, reference: '', observation: '',
     montant: 5000, createdAt: '2026-11-12T08:00:00.000Z',
   },
 );
@@ -25,19 +29,19 @@ describe('comptes bancaires et RIB réglés dans Administration', () => {
   it('liste les comptes, signale le RIB à compléter et le nombre de virements rattachés', () => {
     rendre();
     expect(screen.getByText('BNI/C — numéro non renseigné')).toBeInTheDocument();
-    expect(screen.getByText('BNI/D — 00005 12345678901')).toBeInTheDocument();
+    expect(screen.getByText('BNI/D — 00005 00041 43200100200 85')).toBeInTheDocument();
     expect(screen.getAllByText('RIB à compléter')).toHaveLength(1);
     expect(screen.getByText('Code banque 00005 · SALFA TOLIARA')).toBeInTheDocument();
     expect(screen.getByText('1 virement(s) rattaché(s)')).toBeInTheDocument();
   });
 
-  it('ajoute un compte avec son RIB complet', async () => {
+  it('ajoute un compte avec son RIB complet formaté selon le masque', async () => {
     const onMutation = rendre();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Ajouter un compte' }));
     const dialogue = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
     await user.type(within(dialogue).getByLabelText('Banque'), 'BOA');
-    await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00004 98765432101');
+    await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00004000109876543210142');
     await user.type(within(dialogue).getByLabelText(/Titulaire du compte/), 'SALFA TOLIARA');
     await user.type(within(dialogue).getByLabelText(/Adresse du titulaire/), 'BP 99 Toliara');
     await user.type(within(dialogue).getByLabelText(/Code banque du RIB/), '00004');
@@ -45,7 +49,7 @@ describe('comptes bancaires et RIB réglés dans Administration', () => {
     expect(onMutation).toHaveBeenCalledWith({
       operation: 'ajouter_compte',
       compte: expect.objectContaining({
-        banque: 'BOA', numeroCompte: '00004 98765432101', titulaire: 'SALFA TOLIARA',
+        banque: 'BOA', numeroCompte: '00004 00010 98765432101 42', titulaire: 'SALFA TOLIARA',
         adresse: 'BP 99 Toliara', codeBanque: '00004',
       }),
     });
@@ -59,11 +63,11 @@ describe('comptes bancaires et RIB réglés dans Administration', () => {
     const dialogue = screen.getByRole('dialog', { name: 'Modifier le compte BNI/C' });
     expect(within(dialogue).getByLabelText('Banque')).toHaveValue('BNI/C');
     expect(within(dialogue).getByLabelText(/Code banque du RIB/)).toHaveValue('00005');
-    await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00005 11111111111');
+    await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00005 00041 43200100200 85');
     await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer les modifications' }));
     expect(onMutation).toHaveBeenCalledWith({
       operation: 'modifier_compte',
-      compte: expect.objectContaining({ id: 'b-c', banque: 'BNI/C', numeroCompte: '00005 11111111111' }),
+      compte: expect.objectContaining({ id: 'b-c', banque: 'BNI/C', numeroCompte: '00005 00041 43200100200 85' }),
     });
   });
 

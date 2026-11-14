@@ -55,7 +55,7 @@ Au premier appel, l'API :
 | Compte | Mot de passe | Rôle |
 | --- | --- | --- |
 | `admin` | `admin123` | administrateur : tout, dont les comptes et la clôture |
-| `comptable` | `comptable123` | consultation du journal et de l'analyse |
+| `comptable` | `comptable123` | ajout et impression d'écritures au journal, analyse en lecture, gestion des virements |
 
 > **Changez ces deux mots de passe** dès la première connexion, depuis la barre
 > d'en-tête (bouton « Changer mon mot de passe ») puis l'onglet Administration.

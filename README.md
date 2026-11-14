@@ -155,9 +155,8 @@ garder les versions verrouillées par `package-lock.json`.
   calculé ; la clôture en espèces ne modifie pas le registre bancaire.
 - **Ordre de virement obligatoire** : chaque **DED par virement** imprime
   aussitôt, sans aperçu, l’**ordre de virement** du formulaire BNI 114018 remis à
-  la banque. La feuille A4 porte le même ordre deux fois, séparés par un trait de
-  découpe : la moitié haute part à la banque, la moitié basse reste en souche —
-  quelle que soit la moitié détachée, la pièce est complète. Date, compte débité
+  la banque, en **un seul exemplaire** dans la moitié haute de la feuille A4,
+  sans souche ni trait de découpe. Date, compte débité
   et son RIB, bénéficiaire, montant en chiffres et en toutes lettres, référence,
   observations et signature y figurent ; le titre, le nom de la banque et les
   mentions du modèle sont reproduits, sans aucune image : le document n’embarque
@@ -391,7 +390,7 @@ Le nom du modèle est utilisé comme libellé initial de l'écriture (en majuscu
 
 En mode serveur, si un autre utilisateur modifie le livre pendant une saisie, l'application recharge la dernière révision et réessaie automatiquement l'enregistrement lorsque cela ne risque pas d'écraser une écriture. Si la pièce en cours de modification a elle-même changé ou a été supprimée, ou si l'exercice ou la catégorie n'est plus valide, le formulaire conserve la saisie et signale le problème ; copiez votre travail, fermez le formulaire puis rechargez le livre pour comparer les données. Une erreur réseau n'est jamais réessayée automatiquement, afin d'éviter de créer une pièce en double.
 
-Après l'enregistrement d'une écriture, la fenêtre d'impression du navigateur est sollicitée directement, sans écran d'aperçu dans l'application. Il en va de même pour l'ordre de virement imprimé après chaque DED par virement : choisissez une imprimante A4, puis découpez la feuille au trait indiqué. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
+Après l'enregistrement d'une écriture, la fenêtre d'impression du navigateur est sollicitée directement, sans écran d'aperçu dans l'application. Il en va de même pour l'ordre de virement imprimé en un seul exemplaire sur la feuille A4 après chaque DED par virement. Une pièce déjà enregistrée peut aussi être réimprimée depuis sa ligne dans le journal. La confirmation effective de l'impression dépend de Chrome et de l'imprimante : l'application ne peut pas savoir si une feuille est sortie.
 
 ### Messages privés, son et présence
 

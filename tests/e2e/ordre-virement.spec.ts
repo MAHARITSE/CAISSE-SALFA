@@ -1,14 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * L'ordre de virement remis à la banque est une demi-feuille A4. La feuille
- * porte deux fois le même ordre, séparés par un trait de découpe : la banque
- * reçoit une pièce complète et le dossier garde sa souche, quelle que soit la
- * moitié détachée.
+ * L'ordre de virement remis à la banque est une demi-feuille A4 imprimée en
+ * un seul exemplaire dans la moitié haute de la feuille, sans souche ni trait
+ * de découpe.
  *
  * Ces vérifications portent sur la géométrie réelle de la feuille et sur le PDF
  * produit par Chromium : une régression de cote sortirait soit une page de plus,
- * soit un ordre tronqué au moment de la découpe.
+ * soit un ordre tronqué.
  */
 
 async function ouvrirSession(page: Page) {
@@ -71,49 +70,50 @@ async function ouvrirOrdreVirement(page: Page) {
   return feuille;
 }
 
-test('imprime l’ordre de virement sur une seule A4, en deux moitiés égales', async ({ page }, info) => {
+test('imprime l’ordre de virement sur une seule A4, en un seul exemplaire', async ({ page }, info) => {
   const feuille = await ouvrirOrdreVirement(page);
   const mesures = await feuille.evaluate(el => {
     const mm = (px: number) => px * 25.4 / 96;
     const r = el.getBoundingClientRect();
-    const moities = [...el.querySelectorAll('.ordre-virement-feuille__moitie')]
+    const cadres = [...el.querySelectorAll('.ordre-virement-feuille__cadre')]
       .map(m => mm(m.getBoundingClientRect().height));
     const ordres = [...el.querySelectorAll('.ordre-virement')] as HTMLElement[];
     return {
       largeur: mm(r.width),
       hauteur: mm(r.height),
-      moities,
-      // Débordement interne de chaque ordre : aucun contenu ne doit être masqué.
+      cadres,
+      // Débordement interne de l'ordre : aucun contenu ne doit être masqué.
       debordements: ordres.map(ordre => ordre.scrollHeight - ordre.clientHeight),
       // Débordement interne de chaque bande à cote fixe : le contenu doit tenir.
       debordementBandes: ordres.map(ordre => [...ordre.querySelectorAll<HTMLElement>(
         '.ordre-virement__entete, .ordre-virement__beneficiaire, .ordre-virement__total, .ordre-virement__date',
       )].map(bande => bande.scrollHeight - bande.clientHeight)).flat(),
-      // Bas du second ordre par rapport au haut de la feuille.
-      basSecondOrdre: mm(ordres[1].getBoundingClientRect().bottom - r.top),
-      basSignatures: mm(ordres[1].querySelector('.ordre-virement__date')!.getBoundingClientRect().bottom - r.top),
+      // Bas de l'ordre par rapport au haut de la feuille.
+      basOrdre: mm(ordres[0].getBoundingClientRect().bottom - r.top),
+      basSignatures: mm(ordres[0].querySelector('.ordre-virement__pied')!.getBoundingClientRect().bottom - r.top),
     };
   });
 
   expect(mesures.largeur).toBeCloseTo(210, 0);
   expect(mesures.hauteur).toBeCloseTo(297, 0);
-  // Deux moitiés égales de 135 mm, environ une demi-feuille A4 chacune.
-  expect(mesures.moities).toHaveLength(2);
-  for (const hauteur of mesures.moities) expect(hauteur).toBeCloseTo(135, 0);
+  expect(mesures.cadres).toEqual([expect.closeTo(114, 0)]);
   for (const debordement of mesures.debordements) expect(debordement).toBeLessThanOrEqual(1);
-  // Aucune bande à cote fixe n'est tronquée : son contenu tient dans sa cote.
-  expect(mesures.debordementBandes).toHaveLength(8);
+  // Aucune bande n'est tronquée : son contenu tient dans sa cote (cadre bénéficiaire unique inclus).
+  expect(mesures.debordementBandes).toHaveLength(4);
   for (const debordement of mesures.debordementBandes) expect(debordement).toBeLessThanOrEqual(1);
-  // Le second ordre est entièrement contenu dans la feuille, avec une marge.
-  expect(mesures.basSecondOrdre).toBeLessThanOrEqual(297);
-  expect(mesures.basSignatures).toBeLessThanOrEqual(295);
+  // L'ordre unique tient intégralement dans la moitié haute de la feuille A4 (<= 148,5 mm).
+  expect(mesures.basOrdre).toBeLessThanOrEqual(148.5);
+  expect(mesures.basSignatures).toBeLessThanOrEqual(148.5);
 
-  // Deux exemplaires identiques : la banque et la souche portent le même ordre.
-  await expect(feuille.locator('.ordre-virement')).toHaveCount(2);
-  await expect(feuille).toContainText('EXEMPLAIRE BANQUE');
-  await expect(feuille).toContainText('SOUCHE — à conserver');
-  await expect(feuille.locator('.ordre-virement__piece').first()).toHaveText(/Pièce VD-\d{4}-0001/);
-  await expect(feuille).toContainText('cinq mille Ariary');
+  // Un seul exemplaire et un seul cadre bénéficiaire, sans trait de découpe ni souche, avec le libellé en observation.
+  await expect(feuille.locator('.ordre-virement')).toHaveCount(1);
+  await expect(feuille.locator('.ordre-virement__beneficiaire')).toHaveCount(1);
+  await expect(feuille).not.toContainText('EXEMPLAIRE BANQUE');
+  await expect(feuille).not.toContainText('SOUCHE');
+  await expect(feuille).not.toContainText('Découper ici');
+  await expect(feuille.locator('.ordre-virement__reference')).toHaveText(/VD-\d{4}-0001/);
+  await expect(feuille.locator('.ordre-virement__observation')).toHaveText('ACHAT OXYGENE');
+  await expect(feuille).toContainText('Cinq Mille Ariary');
   await expect(feuille).toContainText('5 000,00');
 
   const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });

@@ -55,13 +55,13 @@ it('le comptable saisit un virement sans modifier les espèces', async () => {
   await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
   const livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
   expect(livre.ecritures).toHaveLength(0);
-  expect(livre.virements.ecritures[0]).toMatchObject({ numero: `VR-${new Date().getFullYear()}-0001`, montant: 1000, libelle: 'Virement reçu' });
+  expect(livre.virements.ecritures[0]).toMatchObject({ numero: `VR-${new Date().getFullYear()}-0001`, montant: 1000, libelle: 'VIREMENT REÇU' });
   await user.click(screen.getByRole('button', { name: /Modifier VR-/ }));
   dialog = screen.getByRole('dialog', { name: /Modifier VR-/ });
   await user.clear(within(dialog).getByLabelText('Libellé'));
   await user.type(within(dialog).getByLabelText('Libellé'), 'Virement corrigé');
   await user.click(within(dialog).getByRole('button', { name: 'Enregistrer' }));
-  expect(JSON.parse(localStorage.getItem(CLE_LIVRE)!).virements.ecritures[0].libelle).toBe('Virement corrigé');
+  expect(JSON.parse(localStorage.getItem(CLE_LIVRE)!).virements.ecritures[0].libelle).toBe('VIREMENT CORRIGÉ');
 });
 
 
@@ -83,15 +83,15 @@ it('l’administrateur prépare BNI/C et BNI/D dans Administration et complète 
   expect(within(section).getAllByText('RIB à compléter')).toHaveLength(2);
   expect(within(section).queryByRole('button', { name: 'Préparer BNI/C et BNI/D' })).toBeNull();
 
-  // Le numéro du RIB et son titulaire se complètent ensuite, par modification.
+  // Le numéro du RIB et son titulaire se complètent ensuite, par modification, avec le masque 5-5-11-2.
   await user.click(within(section).getByRole('button', { name: 'Modifier le compte BNI/C' }));
   let dialog = screen.getByRole('dialog', { name: 'Modifier le compte BNI/C' });
-  await user.type(within(dialog).getByLabelText('Numéro de compte / RIB'), 'TEST-123');
+  await user.type(within(dialog).getByLabelText('Numéro de compte / RIB'), '00005000414320010020085');
   await user.type(within(dialog).getByLabelText(/Titulaire du compte/), 'SALFA TOLIARA');
   await user.type(within(dialog).getByLabelText(/Code banque du RIB/), '00005');
   await user.click(within(dialog).getByRole('button', { name: 'Enregistrer les modifications' }));
   livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
-  expect(livre.virements.comptes[0]).toMatchObject({ numeroCompte: 'TEST-123', titulaire: 'SALFA TOLIARA', codeBanque: '00005' });
+  expect(livre.virements.comptes[0]).toMatchObject({ numeroCompte: '00005 00041 43200100200 85', titulaire: 'SALFA TOLIARA', codeBanque: '00005' });
   expect(livre.virements.comptes[1].numeroCompte).toBe('');
   expect(within(section).getAllByText('RIB à compléter')).toHaveLength(1);
 
@@ -135,7 +135,7 @@ it('refuse de supprimer un compte qui porte des virements', async () => {
   await user.click(within(section).getByRole('button', { name: 'Préparer BNI/C et BNI/D' }));
   await user.click(within(section).getByRole('button', { name: 'Modifier le compte BNI/D' }));
   const dialogModif = screen.getByRole('dialog', { name: 'Modifier le compte BNI/D' });
-  await user.type(within(dialogModif).getByLabelText('Numéro de compte / RIB'), '00005 99999999999');
+  await user.type(within(dialogModif).getByLabelText('Numéro de compte / RIB'), '00005 00041 99999999999 85');
   await user.click(within(dialogModif).getByRole('button', { name: 'Enregistrer les modifications' }));
   const livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
   expect(livre.virements.comptes).toHaveLength(2);
@@ -163,7 +163,7 @@ it('imprime l’ordre de virement sur demi-A4 après toute autorisation de dépe
   await user.click(within(section).getByRole('button', { name: 'Ajouter un compte' }));
   let dialogue = screen.getByRole('dialog', { name: 'Ajouter un compte bancaire' });
   await user.type(within(dialogue).getByLabelText('Banque'), 'BNI/C');
-  await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00005 12345678901');
+  await user.type(within(dialogue).getByLabelText('Numéro de compte / RIB'), '00005 00041 43200100200 85');
   await user.type(within(dialogue).getByLabelText(/Titulaire du compte/), 'SALFA TOLIARA');
   await user.type(within(dialogue).getByLabelText(/Adresse du titulaire/), 'BP 99 Toliara');
   await user.type(within(dialogue).getByLabelText(/Code banque du RIB/), '00005');
@@ -171,38 +171,45 @@ it('imprime l’ordre de virement sur demi-A4 après toute autorisation de dépe
 
   await user.click(screen.getByRole('button', { name: 'Livre des virements' }));
   // Le fournisseur et son RIB vivent dans une fiche, pas dans un champ libre.
-  await creerFiche(user, { type: 'FOURNISSEUR', nom: 'OXYGENE MADA', banque: 'BOA', compte: '00004 111', adresse: 'Lot II Antananarivo' });
+  await creerFiche(user, { type: 'FOURNISSEUR', nom: 'OXYGENE MADA', banque: 'BOA', compte: '00004000109876543210142', adresse: 'Lot II Antananarivo' });
   await user.click(screen.getByRole('button', { name: /Nouvelle DED/ }));
   dialogue = screen.getByRole('dialog', { name: 'Nouvelle DED par virement' });
-  await user.type(within(dialogue).getByLabelText('Libellé'), 'OXYGENE');
+  await user.type(within(dialogue).getByLabelText('Libellé'), 'oxygene');
   await user.selectOptions(within(dialogue).getByLabelText('Fournisseur à payer'),
     within(dialogue).getByRole('option', { name: 'OXYGENE MADA' }));
-  await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000');
+  await user.type(within(dialogue).getByLabelText('Montant (Ar)'), '5000,75');
   await user.click(within(dialogue).getByRole('button', { name: 'Enregistrer' }));
 
-  // L'impression part seule : rien à cliquer dans le registre.
+  // L'impression part seule avec l'état DED (page 1) et l'ordre de virement (page 2).
   await waitFor(() => expect(imprimer).toHaveBeenCalledTimes(1));
+  const etat = document.querySelector('.print-bordereau')!;
+  expect(etat).toHaveTextContent('DEMANDE D’ENGAGEMENT DE DÉPENSES (DED)');
+  expect(etat).toHaveTextContent('OXYGENE');
   const feuille = document.querySelector('.print-ordre-virement')!;
   expect(feuille).toHaveTextContent('ORDRE DE VIREMENT');
-  expect(feuille).toHaveTextContent('EXEMPLAIRE BANQUE');
-  expect(feuille).toHaveTextContent('SOUCHE — à conserver');
+  expect(feuille.querySelectorAll('.ordre-virement')).toHaveLength(1);
+  expect(feuille).not.toHaveTextContent(/moitié haute|souche|découper|EXEMPLAIRE BANQUE/i);
   expect(feuille).toHaveTextContent('OXYGENE MADA');
   expect(feuille).toHaveTextContent('BOA');
+  expect(feuille).toHaveTextContent('00004 00010 98765432101 42');
   // Le donneur d'ordre et le RIB viennent du compte bancaire enregistré.
   expect(feuille).toHaveTextContent('SALFA TOLIARA');
-  expect(feuille).toHaveTextContent('00005 12345678901');
-  expect(feuille).toHaveTextContent('5 000,00');
-  expect(feuille).toHaveTextContent('cinq mille Ariary');
-  expect(feuille).toHaveTextContent(/Pièce VD-\d{4}-0001/);
+  expect(feuille).toHaveTextContent('00005 00041 43200100200 85');
+  expect(feuille).toHaveTextContent('5 000,75');
+  expect(feuille).toHaveTextContent('Cinq Mille Ariary Soixante-Quinze');
+  expect(feuille).toHaveTextContent(/VD-\d{4}-0001/);
+  expect(feuille.querySelector('.ordre-virement__observation')).toHaveTextContent('OXYGENE');
   fireEvent(window, new Event('afterprint'));
+  expect(document.querySelector('.print-bordereau')).toBeNull();
   expect(document.querySelector('.print-ordre-virement')).toBeNull();
   expect(document.body).not.toHaveClass('has-print-ordre-virement');
+  expect(document.body).not.toHaveClass('has-print-bordereau');
 
-  // Le virement est enregistré tel quel : aucune écriture de caisse en espèces.
+  // Le virement est enregistré en majuscules : aucune écriture de caisse en espèces.
   const livre = JSON.parse(localStorage.getItem(CLE_LIVRE)!);
   expect(livre.ecritures).toEqual([]);
   expect(livre.virements.ecritures[0]).toMatchObject({
-    sens: 'DEPENSE', montant: 5000, tiers: 'OXYGENE MADA', beneficiaireBanque: 'BOA',
+    sens: 'DEPENSE', montant: 5000.75, libelle: 'OXYGENE', tiers: 'OXYGENE MADA', beneficiaireBanque: 'BOA',
   });
   expect(livre.virements.comptes[0]).toMatchObject({ titulaire: 'SALFA TOLIARA', adresse: 'BP 99 Toliara' });
 });

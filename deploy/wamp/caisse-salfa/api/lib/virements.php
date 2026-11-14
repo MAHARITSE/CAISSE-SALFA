@@ -73,7 +73,7 @@ function salfa_valider_registre_virements(mixed $brut): array
             'id' => $id, 'numero' => $numero, 'compteId' => $compteId, 'date' => $date, 'sens' => $sens,
             'libelle' => salfa_champ($v, 'libelle', 200), 'categorie' => salfa_champ($v, 'categorie', 120),
             'tiers' => salfa_champ($v, 'tiers', 200, false), 'reference' => salfa_champ($v, 'reference', 200, false),
-            'observation' => salfa_champ($v, 'observation', 500, false), 'montant' => salfa_entier($v, 'montant', 1, SALFA_MONTANT_MAX),
+            'observation' => salfa_champ($v, 'observation', 500, false), 'montant' => salfa_montant_decimal($v, 'montant', SALFA_MONTANT_MAX),
             'createdAt' => $cree,
         ];
         if (isset($v['updatedAt'])) {

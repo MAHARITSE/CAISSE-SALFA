@@ -17,9 +17,9 @@ interface SaisieEcritureProps {
   masques: MasqueSaisie[];
   /** Catégories gérées dans le livre, distinctes par sens. */
   categories: Categories;
-  onOuvrirGestionCategories: () => void;
+  onOuvrirGestionCategories?: () => void;
   erreurExterne?: string | null;
-  onOuvrirGestionMasques: () => void;
+  onOuvrirGestionMasques?: () => void;
   onEnregistrer: (ecriture: Ecriture) => boolean | Promise<boolean>;
   onFermer: () => void;
 }
@@ -219,15 +219,17 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="btn-secondary !py-1.5 !text-xs sm:!text-sm"
-                  onClick={onOuvrirGestionMasques}
-                  title="Gérer les modèles de saisie"
-                >
-                  <Layers size={14} />
-                  Gérer les modèles
-                </button>
+                {onOuvrirGestionMasques && (
+                  <button
+                    type="button"
+                    className="btn-secondary !py-1.5 !text-xs sm:!text-sm"
+                    onClick={onOuvrirGestionMasques}
+                    title="Gérer les modèles de saisie"
+                  >
+                    <Layers size={14} />
+                    Gérer les modèles
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -238,7 +240,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
           </div>
           <div><label className="label" htmlFor={`${formId}-libelle`}>Libellé de l’écriture *</label><input ref={libelleRef} id={`${formId}-libelle`} className="field saisie-majuscules" required maxLength={200} value={libelle} onChange={e => setLibelle(e.target.value)} autoComplete="off" placeholder={estRecette ? 'Ex. RECETTES JOURNALIERES — CAISSE PRINCIPALE' : 'Ex. ACHAT DE CARBURANT — AMBULANCE'} /></div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label><button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button></div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><div className="flex items-end justify-between gap-2"><label className="label" htmlFor={`${formId}-categorie`}>Catégorie *</label>{onOuvrirGestionCategories && <button type="button" className="mb-1 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline sm:text-sm" onClick={onOuvrirGestionCategories}>Gérer</button>}</div><select id={`${formId}-categorie`} className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
             <div>
               <label className="label" htmlFor={`${formId}-tiers`}>{estRecette ? 'Service / déposant' : 'Bénéficiaire / fournisseur'}</label>
               <input id={`${formId}-tiers`} className="field capitalize" maxLength={200} value={tiers} onChange={e => setTiers(e.target.value)} autoCapitalize="words" autoComplete="off" placeholder="Nom ou service (facultatif)" />
@@ -254,7 +256,7 @@ export function SaisieEcriture({ ecritureEnEdition: edition, sensInitial, exerci
               <div className="segmented" aria-label="Mode de saisie du montant"><button type="button" aria-pressed={!detaille} onClick={() => { setDetaille(false); changer(); }}>Montant unique</button><button type="button" aria-pressed={detaille} onClick={() => { setDetaille(true); changer(); }}>Détail par postes</button></div>
             </div>
             {!detaille ? <div><ChampMontant id={`${formId}-montant`} label="Montant total (Ar) *" className="text-xl font-bold" valeur={montantSimple} onChange={setMontantSimple} placeholder="0" obligatoire aide={`Montant entier en ariary, séparé par milliers. Maximum : ${formatAr(MONTANT_MAX)}.`} /></div> : <>
-              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Un modèle de saisie, choisi en haut du formulaire, remplit les postes d’un seul geste.</p><button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Un modèle de saisie, choisi en haut du formulaire, remplit les postes d’un seul geste.</p>{onOuvrirGestionMasques && <button type="button" className="btn-secondary" onClick={onOuvrirGestionMasques}><Layers size={16} />Gérer les modèles</button>}</div>
               <div className="grid gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 sm:grid-cols-[1fr_150px_auto]" onKeyDown={toucheAjout}>
                 <div><label className="label" htmlFor={`${formId}-poste`}>Poste</label><input ref={posteRef} id={`${formId}-poste`} className="field saisie-majuscules" maxLength={200} value={nouveauPoste} onChange={e => setNouveauPoste(e.target.value)} placeholder="Consultation…" /></div>
                 <div><ChampMontant id={`${formId}-mnt-poste`} label="Montant (Ar)" valeur={nouveauMontant} onChange={setNouveauMontant} placeholder="0" /></div>
